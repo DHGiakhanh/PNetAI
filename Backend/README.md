@@ -1,39 +1,21 @@
-Each of these models serves different use cases, enabling flexibility in data structure for complex MongoDB applications.
+# Backend API Documentation
 
-## Setup Instructions
+## Setup
 
-To set up the project, follow these steps:
+1. Install dependencies:
+```bash
+npm install
+```
 
-1. **Clone the Repository**:
-   Open your terminal and run the following command to clone the repository:
-   ```bash
-   git clone https://github.com/PhamPhong137/template-pe-sdn302-jwt.git
-   ```
+2. Create `.env` file from `.env.example` and configure:
+```env
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+```
 
-2. **Navigate to the Project Directory**:
-   Change into the project directory:
-   ```bash
-   cd template-pe-sdn302-jwt
-   ```
-
-3. **Install Dependencies**:
-   Run the following command to install all necessary dependencies:
-   ```bash
-   npm install
-   ```
-
-4. **Configure Environment Variables**:
-   Create a `.env` file in the root of the project and fill in your `mongo_URI`:
-   ```env
-   mongo_URI=your_mongodb_connection_string
-   ```
-
-5. **Start the Application**:
-   Finally, start the application with the following command:
-   ```bash
-   npm start
-   ```
-Note: MongoQuery.md + MongoModel.md is cheat sheet for MongoDB.
-
-
-Follow these steps to successfully set up and run the project on your local machine.
+3. Start server:
+```bash
+npm start
+```

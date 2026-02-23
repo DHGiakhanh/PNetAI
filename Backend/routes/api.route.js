@@ -1,76 +1,37 @@
 const express = require("express");
-const db = require("../models");
-const jwt = require("jsonwebtoken");
-const bcryptjs = require("bcryptjs");
-const verifyToken = require("../middlewares/verifyToken");
+const authRoutes = require("./auth.route");
+const userRoutes = require("./user.route");
+const productRoutes = require("./product.route");
+const cartRoutes = require("./cart.route");
+const orderRoutes = require("./order.route");
+const blogRoutes = require("./blog.route");
+const ratingRoutes = require("./rating.route");
+const carouselRoutes = require("./carousel.route");
 
 const ApiRouter = express.Router();
 
-//register
-ApiRouter.post('/register', async (req, res) => {
-    try {
-        const { email, password, name } = req.body;
-        console.log(req.body);
-        const user = await db.User.findOne({ email });
-        if (user) {
-            return res.status(400).send({ message: "User already exists" });
-        }
+// Auth routes
+ApiRouter.use('/auth', authRoutes);
 
-        const hashedPassword = await bcryptjs.hash(password, 10);
-        const newUser = new db.User({
-            email,
-            password: hashedPassword,
-            name
-        });
+// User routes
+ApiRouter.use('/user', userRoutes);
 
-        await newUser.save();
-        res.status(201).send({
-            message: "User created successfully",
-            user: newUser
-        });
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
+// Product routes
+ApiRouter.use('/products', productRoutes);
 
+// Cart routes
+ApiRouter.use('/cart', cartRoutes);
 
-ApiRouter.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
+// Order routes
+ApiRouter.use('/orders', orderRoutes);
 
-        const user = await db.User.findOne({ email });
-        if (!user) {
-            return res.status(404).send({ message: "User not found" });
-        }
+// Blog routes
+ApiRouter.use('/blogs', blogRoutes);
 
-        const isPasswordValid = await bcryptjs.compare(password, user.password);
+// Rating routes
+ApiRouter.use('/ratings', ratingRoutes);
 
-        if (!isPasswordValid) {
-            return res.status(401).send({ message: "Invalid password" });
-        }
-
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-            expiresIn: "1h"
-        });
-
-        res.status(200).send({ token });
-    } catch (error) {
-        res.status(500).send({ message: error.message });
-    }
-});
-
-ApiRouter.get('/protected', verifyToken, async (req, res) => {
-    res.status(200).json({
-        message: 'This is a protected route',
-        user: {
-            userId: req.userId,
-            role: req.role
-        }
-
-    });
-});
-
-
-
+// Carousel routes
+ApiRouter.use('/carousels', carouselRoutes);
 
 module.exports = ApiRouter;
