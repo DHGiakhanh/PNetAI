@@ -9,6 +9,10 @@ const userSchema = new Schema({
     phone: { type: String },
     address: { type: String },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
     createdAt: { type: Date, default: Date.now },
 });
 
