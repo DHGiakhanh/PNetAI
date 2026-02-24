@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header, ProtectedRoute } from './components';
-import { Home, Login, Dashboard, NotFound } from './pages';
+import { Home, Login, Register, Dashboard, NotFound } from './pages';
 
 function App() {
   return (
@@ -11,6 +11,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route 
               path="/dashboard" 
               element={
