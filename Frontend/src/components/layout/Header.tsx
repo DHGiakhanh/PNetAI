@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -7,8 +7,9 @@ export const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+
     if (token && userData) {
       setIsLoggedIn(true);
       setUser(JSON.parse(userData));
@@ -16,61 +17,90 @@ export const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
     setUser(null);
-    navigate('/');
+    navigate("/");
   };
 
   return (
-    <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="w-full bg-white/80 backdrop-blur-md border-b border-pink-100 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6">
+
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center">
-            <h1 className="text-2xl font-bold text-white">🛍️ E-Shop</h1>
+
+          {/* Logo */}
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-bold text-xl text-pink-500"
+          >
+            🐾 PNetAI
           </Link>
-          
-          <nav className="flex items-center gap-6">
-            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
+
+          {/* Navigation */}
+          <nav className="flex items-center gap-6 text-sm font-medium">
+
+            <Link
+              to="/"
+              className="text-gray-600 hover:text-pink-500 transition"
+            >
               Home
             </Link>
-            <Link to="/products" className="text-gray-300 hover:text-white transition-colors">
-              Products
+
+            <Link
+              to="/products"
+              className="text-gray-600 hover:text-pink-500 transition"
+            >
+              Shop
             </Link>
-            <Link to="/blogs" className="text-gray-300 hover:text-white transition-colors">
-              Blog
+
+            <Link
+              to="/blogs"
+              className="text-gray-600 hover:text-pink-500 transition"
+            >
+              Community
             </Link>
-            
+
             {isLoggedIn ? (
               <>
-                <Link to="/cart" className="text-gray-300 hover:text-white transition-colors">
+                <Link
+                  to="/cart"
+                  className="text-gray-600 hover:text-pink-500 transition"
+                >
                   🛒 Cart
                 </Link>
-                <Link to="/dashboard" className="text-gray-300 hover:text-white transition-colors">
+
+                <Link
+                  to="/dashboard"
+                  className="text-gray-600 hover:text-pink-500 transition"
+                >
                   Dashboard
                 </Link>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 text-sm">Hi, {user?.name}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
-                  >
-                    Logout
-                  </button>
-                </div>
+
+                <span className="text-gray-500 text-sm">
+                  Hi, {user?.name}
+                </span>
+
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition"
+                >
+                  Logout
+                </button>
               </>
             ) : (
               <>
-                <Link 
-                  to="/login" 
-                  className="text-gray-300 hover:text-white transition-colors"
+                <Link
+                  to="/login"
+                  className="text-gray-600 hover:text-pink-500 transition"
                 >
                   Login
                 </Link>
-                <Link 
-                  to="/register" 
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+
+                <Link
+                  to="/register"
+                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition"
                 >
                   Sign Up
                 </Link>
