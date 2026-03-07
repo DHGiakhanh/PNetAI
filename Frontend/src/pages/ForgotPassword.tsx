@@ -81,21 +81,21 @@ export const ForgotPassword = () => {
         {/* Right: Image */}
         <div className="hidden lg:flex w-full lg:w-1/2 bg-gradient-to-br from-pink-200 via-pink-100 to-cyan-100 items-center justify-center relative p-10">
           
-          <div className="absolute top-10 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-48">
+          <div className="absolute z-10 top-10 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-48 hover:-translate-y-1 transition">
             <p className="font-semibold mb-1">Password Recovery</p>
             <p className="text-gray-400">
               Secure reset links sent directly to your email.
             </p>
           </div>
 
-          <div className="absolute bottom-12 left-4 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-52">
+          <div className="absolute z-10 bottom-12 left-4 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-52">
             <p className="font-semibold mb-1">Safe & Fast</p>
             <p className="text-gray-400">
               Get back to tracking your pet’s health in seconds.
             </p>
           </div>
 
-          <div className="relative w-80 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 -rotate-3">
+          <div className="relative z-0 w-80 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 -rotate-3 animate-float">
             <img
               src="https://www.robins.vn/wp-content/uploads/2026/01/anh-con-cho-10.jpg.jpg"
               alt="Dog"

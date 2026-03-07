@@ -152,7 +152,7 @@ export const Register = () => {
             </p>
           </div>
 
-          <div className="relative w-72 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 rotate-3">
+          <div className="relative w-72 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 animate-float">
             <img
               src="https://www.robins.vn/wp-content/uploads/2026/01/anh-con-cho-10.jpg.jpg"
               alt="Cute dog"
