@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-6 text-center">
 
         <h3 className="text-white text-2xl font-bold mb-6">
-          🐾 PetEcho
+          🐾PNetAI
         </h3>
 
         <p className="text-gray-400 mb-6">
@@ -19,7 +19,7 @@ export default function Footer() {
         </div>
 
         <p className="text-gray-500 text-sm mt-10">
-          © 2026 PetEcho
+          © 2026 PNetAI
         </p>
       </div>
     </footer>

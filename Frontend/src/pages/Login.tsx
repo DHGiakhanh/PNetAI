@@ -98,9 +98,9 @@ export const Login = () => {
                 />
                 <span>Remember me</span>
               </label>
-              <button type="button" className="text-pink-500 font-medium">
+              <Link to="/forgot-password" className="text-pink-500 font-medium">
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             <button

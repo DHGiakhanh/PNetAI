@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header, ProtectedRoute } from './components';
-import { LandingPage, Login, Register, Dashboard, NotFound } from './pages';
+import { LandingPage, Login, Register, Dashboard, NotFound} from './pages';
+import { ForgotPassword } from './pages/ForgotPassword';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route 
               path="/dashboard" 
               element={
