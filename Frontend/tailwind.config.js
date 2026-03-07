@@ -9,7 +9,7 @@ export default {
       keyframes: {
         float: {
           '0%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-12px) rotate(-4deg)' },
+          '50%': { transform: 'translateY(-12px) ' },
           '100%': { transform: 'translateY(0)' },
         }
       },
