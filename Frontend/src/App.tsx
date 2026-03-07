@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header, ProtectedRoute } from './components';
-import { Home, Login, Register, Dashboard, NotFound } from './pages';
+import { LandingPage, Login, Register, Dashboard, NotFound } from './pages';
+import { ForgotPassword } from './pages/ForgotPassword';
+import UserProfile from "./pages/UserProfile";
+
 
 function App() {
   return (
@@ -9,16 +12,18 @@ function App() {
         <Header />
         <main>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route 
-              path="/dashboard" 
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

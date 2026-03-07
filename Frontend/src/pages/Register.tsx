@@ -140,21 +140,21 @@ export const Register = () => {
 
         {/* Right: Image / card */}
         <div className="hidden lg:flex w-full lg:w-1/2 bg-gradient-to-br from-pink-200 via-pink-100 to-cyan-100 items-center justify-center relative p-10">
-          <div className="absolute top-10 right-10 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-44">
+          <div className="absolute top-10 right-10 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-44 animate-float">
             <p className="font-semibold mb-1">10k+ Pet Parents</p>
             <p className="text-gray-400">Growing community.</p>
           </div>
 
-          <div className="absolute bottom-10 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-52">
+          <div className="absolute bottom-5 left-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-52 animate-float">
             <p className="font-semibold mb-1">Welcome Bonus 🎁</p>
             <p className="text-gray-400">
               Get 20% off your first grooming or vet booking when you sign up.
             </p>
           </div>
 
-          <div className="relative w-72 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 rotate-3">
+          <div className="relative w-96 h-[520px] rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 rotate-3">
             <img
-              src="https://www.robins.vn/wp-content/uploads/2026/01/anh-con-cho-10.jpg.jpg"
+              src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=1469&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Cute dog"
               className="w-full h-full object-cover"
             />
