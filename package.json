@@ -1,0 +1,27 @@
+{
+  "name": "pnetai",
+  "version": "1.0.0",
+  "description": "E-commerce application with React and Node.js",
+  "scripts": {
+    "install:all": "npm install && cd Backend && npm install && cd ../Frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd Backend && npm start",
+    "dev:frontend": "cd Frontend && npm run dev",
+    "start": "npm run dev",
+    "build:frontend": "cd Frontend && npm run build",
+    "backend": "cd Backend && npm start",
+    "frontend": "cd Frontend && npm run dev"
+  },
+  "keywords": [
+    "ecommerce",
+    "react",
+    "nodejs",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
