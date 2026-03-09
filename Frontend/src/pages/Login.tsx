@@ -4,6 +4,36 @@ import { Button } from '../components/common/Button';
 import { authService } from '../services/auth.service';
 
 export const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await authService.login({ email, password });
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Redirect based on role
+      if (response.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-50 via-pink-50 to-cyan-50 flex items-center justify-center px-4">
       <div className="max-w-6xl w-full bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl overflow-hidden flex flex-col lg:flex-row">
@@ -32,6 +62,12 @@ export const Login = () => {
             Assistant.
           </p>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* Social buttons */}
           <div className="flex gap-3 mb-6">
             <button className="flex-1 border border-pink-100 hover:border-pink-300 text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white">
@@ -50,7 +86,7 @@ export const Login = () => {
             <div className="flex-1 h-px bg-pink-100" />
           </div>
 
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -60,11 +96,12 @@ export const Login = () => {
                 <input
                   type="email"
                   placeholder="alice@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-pink-100 bg-pink-50/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 placeholder:text-gray-400"
+                  required
+                  disabled={loading}
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  ✉
-                </span>
               </div>
             </div>
 
@@ -75,15 +112,20 @@ export const Login = () => {
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-pink-100 bg-pink-50/60 focus:bg-white px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 placeholder:text-gray-400"
+                  required
+                  disabled={loading}
                 />
                 <button
                   type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs"
                 >
-                  👁
+                  {showPassword ? '🙈' : '👁'}
                 </button>
               </div>
             </div>
@@ -105,9 +147,10 @@ export const Login = () => {
 
             <button
               type="submit"
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 rounded-full shadow-lg shadow-pink-200 text-sm"
+              disabled={loading}
+              className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white font-semibold py-3 rounded-full shadow-lg shadow-pink-200 text-sm transition"
             >
-              Log In
+              {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
 
