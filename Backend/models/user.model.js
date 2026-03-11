@@ -8,7 +8,9 @@ const userSchema = new Schema({
     name: { type: String, required: [true, "Name is required"] },
     phone: { type: String },
     address: { type: String },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
+    role: { type: String, enum: ["user", "admin", "sale"], default: "user" },
+    saleCode: { type: String }, // Code of the sale person who manages this customer
+    managedBy: { type: Schema.Types.ObjectId, ref: "User" }, // Reference to sale user
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String },
     resetPasswordToken: { type: String },

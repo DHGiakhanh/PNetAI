@@ -1,18 +1,42 @@
 const nodemailer = require('nodemailer');
 
 // Create transporter
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+const createTransporter = async () => {
+    // For development: use Ethereal fake SMTP if no real credentials
+    if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'your_email@gmail.com') {
+        console.log('⚠️  No email credentials found. Using Ethereal test account...');
+        const testAccount = await nodemailer.createTestAccount();
+        return nodemailer.createTransporter({
+            host: 'smtp.ethereal.email',
+            port: 587,
+            secure: false,
+            auth: {
+                user: testAccount.user,
+                pass: testAccount.pass
+            }
+        });
     }
-});
+
+    // Production: use real SMTP
+    return nodemailer.createTransporter({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: process.env.EMAIL_PORT || 587,
+        secure: false,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+        }
+    });
+};
+
+let transporter = null;
 
 // Send verification email
 const sendVerificationEmail = async (email, token) => {
+    if (!transporter) {
+        transporter = await createTransporter();
+    }
+
     const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify/${token}`;
     
     const mailOptions = {
@@ -28,10 +52,11 @@ const sendVerificationEmail = async (email, token) => {
     };
 
     try {
-        await transporter.sendMail(mailOptions);
-        console.log('Verification email sent to:', email);
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Verification email sent to:', email);
+        console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
     } catch (error) {
-        console.error('Error sending verification email:', error);
+        console.error('❌ Error sending verification email:', error.message);
         throw error;
     }
 };

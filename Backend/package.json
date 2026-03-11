@@ -4,7 +4,8 @@
   "description": "RESTFul API Application - Given",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon server"
+    "start": "nodemon server",
+    "create-admin": "node scripts/createAdmin.js"
   },
   "keywords": [
     "nodejs",

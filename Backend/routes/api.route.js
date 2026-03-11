@@ -7,6 +7,7 @@ const orderRoutes = require("./order.route");
 const blogRoutes = require("./blog.route");
 const ratingRoutes = require("./rating.route");
 const carouselRoutes = require("./carousel.route");
+const adminRoutes = require("./admin.route");
 
 const ApiRouter = express.Router();
 
@@ -15,6 +16,9 @@ ApiRouter.use('/auth', authRoutes);
 
 // User routes
 ApiRouter.use('/user', userRoutes);
+
+// Admin routes
+ApiRouter.use('/admin', adminRoutes);
 
 // Product routes
 ApiRouter.use('/products', productRoutes);

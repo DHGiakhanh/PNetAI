@@ -10,35 +10,54 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, name, saleCode } = req.body;
         
         const existingUser = await db.User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
         }
 
+        // If sale code is provided, validate it exists
+        if (saleCode) {
+            const saleUser = await db.User.findOne({ 
+                role: 'sale',
+                saleCode: saleCode
+            });
+            
+            if (!saleUser) {
+                return res.status(400).json({ message: "Invalid sale code. Please check and try again." });
+            }
+        }
+
         const hashedPassword = await bcryptjs.hash(password, 10);
-        const verificationToken = crypto.randomBytes(32).toString('hex');
         
         const newUser = new db.User({
             email,
             password: hashedPassword,
             name,
-            verificationToken,
-            isVerified: false
+            isVerified: true // Auto-verify users
         });
+
+        // Link to sale user if sale code provided
+        if (saleCode) {
+            const saleUser = await db.User.findOne({ 
+                role: 'sale',
+                saleCode: saleCode
+            });
+            
+            newUser.saleCode = saleCode;
+            newUser.managedBy = saleUser._id;
+        }
 
         await newUser.save();
 
-        // Send verification email
-        await sendVerificationEmail(email, verificationToken);
-
         res.status(201).json({
-            message: "User created successfully. Please check your email to verify your account.",
+            message: "User created successfully. You can now login.",
             user: {
                 id: newUser._id,
                 email: newUser.email,
-                name: newUser.name
+                name: newUser.name,
+                saleCode: newUser.saleCode
             }
         });
     } catch (error) {
@@ -54,10 +73,6 @@ router.post('/login', async (req, res) => {
         const user = await db.User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found" });
-        }
-
-        if (!user.isVerified) {
-            return res.status(403).json({ message: "Please verify your email before logging in" });
         }
 
         const isPasswordValid = await bcryptjs.compare(password, user.password);
