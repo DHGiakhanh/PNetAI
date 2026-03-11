@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Settings
 } from "lucide-react";
+import ToggleSwitch from "../components/common/ToggleSwitch";
 
 export default function UserProfile() {
   return (
@@ -315,7 +316,7 @@ export default function UserProfile() {
                     </p>
                   </div>
 
-                  <input type="checkbox" defaultChecked />
+                  <ToggleSwitch defaultOn />
                 </div>
 
 
@@ -329,7 +330,7 @@ export default function UserProfile() {
                     </p>
                   </div>
 
-                  <input type="checkbox" />
+                  <ToggleSwitch />
                 </div>
 
 
@@ -343,7 +344,7 @@ export default function UserProfile() {
                     </p>
                   </div>
 
-                  <input type="checkbox" defaultChecked />
+                  <ToggleSwitch defaultOn />
                 </div>
 
               </div>
