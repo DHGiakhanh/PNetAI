@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
-import { Button } from '../../components/common/Button';
-import apiClient from '../../services/api.service';
+import { Button } from '../../../components/common/Button';
+import apiClient from '../../auth/services/api.service';
 
 interface User {
   _id: string;

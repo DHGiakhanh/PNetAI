@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header, ProtectedRoute } from './components';
-import { LandingPage, Login, Register, Dashboard, NotFound } from './pages';
-import { ForgotPassword } from './pages/ForgotPassword';
-import UserProfile from "./pages/UserProfile";
-import { AdminLayout } from './components/layout/AdminLayout';
-import { AdminDashboard } from './pages/Admin/AdminDashboard';
-import { UserManagement } from './pages/Admin/UserManagement';
+import { ForgotPassword } from './features/auth/pages/ForgotPassword';
+import { Login, Register, LandingPage, NotFound } from "./routes";
+import { AdminLayout } from './layout/AdminLayout';
+import { AdminDashboard } from './features/admin/pages/AdminDashboard';
+import { UserManagement } from './features/admin/pages/UserManagement';
+import UserProfile from './features/profile/pages/UserProfile';
 
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
           
           {/* Protected routes with Header */}
           <Route path="/profile" element={<><Header /><UserProfile /></>} />
-          <Route
+          {/* <Route
             path="/dashboard"
             element={
               <>
@@ -31,7 +31,7 @@ function App() {
                 </ProtectedRoute>
               </>
             }
-          />
+          /> */}
           
           {/* Admin routes with AdminLayout (no Header) */}
           <Route 
