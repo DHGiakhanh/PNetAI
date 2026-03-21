@@ -144,7 +144,7 @@ export const AdminLayout = () => {
         </header>
 
         {/* 🔥 QUAN TRỌNG: Outlet thay cho children */}
-        <div className="p-6">
+        <div className="w-full h-full">
           <Outlet />
         </div>
       </main>
