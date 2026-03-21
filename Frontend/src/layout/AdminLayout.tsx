@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -11,11 +11,7 @@ import {
   Settings
 } from 'lucide-react';
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
-export const AdminLayout = ({ children }: AdminLayoutProps) => {
+export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -79,7 +75,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           </button>
         </div>
 
-        {/* Menu Items */}
+        {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-4">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -100,7 +96,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           })}
         </nav>
 
-        {/* User Info & Logout */}
+        {/* User + Logout */}
         <div className="border-t border-pink-100 p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold">
@@ -113,6 +109,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
               </div>
             )}
           </div>
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-full transition shadow-lg shadow-pink-200"
@@ -125,25 +122,30 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        {/* Top Bar */}
+        {/* Top bar */}
         <header className="h-16 bg-white/60 backdrop-blur-xl border-b border-pink-100 flex items-center justify-between px-6 shadow-sm">
           <h2 className="text-xl font-semibold text-gray-800">
             {menuItems.find((item) => isActive(item.path, item.exact))?.title || 'Admin'}
           </h2>
+
           <div className="flex items-center gap-4">
             <button className="text-gray-500 hover:text-pink-500 transition">
               <Bell className="w-5 h-5" />
             </button>
-            <Link to="/" className="text-gray-500 hover:text-pink-500 text-sm flex items-center gap-1 transition">
+
+            <Link
+              to="/"
+              className="text-gray-500 hover:text-pink-500 text-sm flex items-center gap-1 transition"
+            >
               <ExternalLink className="w-4 h-4" />
               View Site
             </Link>
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* 🔥 QUAN TRỌNG: Outlet thay cho children */}
         <div className="p-6">
-          {children}
+          <Outlet />
         </div>
       </main>
     </div>
