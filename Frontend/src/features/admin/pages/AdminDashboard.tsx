@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Users, Briefcase, Package, ShoppingBag } from "lucide-react";
-import apiClient from "../../auth/services/api.service";
+import apiClient from "../../../utils/api.service";
+import { StatCard } from "../components/StatCard";
 
 interface Statistics {
   users: {
@@ -30,21 +31,17 @@ export const AdminDashboard = () => {
 
   const fetchStatistics = async () => {
     try {
-      const response = await apiClient.get("/admin/statistics");
-      setStats(response.data);
-    } catch (error) {
-      console.error("Error fetching statistics:", error);
+      const res = await apiClient.get("/admin/statistics");
+      setStats(res.data);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-600 text-lg">Loading dashboard...</p>
-      </div>
-    );
+    return <div className="p-10">Loading...</div>;
   }
 
   return (
@@ -52,26 +49,25 @@ export const AdminDashboard = () => {
 
       <div className="max-w-7xl mx-auto">
 
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Admin Dashboard
+        <h1 className="text-3xl font-bold mb-8 text-gray-800">
+          Dashboard Overview
         </h1>
 
-        {/* Stat Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
 
           <StatCard
-            title="Total Users"
+            title="Users"
             value={stats?.users.total || 0}
-            subtitle={`${stats?.users.verified || 0} verified`}
+            subtitle={`${stats?.users.verified} verified`}
             icon={Users}
             color="pink"
           />
 
           <StatCard
-            title="Sales Team"
+            title="Sales"
             value={stats?.sales || 0}
-            subtitle="Active sales"
+            subtitle="Active"
             icon={Briefcase}
             color="cyan"
           />
@@ -79,7 +75,7 @@ export const AdminDashboard = () => {
           <StatCard
             title="Orders"
             value={stats?.orders || 0}
-            subtitle="All orders"
+            subtitle="All time"
             icon={Package}
             color="purple"
           />
@@ -87,7 +83,7 @@ export const AdminDashboard = () => {
           <StatCard
             title="Products"
             value={stats?.products || 0}
-            subtitle="In catalog"
+            subtitle="Catalog"
             icon={ShoppingBag}
             color="orange"
           />
@@ -95,9 +91,9 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Recent Users */}
-        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-6 border border-pink-100 shadow-lg">
+        <div className="bg-white/60 backdrop-blur-xl border border-pink-100 rounded-2xl p-6 shadow-lg">
 
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">
             Recent Users
           </h2>
 
@@ -109,10 +105,9 @@ export const AdminDashboard = () => {
                 className="flex items-center justify-between p-3 rounded-xl hover:bg-pink-50/40 transition"
               >
 
-                {/* User info */}
                 <div className="flex items-center gap-3">
 
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-cyan-400 flex items-center justify-center text-white text-sm font-semibold">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-cyan-400 flex items-center justify-center text-white font-semibold">
                     {user.name.charAt(0)}
                   </div>
 
@@ -127,7 +122,6 @@ export const AdminDashboard = () => {
 
                 </div>
 
-                {/* Role */}
                 <div className="text-right">
 
                   <span
@@ -156,59 +150,6 @@ export const AdminDashboard = () => {
         </div>
 
       </div>
-
-    </div>
-  );
-};
-
-
-
-
-
-const StatCard = ({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  color,
-}: {
-  title: string;
-  value: number;
-  subtitle: string;
-  icon: any;
-  color: string;
-}) => {
-
-  const colors: any = {
-    pink: "bg-pink-100 text-pink-500",
-    cyan: "bg-cyan-100 text-cyan-500",
-    purple: "bg-purple-100 text-purple-500",
-    orange: "bg-orange-100 text-orange-500",
-  };
-
-  return (
-    <div className="bg-white/60 backdrop-blur-xl border border-pink-100 rounded-2xl p-5 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-
-      <div className="flex items-center justify-between mb-2">
-
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
-
-      </div>
-
-      <p className="text-gray-500 text-sm">{title}</p>
-
-      <p className="text-2xl font-bold text-gray-800 mt-1">
-        {value}
-      </p>
-
-      <p className="text-xs text-gray-400 mt-1">
-        {subtitle}
-      </p>
-
     </div>
   );
 };
