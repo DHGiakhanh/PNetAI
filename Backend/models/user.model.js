@@ -8,7 +8,11 @@ const userSchema = new Schema({
     name: { type: String, required: [true, "Name is required"] },
     phone: { type: String },
     address: { type: String },
-    role: { type: String, enum: ["user", "admin", "sale"], default: "user" },
+    role: { type: String, enum: ["petowner", "serviceprovider", "admin", "sale"], default: "petowner" },
+    // For partner accounts, indicates their business type (vet/spa/shop).
+    partnerType: { type: String, enum: ["vet", "spa", "shop"] },
+    // Unique customer identifier used by Sales support.
+    customerCode: { type: String, unique: true, sparse: true, index: true },
     saleCode: { type: String }, // Code of the sale person who manages this customer
     managedBy: { type: Schema.Types.ObjectId, ref: "User" }, // Reference to sale user
     isVerified: { type: Boolean, default: false },

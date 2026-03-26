@@ -1,6 +1,5 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '../../../components/common/Button';
 import { authService } from '../services/auth.service';
 
 export const Login = () => {
@@ -22,10 +21,25 @@ export const Login = () => {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       // Redirect based on role
-      if (response.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
+      switch (response.user.role) {
+        case 'admin':
+          navigate('/admin');
+          break;
+        case 'sale':
+          navigate('/sales/dashboard');
+          break;
+        case 'serviceprovider':
+          if (response.user.isVerified) {
+            navigate('/serviceprovider/dashboard');
+          } else {
+            navigate('/partner-pending');
+          }
+          break;
+        case 'petowner':
+          navigate('/dashboard');
+          break;
+        default:
+          navigate('/');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');

@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const db = require("../models");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/emailService");
+const verifyToken = require("../middlewares/verifyToken");
+const { generateCustomerCode } = require("../config/customerCode");
 
 const router = express.Router();
 
@@ -35,7 +37,9 @@ router.post('/register', async (req, res) => {
             email,
             password: hashedPassword,
             name,
-            isVerified: true // Auto-verify users
+            role: 'petowner', // Explicitly set to petowner
+            isVerified: true, // Auto-verify users
+            customerCode: generateCustomerCode()
         });
 
         // Link to sale user if sale code provided
@@ -93,8 +97,72 @@ router.post('/login', async (req, res) => {
                 id: user._id,
                 email: user.email,
                 name: user.name,
-                role: user.role
+                role: user.role,
+                partnerType: user.partnerType,
+                isVerified: user.isVerified,
+                customerCode: user.customerCode,
+                saleCode: user.saleCode,
+                managedBy: user.managedBy
             }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Partner Registration (Service Provider)
+router.post('/register-partner', async (req, res) => {
+    try {
+        const { email, password, name, phone, address, partnerType, businessName } = req.body;
+        
+        if (!partnerType || !['vet', 'spa', 'shop'].includes(partnerType)) {
+            return res.status(400).json({ message: "Valid partner type (vet, spa, shop) is required" });
+        }
+
+        const existingUser = await db.User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
+        const hashedPassword = await bcryptjs.hash(password, 10);
+        
+        const newPartner = new db.User({
+            email,
+            password: hashedPassword,
+            name,
+            phone,
+            address,
+            role: 'serviceprovider',
+            partnerType,
+            isVerified: false, // Partners need verification
+            customerCode: generateCustomerCode()
+        });
+
+        await newPartner.save();
+
+        // Create partner application for verification
+        const partnerApplication = new db.PartnerApplication({
+            user: newPartner._id,
+            businessName: businessName || name,
+            partnerType,
+            email,
+            phone,
+            status: 'submitted'
+        });
+        
+        await partnerApplication.save();
+
+        res.status(201).json({
+            message: "Partner registration submitted successfully. Please wait for verification.",
+            user: {
+                id: newPartner._id,
+                email: newPartner.email,
+                name: newPartner.name,
+                role: newPartner.role,
+                partnerType: newPartner.partnerType,
+                isVerified: newPartner.isVerified
+            },
+            applicationId: partnerApplication._id
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -179,6 +247,20 @@ router.post('/logout', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+// Get current authenticated user
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await db.User.findById(req.userId).select(
+      "-password -verificationToken -resetPasswordToken -resetPasswordExpires"
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ user });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
 module.exports = router;

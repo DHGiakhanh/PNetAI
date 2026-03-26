@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
-import { Button } from '../../../components/common/Button';
 import apiClient from '../../../utils/api.service';
 
 interface User {

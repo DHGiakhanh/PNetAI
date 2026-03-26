@@ -234,6 +234,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
         const totalUsers = await db.User.countDocuments({ role: 'user' });
         const totalSales = await db.User.countDocuments({ role: 'sale' });
         const totalAdmins = await db.User.countDocuments({ role: 'admin' });
+        const totalPartners = await db.User.countDocuments({ role: 'partner' });
         const verifiedUsers = await db.User.countDocuments({ isVerified: true });
         const unverifiedUsers = await db.User.countDocuments({ isVerified: false });
         
@@ -254,6 +255,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
                 unverified: unverifiedUsers
             },
             sales: totalSales,
+            partners: totalPartners,
             admins: totalAdmins,
             orders: totalOrders,
             products: totalProducts,
