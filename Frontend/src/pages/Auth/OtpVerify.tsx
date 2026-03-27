@@ -66,23 +66,23 @@ export const OtpVerifyPage = () => {
       >
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-[13px] text-muted hover:text-brown transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
+          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-pink-500 transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Change email
         </button>
 
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-caramel font-semibold mb-2.5">
-          <div className="w-5 h-[1px] bg-caramel" />
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold mb-2.5">
+          <div className="w-5 h-[1px] bg-pink-500" />
           Identity Verification
         </div>
-        <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-ink mb-2">
-          Verify <em className="text-caramel italic font-normal">OTP</em>
+        <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-gray-900 mb-2">
+          Verify <em className="text-pink-500 italic font-normal">OTP</em>
         </h1>
 
-        <div className="inline-flex items-center gap-2 bg-warm border border-sand rounded-full px-3.5 py-1.5 text-[13px] text-brown font-medium mb-6">
+        <div className="inline-flex items-center gap-2 bg-pink-50 border border-pink-100 rounded-full px-3.5 py-1.5 text-[13px] text-pink-600 font-medium mb-6">
           <Mail className="w-4 h-4" /> {email}
         </div>
-        <p className="text-sm text-muted font-light mb-9 leading-relaxed">
+        <p className="text-sm text-gray-600 font-light mb-9 leading-relaxed">
           The 6-digit code was sent to your email. Please check your inbox and spam folder.
         </p>
 
@@ -99,17 +99,17 @@ export const OtpVerifyPage = () => {
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
-              className="w-12 h-14 text-center font-serif text-2xl font-bold bg-white border-[1.5px] border-sand rounded-2xl focus:outline-none focus:border-caramel focus:bg-caramel/5 transition-all outline-none"
+              className="w-12 h-14 text-center font-serif text-2xl font-bold bg-white border-[1.5px] border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:bg-pink-50 transition-all outline-none"
             />
           ))}
         </div>
 
-        <div className="text-center text-[13px] text-muted mb-8">
-          Code expires in <strong className="text-ink font-bold">{formatTime(timer)}</strong>
+        <div className="text-center text-[13px] text-gray-500 mb-8">
+          Code expires in <strong className="text-gray-900 font-bold">{formatTime(timer)}</strong>
           <br />
           <button
             disabled={timer > 0}
-            className="mt-2 text-caramel font-medium hover:underline border-0 bg-transparent cursor-pointer disabled:opacity-50 disabled:no-underline"
+            className="mt-2 text-pink-500 font-medium hover:underline border-0 bg-transparent cursor-pointer disabled:opacity-50 disabled:no-underline"
             onClick={() => setTimer(120)}
           >
             Resend OTP
@@ -119,7 +119,7 @@ export const OtpVerifyPage = () => {
         <button
           onClick={handleVerify}
           disabled={otp.some((v) => v === "") || isVerifying}
-          className="w-full bg-brown hover:bg-ink text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-brown/15 hover:shadow-ink/25 disabled:opacity-70 flex items-center justify-center gap-2"
+          className="w-full bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-pink-200 disabled:opacity-70 flex items-center justify-center gap-2"
         >
           {isVerifying ? (
             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
