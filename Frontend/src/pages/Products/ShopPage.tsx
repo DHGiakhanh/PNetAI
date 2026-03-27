@@ -7,13 +7,11 @@ import {
   ToyBrick,
   Shirt,
   Plus,
-  CalendarDays,
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
-import { serviceService, Service } from "../../services/service.service";
 
 type CategoryItem = {
   id: string;
@@ -41,33 +39,20 @@ const toneStyles: Record<CategoryItem["tone"], { bg: string; fg: string }> = {
 };
 
 type ShopItem =
-  | {
-      kind: "product";
-      id: string;
-      title: string;
-      subtitle: string;
-      meta: string;
-      imageUrl: string;
-      href: string;
-      addLabel: string;
-      filterKey: "food" | "toys" | "apparel" | "grooming" | "vet" | "health" | "travel";
-    }
-  | {
-      kind: "service";
-      id: string;
-      title: string;
-      subtitle: string;
-      meta: string;
-      imageUrl: string;
-      href: string;
-      addLabel: string;
-      filterKey: "grooming" | "vet";
-    };
+  {
+    id: string;
+    title: string;
+    subtitle: string;
+    meta: string;
+    imageUrl: string;
+    href: string;
+    addLabel: string;
+    filterKey: "food" | "toys" | "apparel" | "grooming" | "health" | "travel";
+  };
 
 export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>("all");
   const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,17 +63,15 @@ export default function ShopPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productsResponse, categoriesData, servicesResponse] = await Promise.all([
+      const [productsResponse, categoriesData] = await Promise.all([
         productService.getProducts({ limit: 50 }),
-        categoryService.getCategories(),
-        serviceService.getServices({ limit: 20 })
+        categoryService.getCategories()
       ]);
       
       setProducts(productsResponse.products);
-      setServices(servicesResponse.services);
       
       // Convert backend categories to frontend format
-      const categoryItems: CategoryItem[] = [
+      const rawCategoryItems: CategoryItem[] = [
         { id: "all", label: "All", icon: Dog, tone: "slate" },
         ...categoriesData.map((cat, index) => {
           const categoryId = cat.name.toLowerCase();
@@ -102,12 +85,17 @@ export default function ShopPage() {
             tone: (["pink", "blue", "green", "orange", "purple", "slate"] as const)[index % 6]
           };
         }),
-        // Add service categories
-        { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
-        { id: "vet", label: "Veterinary", icon: Stethoscope, tone: "orange" }
       ];
-      
-      setCategories(categoryItems);
+
+      const uniqueCategoryItems: CategoryItem[] = [];
+      const seen = new Set<string>();
+      for (const item of rawCategoryItems) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        uniqueCategoryItems.push(item);
+      }
+
+      setCategories(uniqueCategoryItems);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -116,7 +104,7 @@ export default function ShopPage() {
   };
 
   const items = useMemo<ShopItem[]>(() => {
-    const productItems: ShopItem[] = products.map((p) => {
+    return products.map((p) => {
       const filterKey: ShopItem["filterKey"] =
         p.category.toLowerCase() === "food"
           ? "food"
@@ -147,26 +135,7 @@ export default function ShopPage() {
         filterKey,
       };
     });
-
-    const serviceItems: ShopItem[] = services.map((s) => {
-      const filterKey: ShopItem["filterKey"] =
-        s.category === "Grooming" ? "grooming" : "vet";
-
-      return {
-        kind: "service",
-        id: s._id,
-        title: s.title,
-        subtitle: s.category,
-        meta: `$${s.basePrice.toFixed(2)}`,
-        imageUrl: s.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
-        href: `/services/${s._id}`,
-        addLabel: `Book ${s.title}`,
-        filterKey,
-      };
-    });
-
-    return [...serviceItems, ...productItems];
-  }, [products, services]);
+  }, [products]);
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return items;
@@ -271,11 +240,7 @@ export default function ShopPage() {
             {filtered.map((p) => (
               <article
                 key={p.id}
-                className={`group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ${
-                  p.kind === "service"
-                    ? "ring-sky-200/80"
-                    : "ring-slate-200"
-                }`}
+                className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200"
               >
                 <Link to={p.href} className="block">
                   <div className="relative aspect-[4/3] bg-slate-50">
@@ -285,20 +250,11 @@ export default function ShopPage() {
                       className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                       loading="lazy"
                     />
-                    <span
-                      className={`absolute left-3 top-3 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-extrabold ring-1 ${
-                        p.kind === "service"
-                          ? "bg-sky-100 text-sky-700 ring-sky-200"
-                          : "bg-white/90 text-slate-600 ring-slate-200"
-                      }`}
-                    >
-                      {p.kind === "service" ? "Service" : "Product"}
-                    </span>
                   </div>
                 </Link>
                 <div className="p-4">
                   <p className="text-xs font-semibold text-slate-400">
-                    {p.kind === "service" ? `Service • ${p.subtitle}` : p.subtitle}
+                    {p.subtitle}
                   </p>
                   <Link to={p.href} className="block">
                     <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">
@@ -309,24 +265,13 @@ export default function ShopPage() {
                     <span className="text-sm font-extrabold text-slate-900">
                       {"meta" in p ? p.meta : ""}
                     </span>
-                    {p.kind === "service" ? (
-                      <Link
-                        to={p.href}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-sky-600 px-3 text-xs font-extrabold text-white shadow-sm hover:bg-sky-700"
-                        aria-label={p.addLabel}
-                      >
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        Book
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
-                        aria-label={p.addLabel}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
+                      aria-label={p.addLabel}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </article>

@@ -88,11 +88,9 @@ export function AppNavbar({
             Shop
           </Link>
           <Link
-            to="/products?category=grooming"
+            to="/services"
             className={
-              location.pathname.startsWith("/services") ||
-              location.search.includes("category=grooming") ||
-              location.search.includes("category=vet")
+              location.pathname.startsWith("/services")
                 ? "text-pink-500"
                 : "text-gray-600 hover:text-pink-500"
             }
@@ -166,7 +164,7 @@ export function AppNavbar({
           <div className="grid gap-3">
             <Link to="/" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">Home</Link>
             <Link to="/products" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">Shop</Link>
-            <Link to="/products?category=grooming" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">Services</Link>
+            <Link to="/services" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">Services</Link>
             <Link to="/blogs" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">Community</Link>
             {isLoggedIn ? (
               <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-pink-50">
@@ -196,7 +194,7 @@ export function AppNavbar({
           <Store className="mb-1 h-4 w-4" />
           Shop
         </Link>
-        <Link to="/products?category=grooming" className={`flex flex-col items-center py-2 text-[11px] font-semibold ${location.pathname.startsWith("/services") || location.search.includes("category=grooming") || location.search.includes("category=vet") ? "text-pink-500" : "text-gray-500"}`}>
+        <Link to="/services" className={`flex flex-col items-center py-2 text-[11px] font-semibold ${location.pathname.startsWith("/services") ? "text-pink-500" : "text-gray-500"}`}>
           <Scissors className="mb-1 h-4 w-4" />
           Services
         </Link>
@@ -213,4 +211,3 @@ export function AppNavbar({
     </>
   );
 }
-

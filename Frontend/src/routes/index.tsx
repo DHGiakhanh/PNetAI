@@ -7,6 +7,8 @@ import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
 
 import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
+import OtpVerifyPage from "@/pages/Auth/OtpVerify";
+import ResetPasswordPage from "@/pages/Auth/ResetPassword";
 import UserProfile from "@/pages/Profile/UserProfile";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
@@ -21,6 +23,7 @@ import ShopPage from "@/pages/Products/ShopPage";
 import ProductDetailPage from "@/pages/Products/ProductDetailPage";
 import ServiceBookingLayout from "@/layout/ServiceBookingLayout";
 import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
+import ServicesPage from "@/pages/Services/ServicesPage";
 
 export default function AppRoutes() {
   return (
@@ -40,6 +43,8 @@ export default function AppRoutes() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="otp-verify" element={<OtpVerifyPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
@@ -55,6 +60,7 @@ export default function AppRoutes() {
 
       {/* Services booking */}
       <Route path="services" element={<ServiceBookingLayout />}>
+        <Route index element={<ServicesPage />} />
         <Route path=":serviceId" element={<ServiceBookingPage />} />
       </Route>
 

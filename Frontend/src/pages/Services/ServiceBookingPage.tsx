@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CalendarDays, Clock3, MapPin, Star, Plus, ArrowLeft } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Star, Plus, ChevronLeft } from "lucide-react";
 import { serviceService, Service } from "../../services/service.service";
 
 type Pet = {
@@ -78,6 +78,7 @@ export default function ServiceBookingPage() {
 
   useEffect(() => {
     if (serviceId) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       fetchService(serviceId);
     }
   }, [serviceId]);
@@ -141,7 +142,7 @@ export default function ServiceBookingPage() {
             to="/products"
             className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
             Back to Shop
           </Link>
         </div>
@@ -150,15 +151,16 @@ export default function ServiceBookingPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-5 pb-16">
-      <div className="mb-4">
+    <main className="mx-auto max-w-6xl px-5 pb-16 pt-6">
+      <div className="mb-4 flex items-center justify-between">
         <Link
           to="/products"
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" />
           Back to Shop
         </Link>
+        <span />
       </div>
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left */}

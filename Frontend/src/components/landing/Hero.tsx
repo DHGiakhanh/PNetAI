@@ -1,78 +1,78 @@
-export default function Hero() {
+const Hero = () => {
   return (
-    <section className="bg-[#f5efe8] pt-20 pb-20">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-
-        {/* Title */}
-        <h1 className="text-5xl md:text-6xl font-serif font-bold text-gray-900 leading-tight">
-          Welcome to Your{" "}
-          <span className="relative">
-            Pet’s
-            <span className="absolute left-0 bottom-1 w-full h-3 bg-purple-200 -z-10 rounded"></span>
-          </span>{" "}
-          <br />
-          Second Home!
-        </h1>
-
-        {/* Description */}
-        <p className="mt-6 text-gray-600 max-w-xl mx-auto text-lg">
-          From grooming to training, and more, we offer a full range of
-          services to keep your pets happy.
-        </p>
-
-        {/* Images */}
-        <div className="mt-16 grid grid-cols-3 gap-6 items-center">
-
-          {/* Left Image */}
-          <div className="overflow-hidden rounded-[40px] h-[420px]">
-            <img
-              src="https://images.unsplash.com/photo-1518717758536-85ae29035b6d"
-              className="w-full h-full object-cover"
-            />
+    <section className="relative min-h-[85vh] flex items-center pt-20 px-6 lg:px-24 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full">
+        <div className="z-10 animate-in fade-in slide-in-from-left duration-700">
+          <div className="inline-flex items-center gap-2 bg-[#F6F0E6] border border-caramel/10 px-4 py-1.5 rounded-full mb-8">
+            <span className="text-caramel text-sm">✦</span>
+            <span className="text-brown text-[13px] font-medium tracking-tight">
+              Over 2,000 authentic products
+            </span>
           </div>
 
-          {/* Center Image */}
-          <div className="relative overflow-hidden rounded-[40px] h-[460px]">
+          <h1 className="font-serif text-[64px] lg:text-[88px] leading-[0.95] font-extrabold text-[#2C2418] mb-8 tracking-tight">
+            Cherish <br />
+            every small <br />
+            <span className="text-caramel italic font-normal">moment</span>
+          </h1>
 
-            <img
-              src="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7"
-              className="w-full h-full object-cover"
-            />
+          <p className="text-[#8B7D6B] text-[18px] leading-relaxed max-w-[460px] mb-12 font-sans font-light">
+            Pet accessories, spa services, and a community for pet lovers - all in one warm and cozy place.
+          </p>
 
-            {/* Badge */}
-            <div className="absolute top-4 left-4 flex gap-3">
-              <span className="bg-black/80 text-white px-4 py-1 rounded-full text-sm">
-                8+ Years experience
-              </span>
+          <div className="flex flex-wrap items-center gap-8">
+            <button className="bg-brown text-white px-10 py-4 rounded-full font-bold text-[15px] hover:bg-ink transition-all duration-300 shadow-xl shadow-brown/20 group">
+              Explore Now →
+            </button>
+            <button className="text-[#2C2418] font-bold text-[15px] flex items-center gap-1.5 hover:opacity-70 transition-opacity">
+              Book a Spa ↗
+            </button>
+          </div>
+        </div>
 
-              <span className="bg-black/80 text-white px-4 py-1 rounded-full text-sm">
-                4k+ Satisfied clients
-              </span>
+        <div className="relative flex justify-center lg:justify-end animate-in fade-in slide-in-from-right duration-1000 lg:pr-12">
+          <div className="relative w-full max-w-[500px] aspect-[4/5.2]">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#E8D4C8] via-[#DBC2A4] to-[#B89670] rounded-[60px] shadow-2xl overflow-hidden flex items-center justify-center group">
+              <div className="relative opacity-80 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                <div className="flex flex-col gap-2 translate-y-[-10px]">
+                  <span className="text-[120px] drop-shadow-2xl">🐾</span>
+                </div>
+              </div>
             </div>
 
-            {/* Review */}
-            <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-xl shadow-md flex items-center gap-3 text-left">
-              <img
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                className="w-8 h-8 rounded-full"
-              />
+            <div className="absolute top-10 right-[-15px] bg-[#3D5A3E] text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 shadow-xl z-20">
+              <span className="text-lg">🛁</span>
+              <span className="text-[13px] font-bold whitespace-nowrap tracking-tight">Spa available today!</span>
+            </div>
 
-              <p className="text-sm text-gray-600">
-                "They treated my dog like family, and the grooming was perfect!"
-              </p>
+            <div className="absolute left-[-70px] top-[25%] flex flex-col gap-4 z-20 hidden md:flex">
+              <div className="bg-white p-6 rounded-[32px] shadow-2xl shadow-black/5 border border-sand/30 w-[140px] animate-in fade-in slide-in-from-left duration-700 delay-300">
+                <div className="text-[#2C2418] text-[28px] font-bold font-serif leading-none italic">4.9</div>
+                <div className="text-[#8B7D6B] text-[12px] font-medium mt-1">Ratings</div>
+              </div>
+              <div className="bg-white p-6 rounded-[32px] shadow-2xl shadow-black/5 border border-sand/30 w-[140px] animate-in fade-in slide-in-from-left duration-700 delay-500">
+                <div className="text-[#2C2418] text-[28px] font-bold font-serif leading-none italic">12k</div>
+                <div className="text-[#8B7D6B] text-[12px] font-medium mt-1">Customers</div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-10 left-[-30px] w-[320px] z-30 animate-in fade-in slide-in-from-bottom duration-1000 delay-700">
+              <div className="bg-white p-5 rounded-[32px] shadow-2xl shadow-black/10 flex items-center gap-4 border border-sand/20">
+                <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-3xl">🐕</div>
+                <div>
+                  <div className="text-[#2C2418] text-[16px] font-bold leading-tight">Mochi booked</div>
+                  <div className="text-[#8B7D6B] text-[12px] mt-0.5">Grooming · 10:00 AM</div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Right Image */}
-          <div className="overflow-hidden rounded-[40px] h-[420px]">
-            <img
-              src="https://images.unsplash.com/photo-1518791841217-8f162f1e1131"
-              className="w-full h-full object-cover"
-            />
-          </div>
-
         </div>
       </div>
+
+      <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-accent-caramel/5 rounded-full blur-[120px] -z-10" />
     </section>
   );
-}
+};
+
+export { Hero };
+export default Hero;

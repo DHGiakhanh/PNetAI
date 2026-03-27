@@ -1,19 +1,37 @@
-import Hero from "../components/landing/Hero";
-import Services from "../components/landing/Services";
-import SocialFeed from "../components/landing/SocialFeed";
-import Shop from "../components/landing/Shop";
-import AIVet from "../components/landing/AIVet";
-import Footer from "../layout/Footer";
+import { useState, useEffect } from "react";
+import {
+  Hero,
+  ServicesStrip,
+  Features,
+  FeaturedProducts,
+  SpaBooking,
+  Testimonials,
+  Newsletter,
+  ProductDetail,
+} from "../components/landing";
 
 export default function LandingPage() {
-    return (
-        <>
-                <Hero />
-                <Services />
-                <SocialFeed />
-                <Shop />
-                <AIVet />
-                <Footer />
-        </>
-    );
+  const [activePage, setActivePage] = useState<"home" | "product">("home");
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activePage]);
+
+  return (
+    <div className="relative">
+      <div className={activePage === "home" ? "block" : "hidden"}>
+        <Hero />
+        <ServicesStrip />
+        <Features />
+        <FeaturedProducts onProductClick={() => setActivePage("product")} />
+        <SpaBooking />
+        <Testimonials />
+        <Newsletter />
+      </div>
+
+      <div className={activePage === "product" ? "block" : "hidden"}>
+        <ProductDetail />
+      </div>
+    </div>
+  );
 }
