@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Briefcase, Package as PackageIcon, PawPrint, Bot } from 'lucide-react';
+import { Users, Briefcase, Package as PackageIcon, Bot } from 'lucide-react';
 import apiClient from '@/utils/api.service';
 
 interface Statistics {
@@ -78,10 +78,10 @@ export const AdminDashboard = () => {
         />
 
         <StatCard
-          title="Partners"
-          value={stats?.partners || 0}
-          subtitle="Vet & Shops"
-          icon={PawPrint}
+          title="Admins"
+          value={stats?.admins || 0}
+          subtitle="System admins"
+          icon={Briefcase}
           color="cyan"
         />
 

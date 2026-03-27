@@ -4,7 +4,7 @@ import { CalendarDays, Clock3, MapPin, Star, Plus } from "lucide-react";
 import {
   getMockService,
   mockServices,
-} from "@/features/services/data/mockServices";
+} from "@/data/mockServices";
 
 type Pet = {
   id: string;

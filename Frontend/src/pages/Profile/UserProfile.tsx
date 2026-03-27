@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Settings
 } from "lucide-react";
-import ToggleSwitch from "../../../components/common/ToggleSwitch";
+import ToggleSwitch from "../../components/common/ToggleSwitch";
 
 
 export default function UserProfile() {

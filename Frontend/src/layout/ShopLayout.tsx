@@ -1,5 +1,5 @@
 import { Outlet } from "react-router-dom";
-import { ShopTopbar } from "@/features/products/components/ShopTopbar";
+import { ShopTopbar } from "@/components/products/ShopTopbar";
 
 export default function ShopLayout() {
   return (

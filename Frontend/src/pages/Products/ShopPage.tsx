@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { mockProducts } from "@/features/products/data/mockProducts";
-import { mockServices } from "@/features/services/data/mockServices";
+import { mockProducts } from "@/data/mockProducts";
+import { mockServices } from "@/data/mockServices";
 
 type Category = {
   id: string;

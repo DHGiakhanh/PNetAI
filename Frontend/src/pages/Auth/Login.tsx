@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Button } from '../../../components/common/Button';
-import { authService } from '../services/auth.service';
+import { authService } from '../../services/auth.service';
 
 export const Login = () => {
   const [email, setEmail] = useState('');

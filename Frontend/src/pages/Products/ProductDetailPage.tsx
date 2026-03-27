@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Star } from "lucide-react";
-import { getMockProduct, mockProducts } from "@/features/products/data/mockProducts";
+import { getMockProduct, mockProducts } from "@/data/mockProducts";
 
 function formatUsd(amount: number) {
   return new Intl.NumberFormat("en-US", {

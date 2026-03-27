@@ -6,21 +6,21 @@ import MainLayout from "@/layout/MainLayout";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
 
-import { ForgotPassword } from "@/features/auth/pages/ForgotPassword";
-import UserProfile from "@/features/profile/pages/UserProfile";
+import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
+import UserProfile from "@/pages/Profile/UserProfile";
 
-import { AdminDashboard } from "@/features/admin/pages/AdminDashboard";
-import { UserManagement } from "@/features/admin/pages/UserManagement";
+import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
+import { UserManagement } from "@/pages/Admin/UserManagement";
 
-import { Login } from "@/features/auth/pages/Login";
-import { Register } from "@/features/auth/pages/Register";
-import LandingPage from "@/features/landing/pages/LandingPage";
+import { Login } from "@/pages/Auth/Login";
+import { Register } from "@/pages/Auth/Register";
+import LandingPage from "@/pages/LandingPage";
 import { NotFound } from "@/components/NotFound";
 import ShopLayout from "@/layout/ShopLayout";
-import ShopPage from "@/features/products/pages/ShopPage";
-import ProductDetailPage from "@/features/products/pages/ProductDetailPage";
+import ShopPage from "@/pages/Products/ShopPage";
+import ProductDetailPage from "@/pages/Products/ProductDetailPage";
 import ServiceBookingLayout from "@/layout/ServiceBookingLayout";
-import ServiceBookingPage from "@/features/services/pages/ServiceBookingPage";
+import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
 
 export default function AppRoutes() {
   return (
