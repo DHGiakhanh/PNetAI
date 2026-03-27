@@ -1,10 +1,10 @@
 import { Outlet } from "react-router-dom";
-import { Header } from "./Header";
+import { AppNavbar } from "@/layout/AppNavbar";
 
 export default function ServiceBookingLayout() {
   return (
     <div className="min-h-screen bg-[#fbfaf7]">
-      <Header />
+      <AppNavbar showBackButton />
       <Outlet />
     </div>
   );

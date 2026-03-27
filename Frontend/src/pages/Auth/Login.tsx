@@ -44,7 +44,7 @@ export const Login = () => {
                 PE
               </div>
               <span className="font-semibold text-lg text-gray-800">
-                PetEcho
+                PNetAI
               </span>
             </div>
             <button className="text-xs text-gray-500 flex items-center gap-1">

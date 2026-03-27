@@ -89,7 +89,7 @@ export const Register = () => {
             <div className="w-10 h-10 rounded-2xl bg-pink-500 flex items-center justify-center text-white font-bold">
               PE
             </div>
-            <span className="font-semibold text-lg text-gray-800">PetEcho</span>
+            <span className="font-semibold text-lg text-gray-800">PNetAI</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
