@@ -9,6 +9,7 @@ import {
   Newsletter,
   ProductDetail,
 } from "../components/landing";
+import Footer from "@/layout/Footer";
 
 export default function LandingPage() {
   const [activePage, setActivePage] = useState<"home" | "product">("home");
@@ -18,7 +19,7 @@ export default function LandingPage() {
   }, [activePage]);
 
   return (
-    <div className="relative">
+    <div className="relative bg-gradient-to-b from-white to-pink-50/40">
       <div className={activePage === "home" ? "block" : "hidden"}>
         <Hero />
         <ServicesStrip />
@@ -32,6 +33,7 @@ export default function LandingPage() {
       <div className={activePage === "product" ? "block" : "hidden"}>
         <ProductDetail />
       </div>
+      <Footer />
     </div>
   );
 }

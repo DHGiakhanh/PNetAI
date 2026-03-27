@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { productService, Product } from "@/services/product.service";
 
 const SERVICES = [
   { icon: "🛁", name: "Bath & Hygiene", desc: "From 80,000đ" },
@@ -10,19 +12,21 @@ const SERVICES = [
 
 export const ServicesStrip = () => {
   return (
-    <div className="bg-forest py-8 px-12 flex justify-around items-center gap-6 flex-wrap">
-      {SERVICES.map((service, index) => (
-        <div key={index} className="flex items-center gap-3 text-white">
-          <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-xl">
-            {service.icon}
+    <section className="bg-pink-500 py-8">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-6 sm:grid-cols-2 lg:grid-cols-5">
+        {SERVICES.map((service, index) => (
+          <div key={index} className="flex items-center gap-3 rounded-2xl bg-white/10 p-3 text-white">
+            <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-xl">
+              {service.icon}
+            </div>
+            <div>
+              <div className="text-[15px] font-medium leading-tight">{service.name}</div>
+              <div className="text-[12px] opacity-70 mt-0.5">{service.desc}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[15px] font-medium leading-tight">{service.name}</div>
-            <div className="text-[12px] opacity-60 mt-0.5">{service.desc}</div>
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </section>
   );
 };
 
@@ -46,12 +50,12 @@ const FEATURE_LIST = [
 
 export const Features = () => {
   return (
-    <section className="py-24 px-6 lg:px-24 bg-warm/50">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <section className="py-24 bg-gradient-to-r from-pink-50/70 to-cyan-50/70">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 md:grid-cols-3">
         {FEATURE_LIST.map((feature, idx) => (
           <div
             key={idx}
-            className="p-10 bg-white rounded-3xl border border-accent-caramel/10 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group"
+            className="p-10 bg-white rounded-3xl border border-pink-100 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group"
           >
             <div className="text-4xl mb-6 group-hover:scale-110 transition-transform inline-block">{feature.icon}</div>
             <h3 className="text-3xl mb-4 italic text-slate-800">{feature.title}</h3>
@@ -61,126 +65,123 @@ export const Features = () => {
       </div>
 
       <div className="mt-20 text-center">
-        <p className="text-accent-caramel font-serif italic text-2xl">&quot;The world is a friendlier place with paws.&quot;</p>
+        <p className="text-pink-500 font-serif italic text-2xl">&quot;The world is a friendlier place with paws.&quot;</p>
       </div>
     </section>
   );
 };
 
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "Royal Canin Maxi Adult 15kg",
-    category: "Thức ăn cao cấp",
-    price: "890.000đ",
-    oldPrice: "1.100.000đ",
-    stars: "★★★★★",
-    icon: "🐕",
-    badge: "Mới về",
-    isFeatured: true,
-  },
-  {
-    id: 2,
-    name: "Dây dắt da bò handmade",
-    category: "Phụ kiện dạo chơi",
-    price: "320.000đ",
-    stars: "★★★★☆",
-    icon: "🦮",
-  },
-  {
-    id: 3,
-    name: "Cần câu lông vũ tương tác",
-    category: "Đồ chơi mèo",
-    price: "145.000đ",
-    oldPrice: "200.000đ",
-    stars: "★★★★★",
-    icon: "🐱",
-  },
-  {
-    id: 4,
-    name: "Giường tròn lông siêu mềm",
-    category: "Nhà & Giường ngủ",
-    price: "480.000đ",
-    stars: "★★★★★",
-    icon: "🛌",
-  },
-  {
-    id: 5,
-    name: "Sữa tắm thảo mộc Lavender",
-    category: "Vệ sinh & Chăm sóc",
-    price: "210.000đ",
-    stars: "★★★★☆",
-    icon: "🧴",
-  },
-];
+function formatUsd(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+}
 
-export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: number) => void }) => {
+export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: string) => void }) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        const [hotProducts, latestProducts] = await Promise.all([
+          productService.getHotProducts(),
+          productService.getLatestProducts(),
+        ]);
+
+        const merged = [...hotProducts, ...latestProducts];
+        const unique = merged.filter((product, index, arr) => arr.findIndex((p) => p._id === product._id) === index);
+        setProducts(unique.slice(0, 6));
+      } catch (error) {
+        console.error("Error fetching featured products:", error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
   return (
-    <section className="py-24 px-6 lg:px-24">
-      <div className="flex justify-between items-end mb-12">
+    <section className="py-24">
+      <div className="mx-auto max-w-6xl px-6">
+      <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-px bg-caramel" />
-            <span className="text-xs uppercase tracking-[0.12em] text-caramel font-semibold">Featured Products</span>
+            <div className="w-6 h-px bg-pink-500" />
+            <span className="text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold">Featured Products</span>
           </div>
-          <h2 className="text-4xl lg:text-5xl font-serif font-bold text-ink leading-tight">
-            Selected <span className="text-caramel italic font-normal">exclusively</span>
+          <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight">
+            Selected <span className="text-pink-500 italic font-normal">exclusively</span>
             <br />
             for your beloved pet
           </h2>
         </div>
-        <a href="#" className="text-brown font-medium text-[15px] flex items-center gap-1.5 hover:gap-2.5 transition-all">
+        <Link to="/products" className="text-pink-500 font-medium text-[15px] flex items-center gap-1.5 hover:gap-2.5 transition-all">
           View all →
-        </a>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {PRODUCTS.map((product) => (
-          <div
-            key={product.id}
-            className={`bg-white rounded-3xl overflow-hidden border border-sand group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-brown/10 ${
-              product.isFeatured ? "row-span-2" : ""
-            }`}
-            onClick={() => onProductClick?.(product.id)}
-          >
-            <div
-              className={`relative bg-warm flex items-center justify-center transition-transform duration-500 group-hover:scale-[1.02] ${
-                product.isFeatured ? "h-[340px] text-[100px]" : "aspect-square text-[80px]"
-              }`}
-            >
-              {product.icon}
-              {product.badge && (
-                <div className="absolute top-4 left-4 bg-forest text-white px-3 py-1 rounded-full text-[11px] font-semibold">
-                  New Arrival
+        {loading
+          ? [...Array(5)].map((_, idx) => (
+              <div key={idx} className="animate-pulse bg-white rounded-3xl overflow-hidden border border-pink-100">
+                <div className="aspect-square bg-pink-100/70" />
+                <div className="p-6">
+                  <div className="h-3 w-20 bg-pink-100 rounded mb-3" />
+                  <div className="h-6 w-4/5 bg-pink-100 rounded mb-4" />
+                  <div className="h-5 w-24 bg-pink-100 rounded" />
                 </div>
-              )}
-            </div>
-            <div className="p-6">
-              <div className="text-[11px] uppercase tracking-widest text-muted mb-1.5">
-                {product.category === "Thức ăn cao cấp"
-                  ? "Premium Food"
-                  : product.category === "Phụ kiện dạo chơi"
-                    ? "Outdoor Accessories"
-                    : product.category === "Đồ chơi mèo"
-                      ? "Cat Toys"
-                      : product.category === "Nhà & Giường ngủ"
-                        ? "Homes & Beds"
-                        : "Hygiene & Care"}
               </div>
-              <div className="text-caramel text-xs mb-2">{product.stars}</div>
-              <h3 className="text-xl font-serif font-bold text-ink leading-tight mb-2">{product.name}</h3>
-              <div className="flex items-center justify-between mt-4">
-                <div>
-                  <span className="text-lg font-bold text-brown">{product.price}</span>
-                  {product.oldPrice && <span className="text-[13px] text-muted line-through ml-2">{product.oldPrice}</span>}
+            ))
+          : products.map((product) => (
+              <div
+                key={product._id}
+                className="bg-white rounded-3xl overflow-hidden border border-pink-100 group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-pink-100"
+                onClick={() => onProductClick?.(product._id)}
+              >
+                <div className="relative bg-pink-50 aspect-square transition-transform duration-500 group-hover:scale-[1.02]">
+                  <img
+                    src={
+                      product.images[0] ||
+                      "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=600&auto=format&fit=crop"
+                    }
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  {product.isHot && (
+                    <div className="absolute top-4 left-4 bg-pink-500 text-white px-3 py-1 rounded-full text-[11px] font-semibold">
+                      Hot
+                    </div>
+                  )}
                 </div>
-                <button className="w-9 h-9 bg-brown text-white rounded-full flex items-center justify-center text-xl transition-all hover:bg-ink hover:rotate-90">
-                  +
-                </button>
+                <div className="p-6">
+                  <div className="text-[11px] uppercase tracking-widest text-gray-500 mb-1.5">{product.category}</div>
+                  <div className="text-pink-500 text-xs mb-2">
+                    ★ {product.averageRating.toFixed(1)} ({product.totalReviews})
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-gray-900 leading-tight mb-2 line-clamp-2">{product.name}</h3>
+                  <div className="flex items-center justify-between mt-4">
+                    <div>
+                      <span className="text-lg font-bold text-pink-500">{formatUsd(product.price)}</span>
+                    </div>
+                    <Link
+                      to={`/products/${product._id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-9 h-9 bg-pink-500 text-white rounded-full inline-flex items-center justify-center text-xl transition-all hover:bg-pink-600 hover:rotate-90"
+                      aria-label={`View ${product.name}`}
+                    >
+                      +
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))}
+      </div>
       </div>
     </section>
   );
@@ -199,18 +200,19 @@ export const SpaBooking = () => {
   const [selectedSlot, setSelectedSlot] = useState("9:30");
 
   return (
-    <div className="bg-warm rounded-[40px] mx-6 lg:mx-24 px-8 lg:px-20 py-20 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+    <section className="py-24">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 rounded-[40px] bg-gradient-to-r from-pink-50 to-cyan-50 px-6 py-14 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-16 lg:py-20">
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-px bg-caramel" />
-          <span className="text-xs uppercase tracking-[0.12em] text-caramel font-semibold">Book a Spa</span>
+          <div className="w-6 h-px bg-pink-500" />
+          <span className="text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold">Book a Spa</span>
         </div>
-        <h2 className="text-4xl lg:text-5xl font-serif font-bold text-ink leading-tight mb-4">
+        <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight mb-4">
           Care for your pet
           <br />
-          <span className="text-caramel italic font-normal">as you wish</span>
+          <span className="text-pink-500 italic font-normal">as you wish</span>
         </h2>
-        <p className="text-muted text-[16px] font-light max-w-md leading-relaxed mb-10">
+        <p className="text-gray-600 text-[16px] font-light max-w-md leading-relaxed mb-10">
           Flexible schedules, dedicated staff, clean &amp; safe environment.
         </p>
 
@@ -218,35 +220,35 @@ export const SpaBooking = () => {
           {SPA_SERVICES.map((s, idx) => (
             <div
               key={idx}
-              className="bg-white border border-sand p-5 rounded-2xl cursor-pointer hover:border-caramel hover:-translate-y-0.5 transition-all group"
+              className="bg-white border border-pink-100 p-5 rounded-2xl cursor-pointer hover:border-pink-300 hover:-translate-y-0.5 transition-all group"
             >
               <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div>
-              <div className="text-[14px] font-semibold text-ink">{s.name}</div>
-              <div className="text-[13px] text-caramel font-medium">{s.price}</div>
+              <div className="text-[14px] font-semibold text-gray-900">{s.name}</div>
+              <div className="text-[13px] text-pink-500 font-medium">{s.price}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="bg-ink rounded-[28px] p-10 text-white shadow-2xl">
+      <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-[28px] p-10 text-white shadow-2xl">
         <h3 className="text-2xl font-serif font-semibold mb-8">Quick Booking</h3>
 
         <div className="space-y-5">
           <div>
             <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Service</label>
-            <select className="w-full bg-white/10 border border-white/15 text-white p-3 rounded-xl outline-none focus:border-caramel transition-colors appearance-none">
-              <option className="text-ink">Basic Bath</option>
-              <option className="text-ink">Grooming</option>
-              <option className="text-ink">Full Spa Package</option>
+            <select className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors appearance-none">
+              <option className="text-gray-900">Basic Bath</option>
+              <option className="text-gray-900">Grooming</option>
+              <option className="text-gray-900">Full Spa Package</option>
             </select>
           </div>
 
           <div>
             <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Your Pet</label>
-            <select className="w-full bg-white/10 border border-white/15 text-white p-3 rounded-xl outline-none focus:border-caramel transition-colors appearance-none">
-              <option className="text-ink">Mochi - Poodle</option>
-              <option className="text-ink">Bong - British Shorthair</option>
-              <option className="text-ink">+ Add new pet</option>
+            <select className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors appearance-none">
+              <option className="text-gray-900">Mochi - Poodle</option>
+              <option className="text-gray-900">Bong - British Shorthair</option>
+              <option className="text-gray-900">+ Add new pet</option>
             </select>
           </div>
 
@@ -255,7 +257,7 @@ export const SpaBooking = () => {
               <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Appointment Date</label>
               <input
                 type="date"
-                className="w-full bg-white/10 border border-white/15 text-white p-3 rounded-xl outline-none focus:border-caramel transition-colors"
+                className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors"
                 defaultValue="2025-04-10"
               />
             </div>
@@ -268,7 +270,7 @@ export const SpaBooking = () => {
                     onClick={() => setSelectedSlot(slot)}
                     className={`text-[11px] p-2 rounded-lg border border-white/15 transition-all ${
                       selectedSlot === slot
-                        ? "bg-caramel border-caramel"
+                        ? "bg-white text-pink-600 border-white"
                         : "bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100"
                     }`}
                     disabled={slot === "16:30"}
@@ -282,11 +284,12 @@ export const SpaBooking = () => {
           </div>
         </div>
 
-        <button className="w-full bg-caramel hover:bg-caramel/90 text-white py-4 rounded-2xl font-semibold mt-10 transition-all hover:-translate-y-0.5 shadow-lg shadow-caramel/20">
+        <button className="w-full bg-white hover:bg-pink-50 text-pink-600 py-4 rounded-2xl font-semibold mt-10 transition-all hover:-translate-y-0.5 shadow-lg shadow-pink-700/20">
           Confirm Booking
         </button>
       </div>
     </div>
+    </section>
   );
 };
 
@@ -315,15 +318,16 @@ const REVIEWS = [
 
 export const Testimonials = () => {
   return (
-    <section className="bg-ink py-24 px-6 lg:px-24 text-white overflow-hidden relative">
+    <section className="bg-gradient-to-r from-pink-500 to-cyan-500 py-24 text-white overflow-hidden relative">
+      <div className="mx-auto max-w-6xl px-6">
       <div className="flex flex-col lg:flex-row justify-between items-end gap-10 mb-16">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-px bg-caramel" />
-            <span className="text-xs uppercase tracking-[0.12em] text-caramel font-semibold">Testimonials</span>
+            <div className="w-6 h-px bg-white/80" />
+            <span className="text-xs uppercase tracking-[0.12em] text-white/90 font-semibold">Testimonials</span>
           </div>
           <h2 className="text-4xl lg:text-5xl font-serif font-bold leading-tight">
-            What our <span className="text-caramel italic font-normal">customers say</span> about us
+            What our <span className="text-pink-100 italic font-normal">customers say</span> about us
           </h2>
         </div>
         <p className="text-white/50 text-[16px] font-light max-w-sm">
@@ -336,15 +340,15 @@ export const Testimonials = () => {
           <div
             key={idx}
             className={`rounded-3xl p-8 border border-white/10 transition-all hover:bg-white/10 group ${
-              r.isBig ? "lg:col-span-2 bg-caramel/15 border-caramel/30" : "bg-white/5"
+              r.isBig ? "lg:col-span-2 bg-white/20 border-white/30" : "bg-white/10"
             }`}
           >
-            <div className="text-caramel text-sm mb-4">★★★★★</div>
+            <div className="text-yellow-200 text-sm mb-4">★★★★★</div>
             <p className={`font-serif italic opacity-90 leading-tight mb-8 ${r.isBig ? "text-2xl lg:text-3xl" : "text-xl"}`}>
               {r.quote}
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-caramel to-blush flex items-center justify-center text-xl">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-pink-200 to-cyan-200 text-gray-800 flex items-center justify-center text-xl">
                 {r.avatar}
               </div>
               <div>
@@ -355,30 +359,33 @@ export const Testimonials = () => {
           </div>
         ))}
       </div>
+      </div>
     </section>
   );
 };
 
 export const Newsletter = () => {
   return (
-    <div className="bg-warm rounded-[40px] mx-6 lg:mx-24 px-8 lg:px-20 py-20 flex flex-col lg:flex-row items-center justify-between gap-12 mb-24">
+    <section className="py-24">
+    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-10 rounded-[40px] bg-gradient-to-r from-pink-50 to-cyan-50 px-6 py-14 sm:px-8 lg:flex-row lg:gap-12 lg:px-16 lg:py-20">
       <div className="max-w-md">
-        <h2 className="text-4xl font-serif font-bold text-ink leading-[1.15] mb-4">
+        <h2 className="text-4xl font-serif font-bold text-gray-900 leading-[1.15] mb-4">
           Receive <br />
-          <span className="text-caramel italic font-normal">exclusive offers</span> every week
+          <span className="text-pink-500 italic font-normal">exclusive offers</span> every week
         </h2>
-        <p className="text-muted text-[15px] font-light">Care tips, discount vouchers, and the latest news from PNetAI.</p>
+        <p className="text-gray-600 text-[15px] font-light">Care tips, discount vouchers, and the latest news from PNetAI.</p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full lg:min-w-[400px]">
         <input
           type="email"
           placeholder="Your email address..."
-          className="flex-1 bg-white border border-sand px-6 py-4 rounded-full outline-none focus:border-caramel transition-all text-ink"
+          className="flex-1 bg-white border border-pink-100 px-6 py-4 rounded-full outline-none focus:border-pink-300 transition-all text-gray-900"
         />
-        <button className="bg-brown hover:bg-ink text-white px-8 py-4 rounded-full font-bold transition-all hover:-translate-y-0.5 shadow-md">
+        <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-bold transition-all hover:-translate-y-0.5 shadow-md">
           Subscribe →
         </button>
       </div>
     </div>
+    </section>
   );
 };
