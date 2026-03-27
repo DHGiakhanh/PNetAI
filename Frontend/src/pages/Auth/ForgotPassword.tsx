@@ -1,109 +1,102 @@
-import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { motion } from "framer-motion";
+import { Mail, ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { AuthLayout } from "./layouts/AuthLayout";
 
-export const ForgotPassword = () => {
+const forgotSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+type ForgotFormValues = z.infer<typeof forgotSchema>;
+
+export const ForgotPasswordPage = () => {
+  const navigate = useNavigate();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotFormValues>({
+    resolver: zodResolver(forgotSchema),
+  });
+
+  const onSubmit = async (data: ForgotFormValues) => {
+    console.log("Forgot password for:", data);
+    navigate("/otp-verify", { state: { email: data.email, from: "forgot" } });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-r from-pink-50 via-pink-50 to-cyan-50 flex items-center justify-center px-4">
-      <div className="max-w-6xl w-full bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl overflow-hidden flex flex-col lg:flex-row">
-        
-        {/* Left: Form */}
-        <div className="w-full lg:w-1/2 px-8 sm:px-12 py-10">
-          {/* Logo */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-2xl bg-pink-500 flex items-center justify-center text-white font-bold">
-                logo
-              </div>
-              <span className="font-semibold text-lg text-gray-800">
-                PNetAI
-              </span>
-            </div>
-            <button className="text-xs text-gray-500 flex items-center gap-1">
-              English ▼
-            </button>
-          </div>
+    <AuthLayout>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <button
+          onClick={() => navigate("/login")}
+          className="flex items-center gap-1.5 text-[13px] text-muted hover:text-brown transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Log In
+        </button>
 
-          {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            Forgot your password? <span className="text-pink-500"></span>
-          </h1>
-
-          <p className="text-gray-500 mb-8 max-w-md">
-            No worries! Enter your email and we’ll send you a link to reset your
-            password.
-          </p>
-
-          {/* Form */}
-          <form className="space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder="alice@example.com"
-                  className="w-full rounded-xl border border-pink-100 bg-pink-50/60 focus:bg-white px-4 py-3 pl-10 text-sm outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 placeholder:text-gray-400"
-                />
-
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  ✉
-                </span>
-              </div>
-            </div>
-
-            {/* Button */}
-            <button
-              type="submit"
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 rounded-full shadow-lg shadow-pink-200 text-sm"
-            >
-              Send Reset Link
-            </button>
-          </form>
-
-          {/* Back to login */}
-          <p className="mt-6 text-sm text-gray-500">
-            Remember your password?{" "}
-            <Link to="/login" className="text-pink-500 font-medium">
-              Back to Login
-            </Link>
-          </p>
-
-          {/* Footer */}
-          <div className="mt-10 flex gap-6 text-xs text-gray-400">
-            <button>Privacy Policy</button>
-            <button>Terms of Service</button>
-            <button>Help Center</button>
-          </div>
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-caramel font-semibold mb-2.5">
+          <div className="w-5 h-[1px] bg-caramel" />
+          Recovery Link
         </div>
+        <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-ink mb-2">
+          Forgot <em className="text-caramel italic font-normal">password?</em>
+        </h1>
+        <p className="text-sm text-muted font-light mb-9 leading-relaxed">
+          Don&apos;t worry! Enter your registered email. We&apos;ll send an OTP to verify your identity.
+        </p>
 
-        {/* Right: Image */}
-        <div className="hidden lg:flex w-full lg:w-1/2 bg-gradient-to-br from-pink-200 via-pink-100 to-cyan-100 items-center justify-center relative p-10">
-          
-          <div className="absolute z-10 top-10 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-48 hover:-translate-y-1 transition">
-            <p className="font-semibold mb-1">Password Recovery</p>
-            <p className="text-gray-400">
-              Secure reset links sent directly to your email.
-            </p>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-ink uppercase tracking-widest leading-none block">
+              Registered Email
+            </label>
+            <div className="relative group">
+              <input
+                {...register("email")}
+                type="email"
+                placeholder="you@email.com"
+                className={`w-full p-3.5 border-[1.5px] rounded-2xl bg-white focus:outline-none transition-all font-sans text-sm shadow-sm ${
+                  errors.email
+                    ? "border-red-500"
+                    : "border-sand focus:border-caramel focus:ring-4 focus:ring-caramel/5"
+                }`}
+              />
+              <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within:text-brown transition-colors" />
+            </div>
+            {errors.email && <p className="text-[11px] text-red-500 font-medium">{errors.email.message}</p>}
           </div>
 
-          <div className="absolute z-10 bottom-12 left-4 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-52">
-            <p className="font-semibold mb-1">Safe & Fast</p>
-            <p className="text-gray-400">
-              Get back to tracking your pet’s health in seconds.
-            </p>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-brown hover:bg-ink text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-brown/15 hover:shadow-ink/25 disabled:opacity-70 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              "Send OTP →"
+            )}
+          </button>
+        </form>
 
-          <div className="relative z-0 w-80 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 -rotate-3 animate-float">
-            <img
-              src="https://www.robins.vn/wp-content/uploads/2026/01/anh-con-cho-10.jpg.jpg"
-              alt="Dog"
-              className="w-full h-full object-cover"
-            />
-          </div>
+        <div className="text-center mt-8">
+          <Link to="/login" className="text-[13px] font-medium text-muted hover:text-caramel transition-colors">
+            Cancel
+          </Link>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </AuthLayout>
   );
 };
+
+export const ForgotPassword = ForgotPasswordPage;
+
+export default ForgotPasswordPage;
