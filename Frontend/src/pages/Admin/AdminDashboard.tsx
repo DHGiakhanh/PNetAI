@@ -10,6 +10,7 @@ interface Statistics {
     unverified: number;
   };
   sales: number;
+  partners?: number;
 
   admins: number;
   orders: number;

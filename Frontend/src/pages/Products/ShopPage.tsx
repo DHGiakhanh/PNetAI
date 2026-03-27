@@ -9,7 +9,7 @@ import {
   Plus,
   CalendarDays,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
@@ -87,7 +87,8 @@ export default function ShopPage() {
       setProducts(productsResponse.products);
       setServices(servicesResponse.services);
       
-      const rawCategoryItems: CategoryItem[] = [
+      // Convert backend categories to frontend format
+      const categoryItems: CategoryItem[] = [
         { id: "all", label: "All", icon: Dog, tone: "slate" },
         ...categoriesData.map((cat, index) => {
           const categoryId = cat.name.toLowerCase();
@@ -105,17 +106,8 @@ export default function ShopPage() {
         { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
         { id: "vet", label: "Veterinary", icon: Stethoscope, tone: "orange" }
       ];
-
-      // Remove duplicate category ids (e.g. grooming appears from backend + service shortcut)
-      const uniqueCategoryItems: CategoryItem[] = [];
-      const seen = new Set<string>();
-      for (const item of rawCategoryItems) {
-        if (seen.has(item.id)) continue;
-        seen.add(item.id);
-        uniqueCategoryItems.push(item);
-      }
-
-      setCategories(uniqueCategoryItems);
+      
+      setCategories(categoryItems);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
