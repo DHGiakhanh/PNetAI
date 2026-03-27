@@ -151,6 +151,15 @@ export default function ServiceBookingPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16">
+      <div className="mb-4">
+        <Link
+          to="/products"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Shop
+        </Link>
+      </div>
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left */}
         <section className="lg:col-span-7">
@@ -503,4 +512,3 @@ export default function ServiceBookingPage() {
     </main>
   );
 }
-

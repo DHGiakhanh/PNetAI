@@ -7,6 +7,7 @@ import {
   ToyBrick,
   Shirt,
   Plus,
+  CalendarDays,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
@@ -86,8 +87,7 @@ export default function ShopPage() {
       setProducts(productsResponse.products);
       setServices(servicesResponse.services);
       
-      // Convert backend categories to frontend format
-      const categoryItems: CategoryItem[] = [
+      const rawCategoryItems: CategoryItem[] = [
         { id: "all", label: "All", icon: Dog, tone: "slate" },
         ...categoriesData.map((cat, index) => {
           const categoryId = cat.name.toLowerCase();
@@ -105,8 +105,17 @@ export default function ShopPage() {
         { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
         { id: "vet", label: "Veterinary", icon: Stethoscope, tone: "orange" }
       ];
-      
-      setCategories(categoryItems);
+
+      // Remove duplicate category ids (e.g. grooming appears from backend + service shortcut)
+      const uniqueCategoryItems: CategoryItem[] = [];
+      const seen = new Set<string>();
+      for (const item of rawCategoryItems) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        uniqueCategoryItems.push(item);
+      }
+
+      setCategories(uniqueCategoryItems);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -165,7 +174,7 @@ export default function ShopPage() {
     });
 
     return [...serviceItems, ...productItems];
-  }, [products]);
+  }, [products, services]);
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return items;
@@ -270,7 +279,11 @@ export default function ShopPage() {
             {filtered.map((p) => (
               <article
                 key={p.id}
-                className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200"
+                className={`group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ${
+                  p.kind === "service"
+                    ? "ring-sky-200/80"
+                    : "ring-slate-200"
+                }`}
               >
                 <Link to={p.href} className="block">
                   <div className="relative aspect-[4/3] bg-slate-50">
@@ -280,11 +293,20 @@ export default function ShopPage() {
                       className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                       loading="lazy"
                     />
+                    <span
+                      className={`absolute left-3 top-3 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-extrabold ring-1 ${
+                        p.kind === "service"
+                          ? "bg-sky-100 text-sky-700 ring-sky-200"
+                          : "bg-white/90 text-slate-600 ring-slate-200"
+                      }`}
+                    >
+                      {p.kind === "service" ? "Service" : "Product"}
+                    </span>
                   </div>
                 </Link>
                 <div className="p-4">
                   <p className="text-xs font-semibold text-slate-400">
-                    {p.subtitle}
+                    {p.kind === "service" ? `Service • ${p.subtitle}` : p.subtitle}
                   </p>
                   <Link to={p.href} className="block">
                     <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">
@@ -295,13 +317,24 @@ export default function ShopPage() {
                     <span className="text-sm font-extrabold text-slate-900">
                       {"meta" in p ? p.meta : ""}
                     </span>
-                    <button
-                      type="button"
-                      className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
-                      aria-label={p.addLabel}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                    {p.kind === "service" ? (
+                      <Link
+                        to={p.href}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-sky-600 px-3 text-xs font-extrabold text-white shadow-sm hover:bg-sky-700"
+                        aria-label={p.addLabel}
+                      >
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        Book
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
+                        aria-label={p.addLabel}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>
@@ -347,4 +380,3 @@ export default function ShopPage() {
     </main>
   );
 }
-
