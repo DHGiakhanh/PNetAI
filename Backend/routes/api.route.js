@@ -2,6 +2,8 @@ const express = require("express");
 const authRoutes = require("./auth.route");
 const userRoutes = require("./user.route");
 const productRoutes = require("./product.route");
+const categoryRoutes = require("./category.route");
+const serviceRoutes = require("./service.route");
 const cartRoutes = require("./cart.route");
 const orderRoutes = require("./order.route");
 const blogRoutes = require("./blog.route");
@@ -22,6 +24,12 @@ ApiRouter.use('/admin', adminRoutes);
 
 // Product routes
 ApiRouter.use('/products', productRoutes);
+
+// Category routes
+ApiRouter.use('/categories', categoryRoutes);
+
+// Service routes
+ApiRouter.use('/services', serviceRoutes);
 
 // Cart routes
 ApiRouter.use('/cart', cartRoutes);

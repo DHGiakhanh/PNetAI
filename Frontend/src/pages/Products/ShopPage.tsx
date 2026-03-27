@@ -11,16 +11,26 @@ import {
 import { Link } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { productService, Product } from "../../services/product.service";
-import { mockServices } from "@/data/mockServices";
+import { categoryService } from "../../services/category.service";
+import { serviceService, Service } from "../../services/service.service";
 
-type Category = {
+type CategoryItem = {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   tone: "pink" | "blue" | "green" | "orange" | "purple" | "slate";
 };
 
-const toneStyles: Record<Category["tone"], { bg: string; fg: string }> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  "🍖": Bone,
+  "🎾": ToyBrick,
+  "🎀": Shirt,
+  "💊": Stethoscope,
+  "✂️": Scissors,
+  "🧳": Cat,
+};
+
+const toneStyles: Record<CategoryItem["tone"], { bg: string; fg: string }> = {
   pink: { bg: "bg-pink-100", fg: "text-pink-600" },
   blue: { bg: "bg-sky-100", fg: "text-sky-600" },
   green: { bg: "bg-emerald-100", fg: "text-emerald-600" },
@@ -28,15 +38,6 @@ const toneStyles: Record<Category["tone"], { bg: string; fg: string }> = {
   purple: { bg: "bg-violet-100", fg: "text-violet-600" },
   slate: { bg: "bg-slate-100", fg: "text-slate-600" },
 };
-
-const categories: Category[] = [
-  { id: "all", label: "All", icon: Dog, tone: "slate" },
-  { id: "food", label: "Food & Treats", icon: Bone, tone: "pink" },
-  { id: "toys", label: "Toys", icon: ToyBrick, tone: "blue" },
-  { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
-  { id: "vet", label: "Vet Services", icon: Stethoscope, tone: "orange" },
-  { id: "apparel", label: "Accessories", icon: Shirt, tone: "purple" },
-];
 
 type ShopItem =
   | {
@@ -48,7 +49,7 @@ type ShopItem =
       imageUrl: string;
       href: string;
       addLabel: string;
-      filterKey: "food" | "toys" | "apparel";
+      filterKey: "food" | "toys" | "apparel" | "grooming" | "vet" | "health" | "travel";
     }
   | {
       kind: "service";
@@ -63,21 +64,51 @@ type ShopItem =
     };
 
 export default function ShopPage() {
-  const [activeCategory, setActiveCategory] = useState<Category["id"]>("all");
+  const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>("all");
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await productService.getProducts({ limit: 50 });
-      setProducts(response.products);
+      const [productsResponse, categoriesData, servicesResponse] = await Promise.all([
+        productService.getProducts({ limit: 50 }),
+        categoryService.getCategories(),
+        serviceService.getServices({ limit: 20 })
+      ]);
+      
+      setProducts(productsResponse.products);
+      setServices(servicesResponse.services);
+      
+      // Convert backend categories to frontend format
+      const categoryItems: CategoryItem[] = [
+        { id: "all", label: "All", icon: Dog, tone: "slate" },
+        ...categoriesData.map((cat, index) => {
+          const categoryId = cat.name.toLowerCase();
+          // Map category names to filter keys
+          const filterId = categoryId === "accessories" ? "apparel" : categoryId;
+          
+          return {
+            id: filterId,
+            label: cat.name,
+            icon: iconMap[cat.icon] || Dog,
+            tone: (["pink", "blue", "green", "orange", "purple", "slate"] as const)[index % 6]
+          };
+        }),
+        // Add service categories
+        { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
+        { id: "vet", label: "Veterinary", icon: Stethoscope, tone: "orange" }
+      ];
+      
+      setCategories(categoryItems);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +121,15 @@ export default function ShopPage() {
           ? "food"
           : p.category.toLowerCase() === "toys"
             ? "toys"
-            : "apparel";
+            : p.category.toLowerCase() === "accessories"
+              ? "apparel"
+              : p.category.toLowerCase() === "health"
+                ? "health"
+                : p.category.toLowerCase() === "grooming"
+                  ? "grooming"
+                  : p.category.toLowerCase() === "travel"
+                    ? "travel"
+                    : "apparel";
 
       return {
         kind: "product",
@@ -108,18 +147,18 @@ export default function ShopPage() {
       };
     });
 
-    const serviceItems: ShopItem[] = mockServices.map((s) => {
+    const serviceItems: ShopItem[] = services.map((s) => {
       const filterKey: ShopItem["filterKey"] =
         s.category === "Grooming" ? "grooming" : "vet";
 
       return {
         kind: "service",
-        id: s.id,
+        id: s._id,
         title: s.title,
-        subtitle: s.category === "Grooming" ? "Grooming" : "Vet Services",
-        meta: `VND${new Intl.NumberFormat("vi-VN").format(s.basePriceVnd)}`,
-        imageUrl: s.imageUrl,
-        href: `/services/${s.id}`,
+        subtitle: s.category,
+        meta: `$${s.basePrice.toFixed(2)}`,
+        imageUrl: s.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
+        href: `/services/${s._id}`,
         addLabel: `Book ${s.title}`,
         filterKey,
       };

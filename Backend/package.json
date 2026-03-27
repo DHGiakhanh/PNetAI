@@ -5,7 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "nodemon server",
-    "create-admin": "node scripts/createAdmin.js"
+    "create-admin": "node scripts/createAdmin.js",
+    "seed-products": "node scripts/seedProducts.js",
+    "seed-categories": "node scripts/seedCategories.js",
+    "seed-services": "node scripts/seedServices.js",
+    "seed-all": "npm run seed-categories && npm run seed-products && npm run seed-services"
   },
   "keywords": [
     "nodejs",

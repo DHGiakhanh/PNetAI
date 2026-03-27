@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CalendarDays, Clock3, MapPin, Star, Plus } from "lucide-react";
-import {
-  getMockService,
-  mockServices,
-} from "@/data/mockServices";
+import { CalendarDays, Clock3, MapPin, Star, Plus, ArrowLeft } from "lucide-react";
+import { serviceService, Service } from "../../services/service.service";
 
 type Pet = {
   id: string;
@@ -14,8 +11,11 @@ type Pet = {
   avatarUrl?: string;
 };
 
-function formatVnd(amount: number) {
-  return new Intl.NumberFormat("vi-VN").format(amount);
+function formatUsd(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
 }
 
 function readPetsFromStorage(): Pet[] {
@@ -66,7 +66,8 @@ const afternoonTimes = ["01:00 PM", "02:30 PM", "04:00 PM", "05:30 PM"];
 
 export default function ServiceBookingPage() {
   const { serviceId } = useParams();
-  const service = serviceId ? getMockService(serviceId) : undefined;
+  const [service, setService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const [pets, setPets] = useState<Pet[]>([]);
@@ -76,6 +77,12 @@ export default function ServiceBookingPage() {
   const [selectedTime, setSelectedTime] = useState(morningTimes[1]);
 
   useEffect(() => {
+    if (serviceId) {
+      fetchService(serviceId);
+    }
+  }, [serviceId]);
+
+  useEffect(() => {
     const loaded = readPetsFromStorage();
     setPets(loaded);
     if (loaded.length && !selectedPetId) {
@@ -83,17 +90,64 @@ export default function ServiceBookingPage() {
     }
   }, [selectedPetId]);
 
+  const fetchService = async (id: string) => {
+    try {
+      setLoading(true);
+      const serviceData = await serviceService.getServiceById(id);
+      setService(serviceData);
+    } catch (error) {
+      console.error('Error fetching service:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedPet = useMemo(() => {
     return pets.find((p) => p.id === selectedPetId) || null;
   }, [pets, selectedPetId]);
 
-  const taxesAndFees = 50_000;
-  const subtotal = service?.basePriceVnd ?? 0;
+  const taxesAndFees = 15.00;
+  const subtotal = service?.basePrice ?? 0;
   const total = subtotal + taxesAndFees;
 
   const canBook = isLoggedIn && pets.length > 0 && Boolean(service);
 
-  const resolvedService = service ?? mockServices[0];
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-6xl px-5 pb-16">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4 w-32"></div>
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7 space-y-6">
+              <div className="h-32 bg-gray-200 rounded-[22px]"></div>
+              <div className="h-48 bg-gray-200 rounded-[22px]"></div>
+              <div className="h-64 bg-gray-200 rounded-[22px]"></div>
+            </div>
+            <div className="lg:col-span-5">
+              <div className="h-96 bg-gray-200 rounded-[22px]"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!service) {
+    return (
+      <main className="mx-auto max-w-6xl px-5 pb-16">
+        <div className="rounded-[22px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <p className="text-sm font-semibold text-slate-500">Service not found.</p>
+          <Link
+            to="/products"
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Shop
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16">
@@ -105,32 +159,50 @@ export default function ServiceBookingPage() {
             <div className="flex gap-4">
               <div className="h-14 w-14 overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
                 <img
-                  alt={resolvedService.provider.name}
-                  src={resolvedService.imageUrl}
+                  alt={service.title}
+                  src={service.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"}
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-extrabold text-slate-900">
-                  {resolvedService.provider.name} - {resolvedService.title}
+                  {service.providerId?.name || "Pet Care Provider"} - {service.title}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
                   <span className="inline-flex items-center gap-1">
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    {resolvedService.rating.toFixed(1)} ({resolvedService.reviewCount} Reviews)
+                    {service.averageRating.toFixed(1)} ({service.totalReviews} Reviews)
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-4 w-4 text-slate-400" />
-                    {resolvedService.provider.distanceKm} miles away
+                    {service.location.city}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock3 className="h-4 w-4 text-slate-400" />
+                    {service.duration} min
                   </span>
                 </div>
               </div>
             </div>
 
             <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-600">
-              {resolvedService.description}
+              {service.description}
             </p>
+
+            {service.features.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-extrabold text-slate-500 mb-2">What's included:</p>
+                <div className="grid gap-1">
+                  {service.features.slice(0, 4).map((feature, index) => (
+                    <p key={index} className="text-xs text-slate-600 flex items-center gap-2">
+                      <span className="w-1 h-1 bg-pink-400 rounded-full"></span>
+                      {feature}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Step 1: Select Pet */}
@@ -342,7 +414,7 @@ export default function ServiceBookingPage() {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-500">Service</span>
                 <span className="font-extrabold text-slate-900">
-                  {resolvedService.title}
+                  {service.title}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -377,7 +449,7 @@ export default function ServiceBookingPage() {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-500">Subtotal</span>
                 <span className="font-extrabold text-slate-900">
-                  VND{formatVnd(subtotal)}
+                  {formatUsd(subtotal)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -385,7 +457,7 @@ export default function ServiceBookingPage() {
                   Taxes &amp; Fees
                 </span>
                 <span className="font-extrabold text-slate-900">
-                  VND{formatVnd(taxesAndFees)}
+                  {formatUsd(taxesAndFees)}
                 </span>
               </div>
             </div>
@@ -393,7 +465,7 @@ export default function ServiceBookingPage() {
             <div className="mt-5 flex items-center justify-between">
               <span className="text-sm font-extrabold text-slate-900">Total</span>
               <span className="text-lg font-extrabold text-slate-900">
-                {formatVnd(total)}
+                {formatUsd(total)}
               </span>
             </div>
 

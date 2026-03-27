@@ -6,6 +6,8 @@ const Blog = require("./blog.model");
 const Cart = require("./cart.model");
 const Order = require("./order.model");
 const Carousel = require("./carousel.model");
+const Category = require("./category.model");
+const Service = require("./service.model");
 
 const db = {}
 
@@ -17,6 +19,8 @@ db.Blog = Blog;
 db.Cart = Cart;
 db.Order = Order;
 db.Carousel = Carousel;
+db.Category = Category;
+db.Service = Service;
 
 
 module.exports = db;
