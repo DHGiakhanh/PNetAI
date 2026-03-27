@@ -4,10 +4,12 @@ import {
   Medal,
   Home
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Services() {
   const services = [
     {
+      id: "gentle-oatmeal-wash",
       title: "Spa Day",
       desc: "Keep 'em fluffy and clean with top-rated groomers in your neighborhood.",
       icon: Scissors,
@@ -16,6 +18,7 @@ export default function Services() {
       iconColor: "text-pink-500"
     },
     {
+      id: "vaccination",
       title: "Health Check",
       desc: "Book appointments at trusted local veterinary clinics instantly.",
       icon: Stethoscope,
@@ -24,6 +27,7 @@ export default function Services() {
       iconColor: "text-green-600"
     },
     {
+      id: "full-grooming",
       title: "Good Boy Classes",
       desc: "Expert behavior classes and obedience training for puppies and adults.",
       icon: Medal,
@@ -32,6 +36,7 @@ export default function Services() {
       iconColor: "text-blue-600"
     },
     {
+      id: "full-grooming",
       title: "Cozy Stays",
       desc: "Safe, fun, and comfortable boarding facilities while you're away.",
       icon: Home,
@@ -66,8 +71,9 @@ export default function Services() {
             const Icon = service.icon;
 
             return (
-              <div
+              <Link
                 key={index}
+                to={`/services/${service.id}`}
                 className={`${service.bg} p-10 rounded-[32px] flex gap-6 items-start`}
               >
 
@@ -87,7 +93,7 @@ export default function Services() {
                   </p>
                 </div>
 
-              </div>
+              </Link>
             );
           })}
         </div>

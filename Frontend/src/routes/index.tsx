@@ -16,6 +16,11 @@ import { Login } from "@/features/auth/pages/Login";
 import { Register } from "@/features/auth/pages/Register";
 import LandingPage from "@/features/landing/pages/LandingPage";
 import { NotFound } from "@/components/NotFound";
+import ShopLayout from "@/layout/ShopLayout";
+import ShopPage from "@/features/products/pages/ShopPage";
+import ProductDetailPage from "@/features/products/pages/ProductDetailPage";
+import ServiceBookingLayout from "@/layout/ServiceBookingLayout";
+import ServiceBookingPage from "@/features/services/pages/ServiceBookingPage";
 
 export default function AppRoutes() {
   return (
@@ -40,6 +45,17 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="profile" element={<UserProfile />} />
         </Route>
+      </Route>
+
+      {/* Shop */}
+      <Route path="products" element={<ShopLayout />}>
+        <Route index element={<ShopPage />} />
+        <Route path=":productId" element={<ProductDetailPage />} />
+      </Route>
+
+      {/* Services booking */}
+      <Route path="services" element={<ServiceBookingLayout />}>
+        <Route path=":serviceId" element={<ServiceBookingPage />} />
       </Route>
 
       {/* Not Found */}
