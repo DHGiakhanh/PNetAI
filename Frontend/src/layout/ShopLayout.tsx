@@ -1,10 +1,10 @@
 import { Outlet } from "react-router-dom";
-import { Header } from "./Header";
+import { AppNavbar } from "@/layout/AppNavbar";
 
 export default function ShopLayout() {
   return (
     <div className="min-h-screen bg-[#fbfaf7]">
-      <Header />
+      <AppNavbar />
       <Outlet />
     </div>
   );

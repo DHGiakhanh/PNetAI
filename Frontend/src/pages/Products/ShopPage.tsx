@@ -8,7 +8,7 @@ import {
   Shirt,
   Plus,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
@@ -64,55 +64,7 @@ type ShopItem =
     };
 
 export default function ShopPage() {
-  const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>("all");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [productsResponse, categoriesData, servicesResponse] = await Promise.all([
-        productService.getProducts({ limit: 50 }),
-        categoryService.getCategories(),
-        serviceService.getServices({ limit: 20 })
-      ]);
-      
-      setProducts(productsResponse.products);
-      setServices(servicesResponse.services);
-      
-      // Convert backend categories to frontend format
-      const categoryItems: CategoryItem[] = [
-        { id: "all", label: "All", icon: Dog, tone: "slate" },
-        ...categoriesData.map((cat, index) => {
-          const categoryId = cat.name.toLowerCase();
-          // Map category names to filter keys
-          const filterId = categoryId === "accessories" ? "apparel" : categoryId;
-          
-          return {
-            id: filterId,
-            label: cat.name,
-            icon: iconMap[cat.icon] || Dog,
-            tone: (["pink", "blue", "green", "orange", "purple", "slate"] as const)[index % 6]
-          };
-        }),
-        // Add service categories
-        { id: "grooming", label: "Grooming", icon: Scissors, tone: "green" },
-        { id: "vet", label: "Veterinary", icon: Stethoscope, tone: "orange" }
-      ];
-      
-      setCategories(categoryItems);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [activeCategory, setActiveCategory] = useState<Category["id"]>("all");
 
   const items = useMemo<ShopItem[]>(() => {
     const productItems: ShopItem[] = products.map((p) => {
