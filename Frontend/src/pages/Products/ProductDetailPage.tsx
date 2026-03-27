@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Star } from "lucide-react";
-import { getMockProduct, mockProducts } from "@/data/mockProducts";
+import { productService, Product } from "../../services/product.service";
 
 function formatUsd(amount: number) {
   return new Intl.NumberFormat("en-US", {
@@ -12,16 +12,64 @@ function formatUsd(amount: number) {
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
-  const product = productId ? getMockProduct(productId) : undefined;
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState<"S" | "M" | "L">("M");
 
-  const related = useMemo(() => {
-    if (!product) return mockProducts.slice(0, 4);
-    return mockProducts.filter((p) => p.id !== product.id).slice(0, 4);
-  }, [product]);
+  useEffect(() => {
+    if (productId) {
+      fetchProduct(productId);
+      fetchRelatedProducts();
+    }
+  }, [productId]);
+
+  const fetchProduct = async (id: string) => {
+    try {
+      setLoading(true);
+      const productData = await productService.getProductById(id);
+      setProduct(productData);
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      setProduct(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRelatedProducts = async () => {
+    try {
+      const response = await productService.getProducts({ limit: 4 });
+      setRelatedProducts(response.products);
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-6xl px-5 py-10">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4 w-32"></div>
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <div className="aspect-[4/3] bg-gray-200 rounded-[28px]"></div>
+            </div>
+            <div className="lg:col-span-5">
+              <div className="space-y-4">
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-20 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!product) {
     return (
@@ -114,10 +162,10 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-extrabold text-amber-700 ring-1 ring-amber-200">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  {product.rating.toFixed(1)}
+                  {product.averageRating.toFixed(1)}
                 </span>
                 <span className="text-sm font-semibold text-slate-500">
-                  ({product.reviewCount} reviews)
+                  ({product.totalReviews} reviews)
                 </span>
               </div>
               <span className="text-2xl font-extrabold text-slate-900">
@@ -196,18 +244,29 @@ export default function ProductDetailPage() {
 
             {/* Highlights */}
             <div className="mt-6">
-              <p className="text-sm font-extrabold text-slate-900">Highlights</p>
-              <ul className="mt-3 grid gap-2">
-                {product.highlights.map((h) => (
-                  <li
-                    key={h}
-                    className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"
-                  >
-                    <span>{h}</span>
-                    <span className="text-xs font-extrabold text-slate-400">✓</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm font-extrabold text-slate-900">Product Info</p>
+              <div className="mt-3 grid gap-2">
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                  <span>Stock Available</span>
+                  <span className="text-xs font-extrabold text-slate-400">{product.stock} units</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                  <span>Category</span>
+                  <span className="text-xs font-extrabold text-slate-400">{product.category}</span>
+                </div>
+                {product.isHot && (
+                  <div className="flex items-center justify-between rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
+                    <span>Hot Product</span>
+                    <span className="text-xs font-extrabold text-red-400">🔥</span>
+                  </div>
+                )}
+                {product.isRecommended && (
+                  <div className="flex items-center justify-between rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 ring-1 ring-green-200">
+                    <span>Recommended</span>
+                    <span className="text-xs font-extrabold text-green-400">⭐</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -239,16 +298,16 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {related.map((p) => (
+          {relatedProducts.map((p) => (
             <Link
-              key={p.id}
-              to={`/products/${p.id}`}
+              key={p._id}
+              to={`/products/${p._id}`}
               className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200 hover:shadow-md"
             >
               <div className="relative aspect-[4/3] bg-slate-50">
                 <img
                   alt={p.name}
-                  src={p.images[0]}
+                  src={p.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"}
                   className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                   loading="lazy"
                 />
@@ -264,7 +323,7 @@ export default function ProductDetailPage() {
                   </span>
                   <span className="inline-flex items-center gap-1 text-xs font-extrabold text-amber-700">
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    {p.rating.toFixed(1)}
+                    {p.averageRating.toFixed(1)}
                   </span>
                 </div>
               </div>

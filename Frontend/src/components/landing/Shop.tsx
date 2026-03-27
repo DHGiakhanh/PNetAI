@@ -1,28 +1,39 @@
 import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { productService, Product } from "../../services/product.service";
 
 export default function Shop() {
-  const products = [
-    {
-      name: "Squeaky Dino Toy",
-      price: "$12.99",
-      img: "https://images.unsplash.com/photo-1535294435445-d7249524ef2e?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-    },
-    {
-      name: "Organic Salmon Bites",
-      price: "$8.50",
-      img: "https://plus.unsplash.com/premium_photo-1695055513495-8fadd1194039?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-    },
-    {
-      name: "Mint Walk Harness",
-      price: "$24.00",
-      img: "https://images.unsplash.com/photo-1733861342772-51f28b30fbb0?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-    },
-    {
-      name: "Ceramic Paw Bowl",
-      price: "$18.50",
-      img: "https://images.unsplash.com/photo-1679224106783-c21b1841412a?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+  const [products, setProducts] = useState<Product[]>([]);
+  const [featuredProduct, setFeaturedProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const [hotProducts, latestProducts] = await Promise.all([
+        productService.getHotProducts(),
+        productService.getLatestProducts()
+      ]);
+      
+      // Use hot products if available, otherwise latest
+      const displayProducts = hotProducts.length > 0 ? hotProducts : latestProducts;
+      setProducts(displayProducts.slice(0, 4));
+      
+      // Set featured product (first hot or latest product)
+      if (displayProducts.length > 0) {
+        setFeaturedProduct(displayProducts[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   return (
     <section className="py-24 bg-[#fafcff]">
@@ -48,72 +59,96 @@ export default function Shop() {
 
           {/* Featured Product */}
           <div className="bg-white rounded-[32px] p-6 shadow-sm">
-
-            <img
-              src="https://images.unsplash.com/photo-1541188495357-ad2dc89487f4?q=80&w=1471&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              className="rounded-3xl w-full h-80 object-cover"
-            />
-
-            <div className="flex justify-between items-end mt-6">
-
-              <div>
-
-                <h3 className="text-2xl font-semibold text-gray-800">
-                  Cloud Pet Bed
-                </h3>
-
-                <p className="text-gray-500 mt-2 text-sm">
-                  Ultimate comfort for your furry friend. Washable and
-                  orthopedic.
-                </p>
-
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="rounded-3xl w-full h-80 bg-gray-200"></div>
+                <div className="flex justify-between items-end mt-6">
+                  <div className="flex-1">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  </div>
+                  <div className="h-8 bg-gray-200 rounded-full w-20 ml-4"></div>
+                </div>
               </div>
+            ) : featuredProduct ? (
+              <Link to={`/products/${featuredProduct._id}`}>
+                <img
+                  src={featuredProduct.images[0] || "https://images.unsplash.com/photo-1541188495357-ad2dc89487f4?q=80&w=1471&auto=format&fit=crop"}
+                  className="rounded-3xl w-full h-80 object-cover"
+                  alt={featuredProduct.name}
+                />
 
-              <div className="bg-pink-100 text-pink-600 px-4 py-2 rounded-full font-semibold">
-                $45.00
+                <div className="flex justify-between items-end mt-6">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-800">
+                      {featuredProduct.name}
+                    </h3>
+
+                    <p className="text-gray-500 mt-2 text-sm">
+                      {featuredProduct.description.length > 80 
+                        ? featuredProduct.description.substring(0, 80) + "..."
+                        : featuredProduct.description}
+                    </p>
+                  </div>
+
+                  <div className="bg-pink-100 text-pink-600 px-4 py-2 rounded-full font-semibold">
+                    ${featuredProduct.price.toFixed(2)}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div className="text-center py-20 text-gray-500">
+                No featured products available
               </div>
-
-            </div>
-
+            )}
           </div>
 
           {/* Small Products */}
           <div className="grid grid-cols-2 gap-6">
+            {loading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white p-4 rounded-3xl shadow-sm animate-pulse">
+                  <div className="rounded-2xl w-full h-36 bg-gray-200"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mt-3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mt-1"></div>
+                </div>
+              ))
+            ) : (
+              products.slice(1, 5).map((p) => (
+                <Link
+                  key={p._id}
+                  to={`/products/${p._id}`}
+                  className="bg-white p-4 rounded-3xl shadow-sm hover:shadow-md transition"
+                >
+                  <img
+                    src={p.images[0] || "https://images.unsplash.com/photo-1535294435445-d7249524ef2e?q=80&w=400&auto=format&fit=crop"}
+                    className="rounded-2xl w-full h-36 object-cover"
+                    alt={p.name}
+                  />
 
-            {products.map((p, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-3xl shadow-sm hover:shadow-md transition"
-              >
+                  <h4 className="font-semibold text-gray-800 mt-3">
+                    {p.name}
+                  </h4>
 
-                <img
-                  src={p.img}
-                  className="rounded-2xl w-full h-36 object-cover"
-                />
-
-                <h4 className="font-semibold text-gray-800 mt-3">
-                  {p.name}
-                </h4>
-
-                <p className="text-blue-500 font-semibold text-sm mt-1">
-                  {p.price}
-                </p>
-
-              </div>
-            ))}
-
+                  <p className="text-blue-500 font-semibold text-sm mt-1">
+                    ${p.price.toFixed(2)}
+                  </p>
+                </Link>
+              ))
+            )}
           </div>
 
         </div>
 
         {/* Button */}
         <div className="text-center mt-14">
-
-          <button className="flex items-center gap-2 mx-auto bg-white px-6 py-3 rounded-full shadow hover:shadow-md transition">
+          <Link 
+            to="/products"
+            className="flex items-center gap-2 mx-auto bg-white px-6 py-3 rounded-full shadow hover:shadow-md transition"
+          >
             Browse Full Shop
             <ArrowRight size={18} />
-          </button>
-
+          </Link>
         </div>
 
       </div>

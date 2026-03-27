@@ -9,8 +9,8 @@ import {
   Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
-import { mockProducts } from "@/data/mockProducts";
+import { useMemo, useState, useEffect } from "react";
+import { productService, Product } from "../../services/product.service";
 import { mockServices } from "@/data/mockServices";
 
 type Category = {
@@ -64,27 +64,45 @@ type ShopItem =
 
 export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState<Category["id"]>("all");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await productService.getProducts({ limit: 50 });
+      setProducts(response.products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const items = useMemo<ShopItem[]>(() => {
-    const productItems: ShopItem[] = mockProducts.map((p) => {
+    const productItems: ShopItem[] = products.map((p) => {
       const filterKey: ShopItem["filterKey"] =
-        p.category === "Food"
+        p.category.toLowerCase() === "food"
           ? "food"
-          : p.category === "Toys"
+          : p.category.toLowerCase() === "toys"
             ? "toys"
             : "apparel";
 
       return {
         kind: "product",
-        id: p.id,
+        id: p._id,
         title: p.name,
         subtitle: p.category,
         meta: new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
         }).format(p.price),
-        imageUrl: p.images[0],
-        href: `/products/${p.id}`,
+        imageUrl: p.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
+        href: `/products/${p._id}`,
         addLabel: `Add ${p.name} to cart`,
         filterKey,
       };
@@ -108,7 +126,7 @@ export default function ShopPage() {
     });
 
     return [...serviceItems, ...productItems];
-  }, []);
+  }, [products]);
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return items;
@@ -198,47 +216,59 @@ export default function ShopPage() {
           </button>
         </div>
 
-        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {filtered.map((p) => (
-            <article
-              key={p.id}
-              className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200"
-            >
-              <Link to={p.href} className="block">
-                <div className="relative aspect-[4/3] bg-slate-50">
-                  <img
-                    alt={p.title}
-                    src={p.imageUrl}
-                    className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                    loading="lazy"
-                  />
-                </div>
-              </Link>
-              <div className="p-4">
-                <p className="text-xs font-semibold text-slate-400">
-                  {p.subtitle}
-                </p>
-                <Link to={p.href} className="block">
-                  <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">
-                    {p.title}
-                  </h3>
-                </Link>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-slate-900">
-                    {"meta" in p ? p.meta : ""}
-                  </span>
-                  <button
-                    type="button"
-                    className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
-                    aria-label={p.addLabel}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
+        {loading ? (
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-[4/3] bg-gray-200 rounded-[22px] mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
               </div>
-            </article>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {filtered.map((p) => (
+              <article
+                key={p.id}
+                className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200"
+              >
+                <Link to={p.href} className="block">
+                  <div className="relative aspect-[4/3] bg-slate-50">
+                    <img
+                      alt={p.title}
+                      src={p.imageUrl}
+                      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
+                <div className="p-4">
+                  <p className="text-xs font-semibold text-slate-400">
+                    {p.subtitle}
+                  </p>
+                  <Link to={p.href} className="block">
+                    <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">
+                      {p.title}
+                    </h3>
+                  </Link>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-sm font-extrabold text-slate-900">
+                      {"meta" in p ? p.meta : ""}
+                    </span>
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
+                      aria-label={p.addLabel}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Spacer section to match airy layout */}
