@@ -327,8 +327,8 @@ export const ProductManagement = () => {
               </div>
 
               <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Pricing & Inventory</p>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price</p>
+                <div className="grid gap-3">
                   <input
                     type="number"
                     min={0}
@@ -339,6 +339,12 @@ export const ProductManagement = () => {
                     placeholder="Price"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Inventory</p>
+                <div className="grid gap-3">
                   <input
                     type="number"
                     min={0}

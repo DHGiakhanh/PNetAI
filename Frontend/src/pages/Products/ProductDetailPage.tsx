@@ -27,7 +27,6 @@ export default function ProductDetailPage() {
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [qty, setQty] = useState(1);
-  const [size, setSize] = useState<"S" | "M" | "L">("M");
 
   useEffect(() => {
     if (productId) {
@@ -211,27 +210,6 @@ export default function ProductDetailPage() {
             </p>
 
             <div className="mt-5 grid gap-4">
-              {/* Size */}
-              <div>
-              <p className="font-serif text-sm font-extrabold italic text-ink">Size</p>
-                <div className="mt-2 flex gap-2">
-                  {(["S", "M", "L"] as const).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSize(s)}
-                      className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 ${
-                        size === s
-                          ? "bg-brown text-white ring-brown"
-                          : "bg-white text-ink ring-sand hover:bg-warm"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Quantity */}
               <div>
                 <p className="font-serif text-sm font-extrabold italic text-ink">Quantity</p>
@@ -313,10 +291,6 @@ export default function ProductDetailPage() {
           <div className="mt-5 rounded-[22px] bg-white p-5 shadow-sm ring-1 ring-sand">
             <p className="font-serif text-sm font-extrabold italic text-ink">Selected</p>
             <div className="mt-2 flex items-center justify-between text-sm font-semibold text-muted">
-              <span>Size</span>
-              <span className="font-extrabold text-ink">{size}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-sm font-semibold text-muted">
               <span>Quantity</span>
               <span className="font-extrabold text-ink">{qty}</span>
             </div>
