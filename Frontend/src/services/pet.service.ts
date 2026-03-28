@@ -7,8 +7,12 @@ export type Pet = {
   breed?: string;
   gender?: "Male" | "Female" | "Unknown";
   age?: number;
+  birthday?: string;
   weightKg?: number;
+  isSpayed?: boolean;
   healthStatus?: string;
+  allergies?: string;
+  medicalHistory?: string;
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
@@ -22,8 +26,12 @@ export type PetPayload = {
   breed?: string;
   gender?: "Male" | "Female" | "Unknown";
   age?: number;
+  birthday?: string;
   weightKg?: number;
+  isSpayed?: boolean;
   healthStatus?: string;
+  allergies?: string;
+  medicalHistory?: string;
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
