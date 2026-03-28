@@ -21,9 +21,8 @@ const initialForm: PetPayload = {
   species: "Dog",
   breed: "",
   gender: "Unknown",
-  age: 0,
-  birthday: "",
-  weightKg: 0,
+  age: undefined,
+  weightKg: undefined,
   isSpayed: false,
   healthStatus: "Healthy",
   allergies: "",
@@ -113,9 +112,8 @@ export default function MyPetsPage() {
       species: pet.species,
       breed: pet.breed || "",
       gender: pet.gender || "Unknown",
-      age: pet.age || 0,
-      birthday: pet.birthday ? new Date(pet.birthday).toISOString().slice(0, 10) : "",
-      weightKg: pet.weightKg || 0,
+      age: pet.age ?? undefined,
+      weightKg: pet.weightKg ?? undefined,
       isSpayed: Boolean(pet.isSpayed),
       healthStatus: pet.healthStatus || "Healthy",
       allergies: pet.allergies || "",
@@ -441,22 +439,6 @@ export default function MyPetsPage() {
                           isSearchable={false}
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Birthday
-                        </label>
-                        <input
-                          type="date"
-                          value={form.birthday || ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              birthday: e.target.value,
-                            }))
-                          }
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
                     </div>
                   </div>
 
@@ -473,11 +455,11 @@ export default function MyPetsPage() {
                         <input
                           type="number"
                           min={0}
-                          value={form.age}
+                          value={form.age ?? ""}
                           onChange={(e) =>
                             setForm((p) => ({
                               ...p,
-                              age: Number(e.target.value),
+                              age: e.target.value === "" ? undefined : Number(e.target.value),
                             }))
                           }
                           placeholder="Age (years)"
@@ -492,11 +474,11 @@ export default function MyPetsPage() {
                           type="number"
                           min={0}
                           step="0.1"
-                          value={form.weightKg}
+                          value={form.weightKg ?? ""}
                           onChange={(e) =>
                             setForm((p) => ({
                               ...p,
-                              weightKg: Number(e.target.value),
+                              weightKg: e.target.value === "" ? undefined : Number(e.target.value),
                             }))
                           }
                           placeholder="Weight (kg)"
