@@ -2,6 +2,11 @@ import apiClient from '../utils/api.service';
 
 export interface Product {
   _id: string;
+  providerId?: {
+    _id: string;
+    name: string;
+    email: string;
+  } | string;
   name: string;
   description: string;
   price: number;
@@ -28,6 +33,7 @@ export interface ProductsResponse {
 export interface ProductFilters {
   search?: string;
   category?: string;
+  providerId?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: 'price-asc' | 'price-desc' | 'newest' | 'popular';
@@ -74,19 +80,19 @@ export const productService = {
     return response.data.product;
   },
 
-  // Create product (Admin only)
+  // Create product (Service Provider only)
   createProduct: async (productData: Partial<Product>): Promise<Product> => {
     const response = await apiClient.post('/products', productData);
     return response.data.product;
   },
 
-  // Update product (Admin only)
+  // Update product (Service Provider owner only)
   updateProduct: async (id: string, productData: Partial<Product>): Promise<Product> => {
     const response = await apiClient.put(`/products/${id}`, productData);
     return response.data.product;
   },
 
-  // Delete product (Admin only)
+  // Delete product (Service Provider owner only)
   deleteProduct: async (id: string): Promise<void> => {
     await apiClient.delete(`/products/${id}`);
   }

@@ -18,10 +18,10 @@ import UserProfile from "@/pages/Profile/UserProfile";
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
 import { ProductManagement } from "@/pages/Admin/ProductManagement";
-import { CategoryManagement } from "@/pages/Admin/CategoryManagement";
 import { ServiceManagement } from "@/pages/Admin/ServiceManagement";
 import { ServiceProviderOverview } from "@/pages/Admin/ServiceProviderOverview";
 import { CustomerBookingsPage } from "@/pages/Admin/CustomerBookingsPage";
+import ServiceProviderProfilePage from "@/pages/ServiceProvider/ServiceProviderProfilePage";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -55,9 +55,9 @@ export default function AppRoutes() {
         <Route path="service-provider" element={<ServiceProviderLayout />}>
           <Route index element={<ServiceProviderOverview />} />
           <Route path="products" element={<ProductManagement />} />
-          <Route path="categories" element={<CategoryManagement />} />
           <Route path="services" element={<ServiceManagement />} />
           <Route path="bookings" element={<CustomerBookingsPage />} />
+          <Route path="profile" element={<ServiceProviderProfilePage />} />
         </Route>
       </Route>
 

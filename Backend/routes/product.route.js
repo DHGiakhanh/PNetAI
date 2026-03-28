@@ -8,7 +8,7 @@ const isServiceProvider = (role) => role === "service_provider" || role === "sho
 // Get all products with filters and search
 router.get('/', async (req, res) => {
     try {
-        const { search, category, minPrice, maxPrice, sort, page = 1, limit = 12 } = req.query;
+        const { search, category, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
         
         let query = {};
         
@@ -21,6 +21,10 @@ router.get('/', async (req, res) => {
         
         if (category) {
             query.category = category;
+        }
+
+        if (providerId) {
+            query.providerId = providerId;
         }
         
         if (minPrice || maxPrice) {
@@ -38,6 +42,7 @@ router.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
         
         const products = await db.Product.find(query)
+            .populate('providerId', 'name email')
             .sort(sortOption)
             .skip(skip)
             .limit(Number(limit));
@@ -90,7 +95,7 @@ router.get('/latest', async (req, res) => {
 // Get product by ID
 router.get('/:id', async (req, res) => {
     try {
-        const product = await db.Product.findById(req.params.id);
+        const product = await db.Product.findById(req.params.id).populate('providerId', 'name email');
         
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -108,8 +113,11 @@ router.post('/', verifyToken, async (req, res) => {
         if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
-        
-        const product = new db.Product(req.body);
+
+        const product = new db.Product({
+            ...req.body,
+            providerId: req.userId,
+        });
         await product.save();
         
         res.status(201).json({ message: "Product created successfully", product });
@@ -124,12 +132,22 @@ router.put('/:id', verifyToken, async (req, res) => {
         if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
-        
-        const product = await db.Product.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body, updatedAt: Date.now() },
-            { new: true }
-        );
+
+        const existing = await db.Product.findById(req.params.id);
+        if (!existing) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (existing.providerId && existing.providerId.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        if (!existing.providerId) {
+            existing.providerId = req.userId;
+        }
+
+        const payload = { ...req.body, updatedAt: Date.now(), providerId: existing.providerId };
+        const product = await db.Product.findByIdAndUpdate(req.params.id, payload, { new: true });
         
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -147,7 +165,16 @@ router.delete('/:id', verifyToken, async (req, res) => {
         if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
-        
+
+        const existing = await db.Product.findById(req.params.id);
+        if (!existing) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (existing.providerId && existing.providerId.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
         const product = await db.Product.findByIdAndDelete(req.params.id);
         
         if (!product) {

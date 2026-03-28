@@ -3,7 +3,7 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
-const isServiceProvider = (role) => role === "service_provider" || role === "shop";
+const isAdmin = (role) => role === "admin";
 
 // Get all categories
 router.get('/', async (req, res) => {
@@ -30,10 +30,10 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create category (Service Provider only)
+// Create category (Admin only)
 router.post('/', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
+        if (!isAdmin(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -46,10 +46,10 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
-// Update category (Service Provider only)
+// Update category (Admin only)
 router.put('/:id', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
+        if (!isAdmin(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -69,10 +69,10 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Delete category (Service Provider only)
+// Delete category (Admin only)
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
+        if (!isAdmin(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         

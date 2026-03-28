@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Boxes, Layers3, LayoutDashboard, LogOut, Scissors, Users } from "lucide-react";
+import { Boxes, LayoutDashboard, LogOut, Scissors, UserCircle2, Users } from "lucide-react";
 
 export default function ServiceProviderLayout() {
   const navigate = useNavigate();
@@ -47,17 +47,6 @@ export default function ServiceProviderLayout() {
               Products
             </NavLink>
             <NavLink
-              to="/service-provider/categories"
-              className={({ isActive }) =>
-                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <Layers3 className="h-5 w-5" />
-              Categories
-            </NavLink>
-            <NavLink
               to="/service-provider/services"
               className={({ isActive }) =>
                 `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
@@ -71,13 +60,24 @@ export default function ServiceProviderLayout() {
             <NavLink
               to="/service-provider/bookings"
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
                   isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
                 }`
               }
             >
               <Users className="h-5 w-5" />
               Customers Booking
+            </NavLink>
+            <NavLink
+              to="/service-provider/profile"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                }`
+              }
+            >
+              <UserCircle2 className="h-5 w-5" />
+              My Profile
             </NavLink>
           </nav>
 
@@ -110,4 +110,3 @@ export default function ServiceProviderLayout() {
     </div>
   );
 }
-

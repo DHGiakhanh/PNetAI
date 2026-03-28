@@ -276,7 +276,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
 router.get('/products', verifyToken, isServiceProvider, async (req, res) => {
     try {
         const { search } = req.query;
-        let query = {};
+        let query = { providerId: req.userId };
 
         if (search) {
             query.$or = [
@@ -285,7 +285,9 @@ router.get('/products', verifyToken, isServiceProvider, async (req, res) => {
             ];
         }
 
-        const products = await db.Product.find(query).sort({ createdAt: -1 });
+        const products = await db.Product.find(query)
+            .populate('providerId', 'name email')
+            .sort({ createdAt: -1 });
         res.status(200).json({ products });
     } catch (error) {
         res.status(500).json({ message: error.message });
