@@ -10,11 +10,18 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, name, saleCode } = req.body;
+        const { email, password, name, saleCode, role = "user" } = req.body;
         
         const existingUser = await db.User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
+        }
+
+        const normalizedRole = role === "service_provider" ? "service_provider" : "user";
+
+        // Service Provider registration requires sale code
+        if (normalizedRole === "service_provider" && !saleCode) {
+            return res.status(400).json({ message: "Sale ID is required for Service Provider account." });
         }
 
         // If sale code is provided, validate it exists
@@ -35,7 +42,9 @@ router.post('/register', async (req, res) => {
             email,
             password: hashedPassword,
             name,
-            isVerified: true // Auto-verify users
+            role: normalizedRole,
+            // Service providers must be approved by sale; normal users auto-verified
+            isVerified: normalizedRole === "service_provider" ? false : true
         });
 
         // Link to sale user if sale code provided
@@ -52,11 +61,15 @@ router.post('/register', async (req, res) => {
         await newUser.save();
 
         res.status(201).json({
-            message: "User created successfully. You can now login.",
+            message:
+                normalizedRole === "service_provider"
+                    ? "Service Provider account created. Waiting for sale approval."
+                    : "User created successfully. You can now login.",
             user: {
                 id: newUser._id,
                 email: newUser.email,
                 name: newUser.name,
+                role: newUser.role,
                 saleCode: newUser.saleCode
             }
         });
@@ -78,6 +91,12 @@ router.post('/login', async (req, res) => {
         const isPasswordValid = await bcryptjs.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid password" });
+        }
+
+        if ((user.role === "service_provider" || user.role === "shop") && !user.isVerified) {
+            return res.status(403).json({
+                message: "Your Service Provider account is pending sale approval."
+            });
         }
 
         const token = jwt.sign(

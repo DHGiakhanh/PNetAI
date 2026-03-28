@@ -97,19 +97,19 @@ export const serviceService = {
     return response.data.service;
   },
 
-  // Create service (Admin/Provider only)
+  // Create service (Service Provider only)
   createService: async (serviceData: Partial<Service>): Promise<Service> => {
     const response = await apiClient.post('/services', serviceData);
     return response.data.service;
   },
 
-  // Update service (Admin/Owner only)
+  // Update service (Service Provider owner only)
   updateService: async (id: string, serviceData: Partial<Service>): Promise<Service> => {
     const response = await apiClient.put(`/services/${id}`, serviceData);
     return response.data.service;
   },
 
-  // Delete service (Admin/Owner only)
+  // Delete service (Service Provider owner only)
   deleteService: async (id: string): Promise<void> => {
     await apiClient.delete(`/services/${id}`);
   }

@@ -13,6 +13,13 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
+const isServiceProvider = (req, res, next) => {
+    if (req.role !== 'service_provider' && req.role !== 'shop') {
+        return res.status(403).json({ message: "Access denied. Service Provider only." });
+    }
+    next();
+};
+
 // Get all users with filters
 router.get('/users', verifyToken, isAdmin, async (req, res) => {
     try {
@@ -265,8 +272,8 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-// Get all products (admin)
-router.get('/products', verifyToken, isAdmin, async (req, res) => {
+// Get all products (Service Provider)
+router.get('/products', verifyToken, isServiceProvider, async (req, res) => {
     try {
         const { search } = req.query;
         let query = {};
@@ -285,11 +292,31 @@ router.get('/products', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-// Get all categories (admin, includes inactive)
-router.get('/categories', verifyToken, isAdmin, async (req, res) => {
+// Get all categories (Service Provider, includes inactive)
+router.get('/categories', verifyToken, isServiceProvider, async (req, res) => {
     try {
         const categories = await db.Category.find().sort({ sortOrder: 1, name: 1 });
         res.status(200).json({ categories });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get service provider services (owned by current user)
+router.get('/services', verifyToken, isServiceProvider, async (req, res) => {
+    try {
+        const { search } = req.query;
+        let query = { providerId: req.userId };
+
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const services = await db.Service.find(query).sort({ createdAt: -1 });
+        res.status(200).json({ services });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

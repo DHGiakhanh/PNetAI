@@ -3,6 +3,7 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
+const isServiceProvider = (role) => role === "service_provider" || role === "shop";
 
 // Get all products with filters and search
 router.get('/', async (req, res) => {
@@ -101,10 +102,10 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create product (Admin only)
+// Create product (Service Provider only)
 router.post('/', verifyToken, async (req, res) => {
     try {
-        if (req.role !== 'admin') {
+        if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -117,10 +118,10 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
-// Update product (Admin only)
+// Update product (Service Provider only)
 router.put('/:id', verifyToken, async (req, res) => {
     try {
-        if (req.role !== 'admin') {
+        if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -140,10 +141,10 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Delete product (Admin only)
+// Delete product (Service Provider only)
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        if (req.role !== 'admin') {
+        if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         

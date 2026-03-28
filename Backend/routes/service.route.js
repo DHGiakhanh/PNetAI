@@ -3,6 +3,7 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
+const isServiceProvider = (role) => role === "service_provider" || role === "shop";
 
 // Get all services with filters and search
 router.get('/', async (req, res) => {
@@ -118,10 +119,10 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create service (Admin or Provider only)
+// Create service (Service Provider only)
 router.post('/', verifyToken, async (req, res) => {
     try {
-        if (req.role !== 'admin' && req.role !== 'provider') {
+        if (!isServiceProvider(req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -139,7 +140,7 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
-// Update service (Admin or Owner only)
+// Update service (Service Provider owner only)
 router.put('/:id', verifyToken, async (req, res) => {
     try {
         const service = await db.Service.findById(req.params.id);
@@ -148,7 +149,7 @@ router.put('/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ message: "Service not found" });
         }
         
-        if (req.role !== 'admin' && service.providerId.toString() !== req.userId) {
+        if (!isServiceProvider(req.role) || service.providerId.toString() !== req.userId) {
             return res.status(403).json({ message: "Access denied" });
         }
         
@@ -164,7 +165,7 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Delete service (Admin or Owner only)
+// Delete service (Service Provider owner only)
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
         const service = await db.Service.findById(req.params.id);
@@ -173,7 +174,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ message: "Service not found" });
         }
         
-        if (req.role !== 'admin' && service.providerId.toString() !== req.userId) {
+        if (!isServiceProvider(req.role) || service.providerId.toString() !== req.userId) {
             return res.status(403).json({ message: "Access denied" });
         }
         

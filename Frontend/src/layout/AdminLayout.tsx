@@ -5,6 +5,7 @@ import {
   Users, 
   Package,
   Shapes,
+  Scissors,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -17,30 +18,21 @@ export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role;
+  const isServiceProvider = role === "service_provider" || role === "shop";
 
-  const menuItems = [
-    {
-      title: 'Dashboard',
-      icon: LayoutDashboard,
-      path: '/admin',
-      exact: true
-    },
-    {
-      title: 'User Management',
-      icon: Users,
-      path: '/admin/users'
-    },
-    {
-      title: 'Products',
-      icon: Package,
-      path: '/admin/products'
-    },
-    {
-      title: 'Categories',
-      icon: Shapes,
-      path: '/admin/categories'
-    }
-  ];
+  const menuItems =
+    isServiceProvider
+      ? [
+          { title: "Products", icon: Package, path: "/admin/products" },
+          { title: "Categories", icon: Shapes, path: "/admin/categories" },
+          { title: "Services", icon: Scissors, path: "/admin/services" },
+        ]
+      : [
+          { title: "Dashboard", icon: LayoutDashboard, path: "/admin", exact: true },
+          { title: "User Management", icon: Users, path: "/admin/users" },
+        ];
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) {
@@ -70,7 +62,9 @@ export const AdminLayout = () => {
               <div className="w-8 h-8 rounded-xl bg-brown flex items-center justify-center text-white font-bold text-sm">
                 PE
               </div>
-              <h1 className="text-lg font-bold text-ink">Admin Panel</h1>
+              <h1 className="text-lg font-bold text-ink">
+                {isServiceProvider ? "Service Provider Panel" : "Admin Panel"}
+              </h1>
             </div>
           ) : (
             <Settings className="w-6 h-6 text-brown" />
@@ -116,8 +110,10 @@ export const AdminLayout = () => {
             </div>
             {sidebarOpen && (
               <div className="flex-1">
-                <p className="text-ink text-sm font-medium">Admin</p>
-                <p className="text-muted text-xs">Administrator</p>
+                <p className="text-ink text-sm font-medium">{user?.name || "User"}</p>
+                <p className="text-muted text-xs">
+                  {isServiceProvider ? "Service Provider" : role || "member"}
+                </p>
               </div>
             )}
           </div>

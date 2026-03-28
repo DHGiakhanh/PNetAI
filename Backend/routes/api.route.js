@@ -11,6 +11,7 @@ const ratingRoutes = require("./rating.route");
 const carouselRoutes = require("./carousel.route");
 const adminRoutes = require("./admin.route");
 const petRoutes = require("./pet.route");
+const saleRoutes = require("./sale.route");
 
 const ApiRouter = express.Router();
 
@@ -49,5 +50,8 @@ ApiRouter.use('/carousels', carouselRoutes);
 
 // Pet routes
 ApiRouter.use('/pets', petRoutes);
+
+// Sale routes
+ApiRouter.use('/sale', saleRoutes);
 
 module.exports = ApiRouter;

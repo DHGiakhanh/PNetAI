@@ -1,10 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { AdminLayout } from "@/layout/AdminLayout";
 import MainLayout from "@/layout/MainLayout";
 
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
+import ServiceProviderRoute from "@/routes/ServiceProviderRoute";
 
 import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
 import OtpVerifyPage from "@/pages/Auth/OtpVerify";
@@ -16,6 +17,7 @@ import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
 import { ProductManagement } from "@/pages/Admin/ProductManagement";
 import { CategoryManagement } from "@/pages/Admin/CategoryManagement";
+import { ServiceManagement } from "@/pages/Admin/ServiceManagement";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -33,12 +35,16 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* Admin */}
-      <Route element={<AdminRoute />}>
-        <Route path="admin" element={<AdminLayout />}>
+      <Route path="admin" element={<AdminLayout />}>
+        <Route element={<AdminRoute />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
+        </Route>
+        <Route element={<ServiceProviderRoute />}>
+          <Route index element={<Navigate to="products" replace />} />
           <Route path="products" element={<ProductManagement />} />
           <Route path="categories" element={<CategoryManagement />} />
+          <Route path="services" element={<ServiceManagement />} />
         </Route>
       </Route>
 
