@@ -9,6 +9,7 @@ export interface RegisterData {
   email: string;
   password: string;
   name: string;
+  role?: "user" | "service_provider";
   saleCode?: string;
 }
 

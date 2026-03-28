@@ -6,6 +6,7 @@ import MainLayout from "@/layout/MainLayout";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
 import ServiceProviderRoute from "@/routes/ServiceProviderRoute";
+import SaleRoute from "@/routes/SaleRoute";
 
 import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
 import OtpVerifyPage from "@/pages/Auth/OtpVerify";
@@ -30,6 +31,7 @@ import ServiceBookingLayout from "@/layout/ServiceBookingLayout";
 import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
 import ServicesPage from "@/pages/Services/ServicesPage";
 import BlogsPage from "@/pages/Blogs/BlogsPage";
+import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsPage";
 
 export default function AppRoutes() {
   return (
@@ -63,6 +65,9 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="profile" element={<UserProfile />} />
           <Route path="my-pets" element={<MyPetsPage />} />
+          <Route element={<SaleRoute />}>
+            <Route path="sale/providers" element={<ServiceProviderApprovalsPage />} />
+          </Route>
         </Route>
       </Route>
 

@@ -19,6 +19,7 @@ type LocalUser = {
   name?: string;
   avatar?: string;
   avatarUrl?: string;
+  role?: string;
 };
 
 type CartPreviewItem = {
@@ -212,6 +213,15 @@ export function AppNavbar() {
               <Users className="h-4 w-4" />
               Blog
             </Link>
+            {isLoggedIn && user?.role === "sale" ? (
+              <Link
+                to="/sale/providers"
+                className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/sale/providers") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+              >
+                <Users className="h-4 w-4" />
+                Provider Approvals
+              </Link>
+            ) : null}
           </nav>
 
           <div className="relative flex items-center gap-3">
@@ -359,6 +369,15 @@ export function AppNavbar() {
               >
                 Blog
               </Link>
+              {isLoggedIn && user?.role === "sale" ? (
+                <Link
+                  to="/sale/providers"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                >
+                  Provider Approvals
+                </Link>
+              ) : null}
               {isLoggedIn ? (
                 <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">
                   {user?.name ?? "Pet Parent"}

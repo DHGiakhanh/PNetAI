@@ -9,11 +9,13 @@ export const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'user' as 'user' | 'service_provider',
     saleCode: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
@@ -42,17 +44,27 @@ export const Register = () => {
       return;
     }
 
+    if (formData.role === 'service_provider' && !formData.saleCode.trim()) {
+      setError('Sale ID is required for Service Provider account');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await authService.register({
+      const response = await authService.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        saleCode: formData.saleCode || undefined
+        role: formData.role,
+        saleCode: formData.role === 'service_provider' ? formData.saleCode : undefined
       });
+      setSuccessMessage(response?.message || 'Registration successful.');
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      if (formData.role !== 'service_provider') {
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -68,13 +80,17 @@ export const Register = () => {
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
           </div>
           <h2 className="font-serif italic text-2xl font-bold text-ink mb-2">Registration Successful!</h2>
-          <p className="text-muted mb-4">Your account has been created successfully.</p>
-          {formData.saleCode && (
+          <p className="text-muted mb-4">{successMessage || 'Your account has been created successfully.'}</p>
+          {formData.role === 'service_provider' && formData.saleCode && (
             <p className="text-sm text-brown mb-2 flex items-center justify-center gap-1">
-              <Check className="w-4 h-4" /> Sale code applied: {formData.saleCode}
+              <Check className="w-4 h-4" /> Sale ID linked: {formData.saleCode}
             </p>
           )}
-          <p className="text-sm text-gray-500">Redirecting to login...</p>
+          {formData.role === 'service_provider' ? (
+            <p className="text-sm text-gray-500">Please wait for your sale representative to approve your account.</p>
+          ) : (
+            <p className="text-sm text-gray-500">Redirecting to login...</p>
+          )}
         </div>
       </div>
     );
@@ -100,6 +116,36 @@ export const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Account Type
+              </label>
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-sand bg-warm/60 p-1">
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, role: 'user', saleCode: '' }))}
+                  className={`rounded-lg py-2 text-sm font-semibold transition ${
+                    formData.role === 'user'
+                      ? 'bg-brown text-white'
+                      : 'text-gray-700 hover:bg-white/60'
+                  }`}
+                >
+                  Pet Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, role: 'service_provider' }))}
+                  className={`rounded-lg py-2 text-sm font-semibold transition ${
+                    formData.role === 'service_provider'
+                      ? 'bg-brown text-white'
+                      : 'text-gray-700 hover:bg-white/60'
+                  }`}
+                >
+                  Service Provider
+                </button>
+              </div>
+            </div>
+
             {/* Full name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -190,24 +236,26 @@ export const Register = () => {
               </div>
             </div>
 
-            {/* Sale Code */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sale Code <span className="text-gray-400">(Optional)</span>
-              </label>
-              <input
-                type="text"
-                name="saleCode"
-                placeholder="Enter referral code"
-                value={formData.saleCode}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-sand bg-warm/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-caramel/40 focus:border-caramel placeholder:text-gray-400"
-                disabled={loading}
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                If you have a sale representative code, enter it here
-              </p>
-            </div>
+            {formData.role === 'service_provider' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale ID <span className="text-rust">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="saleCode"
+                  placeholder="Enter sale ID (example: SALE001)"
+                  value={formData.saleCode}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-sand bg-warm/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-caramel/40 focus:border-caramel placeholder:text-gray-400"
+                  disabled={loading}
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Your account will be pending until this sale representative approves it.
+                </p>
+              </div>
+            ) : null}
 
             <p className="text-xs text-gray-400">
               By clicking Register, you agree to our{" "}
