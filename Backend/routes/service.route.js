@@ -5,6 +5,15 @@ const verifyToken = require("../middlewares/verifyToken");
 const router = express.Router();
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
 
+const toServiceResponse = (serviceDoc) => {
+    const service = serviceDoc?.toObject ? serviceDoc.toObject() : serviceDoc;
+    const provider = service?.providerId && typeof service.providerId === "object" ? service.providerId : null;
+    return {
+        ...service,
+        providerName: provider?.name || "",
+    };
+};
+
 // Get all services with filters and search
 router.get('/', async (req, res) => {
     try {
@@ -51,7 +60,7 @@ router.get('/', async (req, res) => {
         const total = await db.Service.countDocuments(query);
         
         res.status(200).json({
-            services,
+            services: services.map(toServiceResponse),
             pagination: {
                 total,
                 page: Number(page),
@@ -69,7 +78,7 @@ router.get('/popular', async (req, res) => {
         const services = await db.Service.find({ isPopular: true, isAvailable: true })
             .populate('providerId', 'name email')
             .limit(8);
-        res.status(200).json({ services });
+        res.status(200).json({ services: services.map(toServiceResponse) });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -84,7 +93,7 @@ router.get('/category/:category', async (req, res) => {
         })
         .populate('providerId', 'name email')
         .limit(8);
-        res.status(200).json({ services });
+        res.status(200).json({ services: services.map(toServiceResponse) });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -97,7 +106,7 @@ router.get('/latest', async (req, res) => {
             .populate('providerId', 'name email')
             .sort({ createdAt: -1 })
             .limit(8);
-        res.status(200).json({ services });
+        res.status(200).json({ services: services.map(toServiceResponse) });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -113,7 +122,7 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ message: "Service not found" });
         }
         
-        res.status(200).json({ service });
+        res.status(200).json({ service: toServiceResponse(service) });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

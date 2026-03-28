@@ -5,6 +5,7 @@ export interface Service {
   title: string;
   description: string;
   category: string;
+  providerName?: string;
   basePrice: number;
   duration: number;
   images: string[];
@@ -18,7 +19,7 @@ export interface Service {
     name: string;
     email: string;
     phone?: string;
-  };
+  } | string;
   location: {
     address: string;
     city: string;

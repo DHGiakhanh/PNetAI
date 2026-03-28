@@ -6,6 +6,12 @@ import Pagination from "@/components/common/Pagination";
 
 type ServiceCategory = "all" | "grooming" | "vet";
 
+const getProviderName = (service: Service) => {
+  if (service.providerName) return service.providerName;
+  if (typeof service.providerId === "string") return "";
+  return service.providerId?.name || "";
+};
+
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
@@ -140,9 +146,11 @@ export default function ServicesPage() {
                   <Link to={`/services/${s._id}`} className="block">
                     <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">{s.title}</h3>
                   </Link>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-sky-700">
-                    by {s.providerId?.name || "Service Provider"}
-                  </p>
+                  {getProviderName(s) ? (
+                    <p className="mt-1 line-clamp-1 text-xs font-semibold text-sky-700">
+                      by {getProviderName(s)}
+                    </p>
+                  ) : null}
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-sm font-extrabold text-slate-900">${s.basePrice.toFixed(2)}</span>
                     <Link

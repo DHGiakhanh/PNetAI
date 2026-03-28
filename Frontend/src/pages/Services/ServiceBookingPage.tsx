@@ -11,6 +11,12 @@ function formatUsd(amount: number) {
   }).format(amount);
 }
 
+function getProviderName(service: Service) {
+  if (service.providerName) return service.providerName;
+  if (typeof service.providerId === "string") return "";
+  return service.providerId?.name || "";
+}
+
 const dateOptions = [
   { dow: "MON", day: 12, label: "Mon, Aug 12" },
   { dow: "TUE", day: 13, label: "Tue, Aug 13" },
@@ -88,6 +94,7 @@ export default function ServiceBookingPage() {
   const total = subtotal + taxesAndFees;
 
   const canBook = isLoggedIn && pets.length > 0 && Boolean(service);
+  const providerName = service ? getProviderName(service) : "";
 
   if (loading) {
     return (
@@ -154,7 +161,7 @@ export default function ServiceBookingPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-extrabold text-ink">
-                  {service.providerId?.name || "Pet Care Provider"} - {service.title}
+                  {(providerName || "Pet Care Provider")} - {service.title}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-muted">
                   <span className="inline-flex items-center gap-1">
