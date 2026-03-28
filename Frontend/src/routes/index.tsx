@@ -34,6 +34,8 @@ import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
 import ServicesPage from "@/pages/Services/ServicesPage";
 import BlogsPage from "@/pages/Blogs/BlogsPage";
 import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsPage";
+import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
+import SaleLayout from "@/layout/SaleLayout";
 
 export default function AppRoutes() {
   return (
@@ -53,6 +55,15 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
+      {/* Sale */}
+      <Route element={<SaleRoute />}>
+        <Route path="sale" element={<SaleLayout />}>
+          <Route index element={<ServiceProviderApprovalsPage />} />
+          <Route path="providers" element={<ServiceProviderApprovalsPage />} />
+          <Route path="approvals" element={<SalePendingApprovalsPage />} />
+        </Route>
+      </Route>
+
       {/* Main layout */}
       <Route path="/" element={<MainLayout />}>
         {/* Public */}
@@ -68,9 +79,6 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="profile" element={<UserProfile />} />
           <Route path="my-pets" element={<MyPetsPage />} />
-          <Route element={<SaleRoute />}>
-            <Route path="sale/providers" element={<ServiceProviderApprovalsPage />} />
-          </Route>
         </Route>
       </Route>
 
