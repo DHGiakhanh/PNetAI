@@ -329,6 +329,7 @@ router.get('/customers-bookings', verifyToken, isServiceProvider, async (req, re
     try {
         const orders = await db.Order.find()
             .populate('user', 'name email phone')
+            .populate('items.product', 'providerId')
             .sort({ createdAt: -1 })
             .limit(300);
 
@@ -337,6 +338,21 @@ router.get('/customers-bookings', verifyToken, isServiceProvider, async (req, re
         for (const order of orders) {
             const user = order.user;
             if (!user) continue;
+
+            const providerItems = (order.items || []).filter((item) => {
+                const product = item.product;
+                return product?.providerId && product.providerId.toString() === req.userId;
+            });
+
+            if (providerItems.length === 0) {
+                continue;
+            }
+
+            const providerTotal = providerItems.reduce(
+                (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+                0
+            );
+
             const key = user._id.toString();
             const existing = bookingMap.get(key) || {
                 user: {
@@ -351,7 +367,7 @@ router.get('/customers-bookings', verifyToken, isServiceProvider, async (req, re
             };
 
             existing.totalOrders += 1;
-            existing.totalSpent += Number(order.totalAmount || 0);
+            existing.totalSpent += providerTotal;
             if (!existing.lastBookedAt || new Date(order.createdAt) > new Date(existing.lastBookedAt)) {
                 existing.lastBookedAt = order.createdAt;
             }

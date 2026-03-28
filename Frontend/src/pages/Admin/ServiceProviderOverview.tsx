@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Boxes, Layers3, Scissors, Users } from "lucide-react";
+import { Boxes, Scissors, Users } from "lucide-react";
 import apiClient from "@/utils/api.service";
 
 type Card = {
@@ -11,7 +11,6 @@ type Card = {
 export const ServiceProviderOverview = () => {
   const [cards, setCards] = useState<Card[]>([
     { label: "Shop Products", value: 0, icon: Boxes },
-    { label: "Shop Categories", value: 0, icon: Layers3 },
     { label: "Shop Services", value: 0, icon: Scissors },
     { label: "Customers Booking", value: 0, icon: Users },
   ]);
@@ -21,16 +20,14 @@ export const ServiceProviderOverview = () => {
     const fetchOverview = async () => {
       try {
         setLoading(true);
-        const [productsRes, categoriesRes, servicesRes, customersRes] = await Promise.all([
+        const [productsRes, servicesRes, customersRes] = await Promise.all([
           apiClient.get("/admin/products"),
-          apiClient.get("/admin/categories"),
           apiClient.get("/admin/services"),
           apiClient.get("/admin/customers-bookings"),
         ]);
 
         setCards([
           { label: "Shop Products", value: productsRes.data?.products?.length || 0, icon: Boxes },
-          { label: "Shop Categories", value: categoriesRes.data?.categories?.length || 0, icon: Layers3 },
           { label: "Shop Services", value: servicesRes.data?.services?.length || 0, icon: Scissors },
           { label: "Customers Booking", value: customersRes.data?.customers?.length || 0, icon: Users },
         ]);
@@ -67,4 +64,3 @@ export const ServiceProviderOverview = () => {
     </div>
   );
 };
-

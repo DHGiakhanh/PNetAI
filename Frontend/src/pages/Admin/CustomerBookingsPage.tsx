@@ -55,7 +55,7 @@ export const CustomerBookingsPage = () => {
         </span>
         <div>
           <h1 className="font-serif text-4xl font-bold italic text-ink">Customers Booking</h1>
-          <p className="text-sm text-muted">Customers who have placed bookings/orders in the system.</p>
+          <p className="text-sm text-muted">Customers who placed orders for products from your service provider shop.</p>
         </div>
       </div>
 
