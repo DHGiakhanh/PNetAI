@@ -3,10 +3,9 @@ import { AppNavbar } from "@/layout/AppNavbar";
 
 export default function ShopLayout() {
   return (
-    <div className="min-h-screen bg-[#fbfaf7]">
+    <div className="min-h-screen bg-gradient-to-b from-warm to-cream">
       <AppNavbar />
       <Outlet />
     </div>
   );
 }
-

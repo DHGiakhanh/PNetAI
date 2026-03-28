@@ -24,6 +24,7 @@ import ProductDetailPage from "@/pages/Products/ProductDetailPage";
 import ServiceBookingLayout from "@/layout/ServiceBookingLayout";
 import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
 import ServicesPage from "@/pages/Services/ServicesPage";
+import BlogsPage from "@/pages/Blogs/BlogsPage";
 
 export default function AppRoutes() {
   return (
@@ -45,6 +46,7 @@ export default function AppRoutes() {
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="otp-verify" element={<OtpVerifyPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="blogs" element={<BlogsPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>

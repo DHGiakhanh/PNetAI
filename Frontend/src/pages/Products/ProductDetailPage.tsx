@@ -18,7 +18,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [addLoading, setAddLoading] = useState(false);
-  const [addMessage, setAddMessage] = useState("");
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [qty, setQty] = useState(1);
@@ -30,6 +30,12 @@ export default function ProductDetailPage() {
       fetchRelatedProducts();
     }
   }, [productId]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const fetchProduct = async (id: string) => {
     try {
@@ -58,18 +64,18 @@ export default function ProductDetailPage() {
 
     const token = localStorage.getItem("token");
     if (!token) {
+      setToast({ type: "error", message: "Please login to add items to cart." });
       navigate("/login");
       return;
     }
 
     try {
       setAddLoading(true);
-      setAddMessage("");
       await cartService.addToCart(product._id, qty);
-      setAddMessage("Added to cart successfully.");
+      setToast({ type: "success", message: "Added to cart successfully." });
       window.dispatchEvent(new Event("cart:updated"));
     } catch (error: any) {
-      setAddMessage(error?.response?.data?.message || "Could not add to cart.");
+      setToast({ type: "error", message: error?.response?.data?.message || "Could not add to cart." });
     } finally {
       setAddLoading(false);
     }
@@ -119,6 +125,15 @@ export default function ProductDetailPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16 pt-6">
+      {toast ? (
+        <div
+          className={`fixed right-5 top-20 z-[80] rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg ${
+            toast.type === "success" ? "bg-brown" : "bg-rust"
+          }`}
+        >
+          {toast.message}
+        </div>
+      ) : null}
       {/* Breadcrumb + back */}
       <div className="mb-4 flex items-center justify-between">
         <Link
@@ -261,9 +276,6 @@ export default function ProductDetailPage() {
                 >
                   {addLoading ? "Adding..." : `Add to cart · ${formatUsd(product.price * qty)}`}
                 </button>
-                {addMessage ? (
-                  <p className="text-xs font-semibold text-muted">{addMessage}</p>
-                ) : null}
                 <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
                   <ShieldCheck className="h-5 w-5 text-brown" />
                   <p className="text-sm font-semibold text-ink">
