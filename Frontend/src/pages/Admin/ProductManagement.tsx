@@ -268,78 +268,95 @@ export const ProductManagement = () => {
             <h2 className="font-serif text-3xl font-bold italic text-ink">
               {editing ? "Edit Product" : "Create Product"}
             </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Product name"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <select
-                required
-                value={form.category}
-                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              >
-                <option value="" disabled>
-                  Select category
-                </option>
-                {categories.map((category) => (
-                  <option key={category._id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <textarea
-                required
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Description"
-                rows={3}
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-              />
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                required
-                value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: Number(e.target.value) }))}
-                placeholder="Price"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                type="number"
-                min={0}
-                required
-                value={form.stock}
-                onChange={(e) => setForm((p) => ({ ...p, stock: Number(e.target.value) }))}
-                placeholder="Stock"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                value={form.imageUrl}
-                onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-                placeholder="Image URL"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-              />
-              <label className="inline-flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={form.isHot}
-                  onChange={(e) => setForm((p) => ({ ...p, isHot: e.target.checked }))}
-                />
-                Hot product
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={form.isRecommended}
-                  onChange={(e) => setForm((p) => ({ ...p, isRecommended: e.target.checked }))}
-                />
-                Recommended
-              </label>
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Basic Information</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Product name"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <select
+                    required
+                    value={form.category}
+                    onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  >
+                    <option value="" disabled>
+                      Select category
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category._id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    required
+                    value={form.description}
+                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="Description"
+                    rows={3}
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Pricing & Inventory</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    required
+                    value={form.price}
+                    onChange={(e) => setForm((p) => ({ ...p, price: Number(e.target.value) }))}
+                    placeholder="Price"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={form.stock}
+                    onChange={(e) => setForm((p) => ({ ...p, stock: Number(e.target.value) }))}
+                    placeholder="Stock"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Media & Visibility</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    value={form.imageUrl}
+                    onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
+                    placeholder="Image URL"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
+                  />
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={form.isHot}
+                      onChange={(e) => setForm((p) => ({ ...p, isHot: e.target.checked }))}
+                    />
+                    Hot product
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={form.isRecommended}
+                      onChange={(e) => setForm((p) => ({ ...p, isRecommended: e.target.checked }))}
+                    />
+                    Recommended
+                  </label>
+                </div>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button
