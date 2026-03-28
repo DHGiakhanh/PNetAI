@@ -79,6 +79,7 @@ export default function MyPetsPage() {
   const [editing, setEditing] = useState<Pet | null>(null);
   const [form, setForm] = useState<PetPayload>(initialForm);
   const [saving, setSaving] = useState(false);
+  const [deletingPet, setDeletingPet] = useState<Pet | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -173,11 +174,11 @@ export default function MyPetsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this pet profile?")) return;
     try {
       await petService.deletePet(id);
       toast.success("Pet profile deleted.");
       await fetchPets();
+      setDeletingPet(null);
     } catch (err: any) {
       const message = err?.response?.data?.message || "Could not delete pet.";
       setError(message);
@@ -255,16 +256,16 @@ export default function MyPetsPage() {
                         <Edit3 className="h-4 w-4" /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(pet._id)}
+                        onClick={() => setDeletingPet(pet)}
                         className="inline-flex items-center justify-center gap-1 rounded-full border border-rust/30 px-3 py-2 text-sm font-semibold text-rust hover:bg-[#fff1eb]"
                       >
                         <Trash2 className="h-4 w-4" /> Delete
                       </button>
                       <Link
                         to="/services"
-                        className="inline-flex items-center justify-center gap-1 rounded-full bg-brown px-3 py-2 text-sm font-semibold text-white hover:bg-brown-dark"
+                        className="inline-flex items-center justify-center rounded-full bg-brown px-3 py-2 text-sm font-semibold text-white hover:bg-brown-dark"
                       >
-                        <Stethoscope className="h-4 w-4" /> Book
+                        <Stethoscope className="h-4 w-4" />
                       </Link>
                     </div>
                   </div>
@@ -640,6 +641,33 @@ export default function MyPetsPage() {
               </button>
             </div>
           </form>
+        </div>
+      ) : null}
+
+      {deletingPet ? (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-sand bg-white p-6 shadow-2xl">
+            <h4 className="font-serif text-3xl font-bold italic text-ink">Delete Pet?</h4>
+            <p className="mt-2 text-sm text-muted">
+              This will remove <span className="font-semibold text-ink">{deletingPet.name}</span> from your pet library.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingPet(null)}
+                className="rounded-full border border-sand px-4 py-2 text-sm font-semibold text-ink hover:bg-warm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(deletingPet._id)}
+                className="rounded-full bg-rust px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </main>

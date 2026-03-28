@@ -76,13 +76,13 @@ export const UserManagement = () => {
         <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-full shadow-lg shadow-pink-200 transition"
+          className="px-6 py-2.5 bg-brown hover:bg-brown-dark text-white font-semibold rounded-full shadow-md transition"
         >
           + Create Sale Account
         </button>
       </div>
 
-      <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 mb-6 border border-pink-100 shadow-lg">
+      <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-4 mb-6 border border-sand shadow-lg">
         <div className="flex gap-4 flex-wrap">
           <div className="flex gap-2">
             {['all', 'user', 'sale', 'admin'].map((f) => (
@@ -91,8 +91,8 @@ export const UserManagement = () => {
                 onClick={() => setFilter(f)}
                 className={`px-4 py-2 rounded-xl capitalize font-medium transition ${
                   filter === f 
-                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-200' 
-                    : 'bg-pink-50 text-gray-700 hover:bg-pink-100'
+                    ? 'bg-brown text-white shadow-md' 
+                    : 'bg-warm text-gray-700 hover:bg-warm'
                 }`}
               >
                 {f === 'all' ? 'All' : f + 's'}
@@ -105,15 +105,15 @@ export const UserManagement = () => {
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+            className="flex-1 px-4 py-2 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
           />
         </div>
       </div>
 
-      <div className="bg-white/60 backdrop-blur-xl rounded-2xl overflow-hidden border border-pink-100 shadow-lg">
+      <div className="bg-white/60 backdrop-blur-xl rounded-2xl overflow-hidden border border-sand shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-pink-50/80">
+            <thead className="bg-warm/70">
               <tr>
                 <th className="px-4 py-3 text-left text-gray-700 font-semibold">Name</th>
                 <th className="px-4 py-3 text-left text-gray-700 font-semibold">Email</th>
@@ -139,7 +139,7 @@ export const UserManagement = () => {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user._id} className="border-t border-pink-100 hover:bg-pink-50/30 transition">
+                  <tr key={user._id} className="border-t border-sand hover:bg-warm/40 transition">
                     <td className="px-4 py-3 text-gray-800 font-medium">{user.name}</td>
                     <td className="px-4 py-3 text-gray-600">{user.email}</td>
                     <td className="px-4 py-3">
@@ -173,7 +173,7 @@ export const UserManagement = () => {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => setSelectedUser(user)}
-                          className="px-3 py-1.5 text-pink-500 hover:bg-pink-50 border border-pink-200 hover:border-pink-300 rounded-lg text-sm font-medium transition flex items-center gap-1"
+                          className="px-3 py-1.5 text-brown hover:bg-warm border border-sand hover:border-caramel rounded-lg text-sm font-medium transition flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
                           View
@@ -244,7 +244,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 max-w-md w-full border border-pink-100 shadow-2xl">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 max-w-md w-full border border-sand shadow-2xl">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">Create Sale Account</h2>
 
         {error && (
@@ -260,7 +260,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="John Doe"
               required
             />
@@ -272,7 +272,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="john@example.com"
               required
             />
@@ -284,7 +284,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
               type="text"
               value={formData.saleCode}
               onChange={(e) => setFormData({ ...formData, saleCode: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="SALE001"
               required
             />
@@ -299,7 +299,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="••••••••"
               required
               minLength={6}
@@ -312,7 +312,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="+1 234 567 8900"
             />
           </div>
@@ -322,7 +322,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
             <textarea
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-2.5 bg-pink-50/60 border border-pink-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700 placeholder:text-gray-400"
+              className="w-full px-4 py-2.5 bg-warm/60 border border-sand rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel text-gray-700 placeholder:text-gray-400"
               placeholder="123 Main St, City, Country"
               rows={2}
             />
@@ -332,7 +332,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white font-semibold rounded-full shadow-lg shadow-pink-200 transition"
+              className="flex-1 px-4 py-2.5 bg-brown hover:bg-brown-dark disabled:bg-brown/60 text-white font-semibold rounded-full shadow-md transition"
             >
               {loading ? 'Creating...' : 'Create Sale Account'}
             </button>
@@ -353,7 +353,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
 const UserDetailModal = ({ user, onClose }: { user: User; onClose: () => void }) => {
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 max-w-lg w-full border border-pink-100 shadow-2xl">
+      <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 max-w-lg w-full border border-sand shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">User Details</h2>
           <button
@@ -365,8 +365,8 @@ const UserDetailModal = ({ user, onClose }: { user: User; onClose: () => void })
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-4 pb-4 border-b border-pink-100">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-cyan-400 flex items-center justify-center text-white text-2xl font-bold">
+          <div className="flex items-center gap-4 pb-4 border-b border-sand">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-caramel to-brown flex items-center justify-center text-white text-2xl font-bold">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -414,7 +414,7 @@ const UserDetailModal = ({ user, onClose }: { user: User; onClose: () => void })
             {user.role === 'sale' && user.saleCode && (
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Sale Code</label>
-                <p className="text-gray-800 font-mono bg-pink-50 px-3 py-2 rounded-xl">{user.saleCode}</p>
+                <p className="text-gray-800 font-mono bg-warm px-3 py-2 rounded-xl">{user.saleCode}</p>
               </div>
             )}
 
@@ -422,7 +422,7 @@ const UserDetailModal = ({ user, onClose }: { user: User; onClose: () => void })
             {user.role === 'user' && user.managedBy && (
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Managed By</label>
-                <div className="bg-pink-50 rounded-xl p-3">
+                <div className="bg-warm rounded-xl p-3">
                   <p className="text-gray-800 font-medium">{user.managedBy.name}</p>
                   <p className="text-gray-600 text-sm">{user.managedBy.email}</p>
                   {user.saleCode && (
@@ -434,10 +434,10 @@ const UserDetailModal = ({ user, onClose }: { user: User; onClose: () => void })
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-pink-100">
+        <div className="mt-6 pt-4 border-t border-sand">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-full shadow-lg shadow-pink-200 transition"
+            className="w-full px-4 py-2.5 bg-brown hover:bg-brown-dark text-white font-semibold rounded-full shadow-md transition"
           >
             Close
           </button>

@@ -265,6 +265,36 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// Get all products (admin)
+router.get('/products', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { search } = req.query;
+        let query = {};
+
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const products = await db.Product.find(query).sort({ createdAt: -1 });
+        res.status(200).json({ products });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get all categories (admin, includes inactive)
+router.get('/categories', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const categories = await db.Category.find().sort({ sortOrder: 1, name: 1 });
+        res.status(200).json({ categories });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Assign customer to sale
 router.post('/users/:userId/assign-sale', verifyToken, isAdmin, async (req, res) => {
     try {

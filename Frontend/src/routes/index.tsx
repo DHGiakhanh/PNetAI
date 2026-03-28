@@ -14,6 +14,8 @@ import UserProfile from "@/pages/Profile/UserProfile";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
+import { ProductManagement } from "@/pages/Admin/ProductManagement";
+import { CategoryManagement } from "@/pages/Admin/CategoryManagement";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -35,6 +37,8 @@ export default function AppRoutes() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="products" element={<ProductManagement />} />
+          <Route path="categories" element={<CategoryManagement />} />
         </Route>
       </Route>
 
