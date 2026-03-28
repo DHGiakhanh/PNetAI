@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Star } from "lucide-react";
 import { productService, Product } from "../../services/product.service";
+import { cartService } from "../../services/cart.service";
 
 function formatUsd(amount: number) {
   return new Intl.NumberFormat("en-US", {
@@ -12,9 +13,12 @@ function formatUsd(amount: number) {
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addMessage, setAddMessage] = useState("");
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [qty, setQty] = useState(1);
@@ -49,20 +53,42 @@ export default function ProductDetailPage() {
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!product) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setAddLoading(true);
+      setAddMessage("");
+      await cartService.addToCart(product._id, qty);
+      setAddMessage("Added to cart successfully.");
+      window.dispatchEvent(new Event("cart:updated"));
+    } catch (error: any) {
+      setAddMessage(error?.response?.data?.message || "Could not add to cart.");
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="mx-auto max-w-6xl px-5 py-10">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4 w-32"></div>
+          <div className="h-8 bg-sand rounded mb-4 w-32"></div>
           <div className="grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <div className="aspect-[4/3] bg-gray-200 rounded-[28px]"></div>
+              <div className="aspect-[4/3] bg-sand rounded-[28px]"></div>
             </div>
             <div className="lg:col-span-5">
               <div className="space-y-4">
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-20 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-sand rounded w-20"></div>
+                <div className="h-8 bg-sand rounded w-3/4"></div>
+                <div className="h-20 bg-sand rounded"></div>
               </div>
             </div>
           </div>
@@ -74,11 +100,11 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <main className="mx-auto max-w-6xl px-5 py-10">
-        <div className="rounded-[22px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <p className="text-sm font-semibold text-slate-500">Product not found.</p>
+        <div className="rounded-[22px] bg-white p-6 shadow-sm ring-1 ring-sand">
+          <p className="text-sm font-semibold text-muted">Product not found.</p>
           <Link
             to="/products"
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brown-dark"
           >
             <ChevronLeft className="h-4 w-4" />
             Back to Shop
@@ -97,16 +123,16 @@ export default function ProductDetailPage() {
       <div className="mb-4 flex items-center justify-between">
         <Link
           to="/products"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to Shop
         </Link>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm ring-1 ring-sand hover:bg-warm"
         >
-          <Heart className="h-4 w-4 text-pink-500" />
+          <Heart className="h-4 w-4 text-brown" />
           Save
         </button>
       </div>
@@ -114,8 +140,8 @@ export default function ProductDetailPage() {
       <section className="grid gap-6 lg:grid-cols-12">
         {/* Gallery */}
         <div className="lg:col-span-7">
-          <div className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-slate-200">
-            <div className="relative aspect-[4/3] bg-slate-50">
+          <div className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-sand">
+            <div className="relative aspect-[4/3] bg-warm">
               {activeImage ? (
                 <img
                   alt={product.name}
@@ -124,7 +150,7 @@ export default function ProductDetailPage() {
                   loading="lazy"
                 />
               ) : (
-                <div className="grid h-full w-full place-items-center text-sm font-semibold text-slate-400">
+                <div className="grid h-full w-full place-items-center text-sm font-semibold text-muted">
                   No image
                 </div>
               )}
@@ -137,7 +163,7 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={() => setActiveImageIdx(idx)}
                   className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl ring-1 ${
-                    idx === activeImageIdx ? "ring-sky-300" : "ring-slate-200"
+                    idx === activeImageIdx ? "ring-caramel" : "ring-sand"
                   }`}
                   aria-label={`View image ${idx + 1}`}
                 >
@@ -150,11 +176,11 @@ export default function ProductDetailPage() {
 
         {/* Details */}
         <div className="lg:col-span-5">
-          <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400">
+          <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-sand">
+            <p className="text-xs font-extrabold uppercase tracking-wide text-muted">
               {product.category}
             </p>
-            <h1 className="mt-2 text-2xl font-extrabold leading-snug text-slate-900">
+            <h1 className="mt-2 font-serif text-3xl font-extrabold italic leading-snug text-ink">
               {product.name}
             </h1>
 
@@ -164,23 +190,23 @@ export default function ProductDetailPage() {
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                   {product.averageRating.toFixed(1)}
                 </span>
-                <span className="text-sm font-semibold text-slate-500">
+                <span className="text-sm font-semibold text-muted">
                   ({product.totalReviews} reviews)
                 </span>
               </div>
-              <span className="text-2xl font-extrabold text-slate-900">
+              <span className="text-2xl font-extrabold text-ink">
                 {formatUsd(product.price)}
               </span>
             </div>
 
-            <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-600">
+            <p className="mt-4 text-sm font-semibold leading-relaxed text-muted">
               {product.description}
             </p>
 
             <div className="mt-5 grid gap-4">
               {/* Size */}
               <div>
-                <p className="text-sm font-extrabold text-slate-900">Size</p>
+              <p className="font-serif text-sm font-extrabold italic text-ink">Size</p>
                 <div className="mt-2 flex gap-2">
                   {(["S", "M", "L"] as const).map((s) => (
                     <button
@@ -189,8 +215,8 @@ export default function ProductDetailPage() {
                       onClick={() => setSize(s)}
                       className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 ${
                         size === s
-                          ? "bg-sky-600 text-white ring-sky-600"
-                          : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+                          ? "bg-brown text-white ring-brown"
+                          : "bg-white text-ink ring-sand hover:bg-warm"
                       }`}
                     >
                       {s}
@@ -201,26 +227,26 @@ export default function ProductDetailPage() {
 
               {/* Quantity */}
               <div>
-                <p className="text-sm font-extrabold text-slate-900">Quantity</p>
-                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-slate-50 p-1 ring-1 ring-slate-200">
+                <p className="font-serif text-sm font-extrabold italic text-ink">Quantity</p>
+                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-warm p-1 ring-1 ring-sand">
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm"
                     aria-label="Decrease quantity"
                   >
-                    <Minus className="h-4 w-4 text-slate-700" />
+                    <Minus className="h-4 w-4 text-ink" />
                   </button>
-                  <span className="min-w-10 text-center text-sm font-extrabold text-slate-900">
+                  <span className="min-w-10 text-center text-sm font-extrabold text-ink">
                     {qty}
                   </span>
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.min(99, q + 1))}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm"
                     aria-label="Increase quantity"
                   >
-                    <Plus className="h-4 w-4 text-slate-700" />
+                    <Plus className="h-4 w-4 text-ink" />
                   </button>
                 </div>
               </div>
@@ -229,13 +255,18 @@ export default function ProductDetailPage() {
               <div className="mt-1 grid gap-3">
                 <button
                   type="button"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-pink-500 px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-pink-600"
+                  onClick={handleAddToCart}
+                  disabled={addLoading || product.stock <= 0}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
                 >
-                  Add to cart · {formatUsd(product.price * qty)}
+                  {addLoading ? "Adding..." : `Add to cart · ${formatUsd(product.price * qty)}`}
                 </button>
-                <div className="flex items-center gap-2 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-                  <ShieldCheck className="h-5 w-5 text-sky-700" />
-                  <p className="text-sm font-semibold text-slate-700">
+                {addMessage ? (
+                  <p className="text-xs font-semibold text-muted">{addMessage}</p>
+                ) : null}
+                <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
+                  <ShieldCheck className="h-5 w-5 text-brown" />
+                  <p className="text-sm font-semibold text-ink">
                     Free returns within 7 days · Community verified picks
                   </p>
                 </div>
@@ -244,26 +275,26 @@ export default function ProductDetailPage() {
 
             {/* Highlights */}
             <div className="mt-6">
-              <p className="text-sm font-extrabold text-slate-900">Product Info</p>
+              <p className="font-serif text-sm font-extrabold italic text-ink">Product Info</p>
               <div className="mt-3 grid gap-2">
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
                   <span>Stock Available</span>
-                  <span className="text-xs font-extrabold text-slate-400">{product.stock} units</span>
+                  <span className="text-xs font-extrabold text-muted">{product.stock} units</span>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
                   <span>Category</span>
-                  <span className="text-xs font-extrabold text-slate-400">{product.category}</span>
+                  <span className="text-xs font-extrabold text-muted">{product.category}</span>
                 </div>
                 {product.isHot && (
-                  <div className="flex items-center justify-between rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
+                  <div className="flex items-center justify-between rounded-2xl bg-[#fff5f1] px-4 py-3 text-sm font-semibold text-rust ring-1 ring-rust/25">
                     <span>Hot Product</span>
-                    <span className="text-xs font-extrabold text-red-400">🔥</span>
+                    <span className="text-xs font-extrabold text-rust">🔥</span>
                   </div>
                 )}
                 {product.isRecommended && (
-                  <div className="flex items-center justify-between rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 ring-1 ring-green-200">
+                  <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
                     <span>Recommended</span>
-                    <span className="text-xs font-extrabold text-green-400">⭐</span>
+                    <span className="text-xs font-extrabold text-emerald-600">⭐</span>
                   </div>
                 )}
               </div>
@@ -271,15 +302,15 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Sticky add-on card */}
-          <div className="mt-5 rounded-[22px] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm font-extrabold text-slate-900">Selected</p>
-            <div className="mt-2 flex items-center justify-between text-sm font-semibold text-slate-600">
+          <div className="mt-5 rounded-[22px] bg-white p-5 shadow-sm ring-1 ring-sand">
+            <p className="font-serif text-sm font-extrabold italic text-ink">Selected</p>
+            <div className="mt-2 flex items-center justify-between text-sm font-semibold text-muted">
               <span>Size</span>
-              <span className="font-extrabold text-slate-900">{size}</span>
+              <span className="font-extrabold text-ink">{size}</span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-sm font-semibold text-slate-600">
+            <div className="mt-1 flex items-center justify-between text-sm font-semibold text-muted">
               <span>Qty</span>
-              <span className="font-extrabold text-slate-900">{qty}</span>
+              <span className="font-extrabold text-ink">{qty}</span>
             </div>
           </div>
         </div>
@@ -288,10 +319,10 @@ export default function ProductDetailPage() {
       {/* Related */}
       <section className="mt-10">
         <div className="flex items-end justify-between">
-          <p className="text-sm font-extrabold text-slate-900">You may also like</p>
+          <p className="font-serif text-lg font-extrabold italic text-ink">You may also like</p>
           <Link
             to="/products"
-            className="text-sm font-semibold text-pink-500 hover:text-pink-600"
+            className="text-sm font-semibold text-brown hover:text-brown-dark"
           >
             Browse all
           </Link>
@@ -302,9 +333,9 @@ export default function ProductDetailPage() {
             <Link
               key={p._id}
               to={`/products/${p._id}`}
-              className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-slate-200 hover:shadow-md"
+              className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sand hover:shadow-md"
             >
-              <div className="relative aspect-[4/3] bg-slate-50">
+              <div className="relative aspect-[4/3] bg-warm">
                 <img
                   alt={p.name}
                   src={p.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"}
@@ -313,12 +344,12 @@ export default function ProductDetailPage() {
                 />
               </div>
               <div className="p-4">
-                <p className="text-xs font-semibold text-slate-400">{p.category}</p>
-                <p className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900">
+                <p className="text-xs font-semibold text-muted">{p.category}</p>
+                <p className="mt-1 line-clamp-1 text-sm font-extrabold text-ink">
                   {p.name}
                 </p>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-slate-900">
+                  <span className="text-sm font-extrabold text-ink">
                     {formatUsd(p.price)}
                   </span>
                   <span className="inline-flex items-center gap-1 text-xs font-extrabold text-amber-700">
@@ -334,4 +365,3 @@ export default function ProductDetailPage() {
     </main>
   );
 }
-

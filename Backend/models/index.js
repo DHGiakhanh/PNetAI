@@ -8,6 +8,7 @@ const Order = require("./order.model");
 const Carousel = require("./carousel.model");
 const Category = require("./category.model");
 const Service = require("./service.model");
+const Pet = require("./pet.model");
 
 const db = {}
 
@@ -21,6 +22,7 @@ db.Order = Order;
 db.Carousel = Carousel;
 db.Category = Category;
 db.Service = Service;
+db.Pet = Pet;
 
 
 module.exports = db;

@@ -8,10 +8,11 @@ import {
   Shirt,
   Plus,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
+import { cartService } from "../../services/cart.service";
 
 type CategoryItem = {
   id: string;
@@ -51,10 +52,12 @@ type ShopItem =
   };
 
 export default function ShopPage() {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>("all");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -141,6 +144,24 @@ export default function ShopPage() {
     if (activeCategory === "all") return items;
     return items.filter((i) => i.filterKey === activeCategory);
   }, [activeCategory, items]);
+
+  const handleAddToCart = async (productId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setAddingId(productId);
+      await cartService.addToCart(productId, 1);
+      window.dispatchEvent(new Event("cart:updated"));
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+    } finally {
+      setAddingId(null);
+    }
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16">
@@ -267,6 +288,8 @@ export default function ShopPage() {
                     </span>
                     <button
                       type="button"
+                      onClick={() => handleAddToCart(p.id)}
+                      disabled={addingId === p.id}
                       className="grid h-9 w-9 place-items-center rounded-full bg-pink-500 text-white shadow-sm hover:bg-pink-600"
                       aria-label={p.addLabel}
                     >
