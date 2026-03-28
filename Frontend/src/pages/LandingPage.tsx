@@ -19,7 +19,7 @@ export default function LandingPage() {
   }, [activePage]);
 
   return (
-    <div className="relative bg-gradient-to-b from-white to-pink-50/40">
+    <div className="relative bg-gradient-to-b from-white to-warm">
       <div className={activePage === "home" ? "block" : "hidden"}>
         <Hero />
         <ServicesStrip />

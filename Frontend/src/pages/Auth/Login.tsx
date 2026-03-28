@@ -34,29 +34,16 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-pink-50 via-pink-50 to-cyan-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-r from-warm via-warm to-cream flex items-center justify-center px-4">
       <div className="max-w-6xl w-full bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl overflow-hidden flex flex-col lg:flex-row">
         {/* Left: Form */}
         <div className="w-full lg:w-1/2 px-8 sm:px-12 py-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-2xl bg-pink-500 flex items-center justify-center text-white font-bold">
-                PE
-              </div>
-              <span className="font-semibold text-lg text-gray-800">
-                PNetAI
-              </span>
-            </div>
-            <button className="text-xs text-gray-500 flex items-center gap-1">
-              English ▼
-            </button>
-          </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+          <h1 className="font-serif italic text-3xl sm:text-4xl font-bold text-ink mb-3">
             Welcome back to your pet&apos;s favorite place!{" "}
-            <span className="text-pink-500">🐾</span>
+            <span className="text-brown">🐾</span>
           </h1>
-          <p className="text-gray-500 mb-8 max-w-md">
+          <p className="text-muted mb-8 max-w-md">
             Log in to track health, book spas, and chat with our AI Vet
             Assistant.
           </p>
@@ -66,24 +53,6 @@ export const Login = () => {
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
-
-          {/* Social buttons */}
-          <div className="flex gap-3 mb-6">
-            <button className="flex-1 border border-pink-100 hover:border-pink-300 text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white">
-              <span className="w-5 h-5 rounded-full border" />
-              Continue with Google
-            </button>
-            <button className="flex-1 border border-pink-100 hover:border-pink-300 text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white">
-              <span className="w-5 h-5 rounded-full border" />
-              Continue with Facebook
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs text-gray-400 mb-6">
-            <div className="flex-1 h-px bg-pink-100" />
-            <span>Or continue with email</span>
-            <div className="flex-1 h-px bg-pink-100" />
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
@@ -97,7 +66,7 @@ export const Login = () => {
                   placeholder="alice@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-pink-100 bg-pink-50/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 placeholder:text-gray-400"
+                  className="w-full rounded-xl border border-sand bg-warm/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-caramel/40 focus:border-caramel placeholder:text-gray-400"
                   required
                   disabled={loading}
                 />
@@ -115,7 +84,7 @@ export const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-pink-100 bg-pink-50/60 focus:bg-white px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 placeholder:text-gray-400"
+                  className="w-full rounded-xl border border-sand bg-warm/60 focus:bg-white px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-caramel/40 focus:border-caramel placeholder:text-gray-400"
                   required
                   disabled={loading}
                 />
@@ -135,11 +104,11 @@ export const Login = () => {
                 <input
                   type="checkbox"
                   defaultChecked
-                  className="rounded border-pink-200 text-pink-500 focus:ring-pink-300"
+                  className="rounded border-sand text-brown focus:ring-caramel/40"
                 />
                 <span>Remember me</span>
               </label>
-              <Link to="/forgot-password" className="text-pink-500 font-medium">
+              <Link to="/forgot-password" className="text-brown font-medium">
                 Forgot Password?
               </Link>
             </div>
@@ -147,15 +116,43 @@ export const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white font-semibold py-3 rounded-full shadow-lg shadow-pink-200 text-sm transition"
+              className="w-full bg-brown hover:bg-brown-dark disabled:bg-sand text-white font-semibold py-3 rounded-full shadow-lg shadow-brown/20 text-sm transition"
             >
               {loading ? 'Logging in...' : 'Log In'}
             </button>
           </form>
 
+          <div className="flex items-center gap-4 text-xs text-gray-400 my-6">
+            <div className="flex-1 h-px bg-warm" />
+            <span>Or continue with</span>
+            <div className="flex-1 h-px bg-warm" />
+          </div>
+
+          <button className="w-full border border-sand hover:border-caramel text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path
+                d="M21.805 10.023H12v3.955h5.608c-.242 1.273-.968 2.35-2.063 3.073v2.551h3.338c1.955-1.8 3.122-4.45 3.122-7.602 0-.66-.06-1.295-.2-1.977z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 22c2.82 0 5.188-.928 6.918-2.398l-3.338-2.551c-.928.622-2.115.992-3.58.992-2.75 0-5.077-1.856-5.91-4.353H2.646v2.632A9.999 9.999 0 0012 22z"
+                fill="#34A853"
+              />
+              <path
+                d="M6.09 13.69a5.996 5.996 0 010-3.38V7.678H2.646a9.996 9.996 0 000 8.644l3.444-2.632z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.957c1.533 0 2.908.528 3.99 1.565l2.996-2.996C17.183 2.89 14.82 2 12 2a9.999 9.999 0 00-9.354 5.678L6.09 10.31C6.923 7.813 9.25 5.957 12 5.957z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continue with Google
+          </button>
+
           <p className="mt-6 text-sm text-gray-500">
             Don&apos;t have an account?{" "}
-            <Link to="/register" className="text-pink-500 font-medium">
+            <Link to="/register" className="text-brown font-medium">
               Create free account
             </Link>
           </p>
@@ -168,7 +165,7 @@ export const Login = () => {
         </div>
 
         {/* Right: Image / cards */}
-        <div className="hidden lg:flex w-full lg:w-1/2 bg-gradient-to-br from-pink-200 via-pink-100 to-cyan-100 items-center justify-center relative p-10">
+        <div className="hidden lg:flex w-full lg:w-1/2 bg-gradient-to-br from-sand via-warm to-sage items-center justify-center relative p-10">
           <div className="absolute top-10 right-6 bg-white rounded-2xl shadow-lg px-4 py-3 text-xs text-gray-700 w-48">
             <p className="font-semibold mb-1">AI Vet Consult</p>
             <p className="text-gray-400">
@@ -183,7 +180,7 @@ export const Login = () => {
             </p>
           </div>
 
-          <div className="relative w-80 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-blue-200 animate-float">
+          <div className="relative w-80 h-96 rounded-[2.2rem] overflow-hidden shadow-2xl bg-sand animate-float">
             <img
               src="https://www.robins.vn/wp-content/uploads/2026/01/anh-con-cho-10.jpg.jpg"
               alt="Dogs walking"

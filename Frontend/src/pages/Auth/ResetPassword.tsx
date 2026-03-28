@@ -47,22 +47,22 @@ export const ResetPasswordPage = () => {
           animate={{ scale: 1, opacity: 1 }}
           className="text-center"
         >
-          <div className="w-16 h-16 bg-pink-100 text-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+          <div className="w-16 h-16 bg-warm text-brown rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold mb-2.5">
-            <div className="w-5 h-[1px] bg-pink-500" />
+          <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.12em] text-brown font-semibold mb-2.5">
+            <div className="w-5 h-[1px] bg-brown" />
             Complete
           </div>
           <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-gray-900 mb-2">
-            Success<em className="text-pink-500 italic font-normal">ful!</em>
+            Success<em className="text-brown italic font-normal">ful!</em>
           </h1>
           <p className="text-sm text-gray-600 font-light mb-9 max-w-[280px] mx-auto leading-relaxed">
             Your password has been reset. You can now log in to PawHaus with your new credentials.
           </p>
           <button
             onClick={() => navigate("/login")}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-xl font-sans text-sm font-bold shadow-lg shadow-pink-200 transition-all max-w-[300px]"
+            className="w-full bg-brown hover:bg-brown-dark text-white p-4 rounded-xl font-sans text-sm font-bold shadow-lg shadow-brown/20 transition-all max-w-[300px]"
           >
             Log In Now →
           </button>
@@ -80,17 +80,17 @@ export const ResetPasswordPage = () => {
       >
         <button
           onClick={() => navigate("/otp-verify")}
-          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-pink-500 transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
+          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-brown transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Go Back
         </button>
 
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold mb-2.5">
-          <div className="w-5 h-[1px] bg-pink-500" />
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-brown font-semibold mb-2.5">
+          <div className="w-5 h-[1px] bg-brown" />
           Final Step
         </div>
         <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-gray-900 mb-2">
-          New <em className="text-pink-500 italic font-normal">password</em>
+          New <em className="text-brown italic font-normal">password</em>
         </h1>
         <p className="text-sm text-gray-600 font-light mb-9 leading-relaxed">
           Create a strong password - mix uppercase, numbers, and symbols.
@@ -109,13 +109,13 @@ export const ResetPasswordPage = () => {
                 className={`w-full p-3.5 border-[1.5px] rounded-2xl bg-white focus:outline-none transition-all font-sans text-sm shadow-sm ${
                   errors.password
                     ? "border-red-500"
-                    : "border-pink-100 focus:border-pink-300 focus:ring-4 focus:ring-pink-100"
+                    : "border-sand focus:border-caramel focus:ring-4 focus:ring-sand"
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brown transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -134,7 +134,7 @@ export const ResetPasswordPage = () => {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 className={`w-full p-3.5 border-[1.5px] rounded-2xl bg-white focus:outline-none transition-all font-sans text-sm shadow-sm ${
-                  errors.confirmPassword ? "border-red-500" : "border-pink-100 focus:border-pink-300 focus:ring-4 focus:ring-pink-100"
+                  errors.confirmPassword ? "border-red-500" : "border-sand focus:border-caramel focus:ring-4 focus:ring-sand"
                 }`}
               />
             </div>
@@ -146,7 +146,7 @@ export const ResetPasswordPage = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-pink-200 disabled:opacity-70 mt-4 flex items-center justify-center gap-2"
+            className="w-full bg-brown hover:bg-brown-dark text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-brown/20 disabled:opacity-70 mt-4 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />

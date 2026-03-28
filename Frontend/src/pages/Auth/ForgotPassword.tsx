@@ -37,17 +37,17 @@ export const ForgotPasswordPage = () => {
       >
         <button
           onClick={() => navigate("/login")}
-          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-pink-500 transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
+          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-brown transition-colors mb-7 font-medium border-0 bg-transparent cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Log In
         </button>
 
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold mb-2.5">
-          <div className="w-5 h-[1px] bg-pink-500" />
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-brown font-semibold mb-2.5">
+          <div className="w-5 h-[1px] bg-brown" />
           Recovery Link
         </div>
         <h1 className="font-serif text-[clamp(28px,3vw,40px)] font-bold tracking-tight leading-[1.1] text-gray-900 mb-2">
-          Forgot <em className="text-pink-500 italic font-normal">password?</em>
+          Forgot <em className="text-brown italic font-normal">password?</em>
         </h1>
         <p className="text-sm text-gray-600 font-light mb-9 leading-relaxed">
           Don&apos;t worry! Enter your registered email. We&apos;ll send an OTP to verify your identity.
@@ -66,10 +66,10 @@ export const ForgotPasswordPage = () => {
                 className={`w-full p-3.5 border-[1.5px] rounded-2xl bg-white focus:outline-none transition-all font-sans text-sm shadow-sm ${
                   errors.email
                     ? "border-red-500"
-                    : "border-pink-100 focus:border-pink-300 focus:ring-4 focus:ring-pink-100"
+                    : "border-sand focus:border-caramel focus:ring-4 focus:ring-sand"
                 }`}
               />
-              <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-pink-500 transition-colors" />
+              <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-brown transition-colors" />
             </div>
             {errors.email && <p className="text-[11px] text-red-500 font-medium">{errors.email.message}</p>}
           </div>
@@ -77,7 +77,7 @@ export const ForgotPasswordPage = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-pink-200 disabled:opacity-70 flex items-center justify-center gap-2"
+            className="w-full bg-brown hover:bg-brown-dark text-white p-4 rounded-xl font-sans text-[15px] font-medium transition-all shadow-lg shadow-brown/20 disabled:opacity-70 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -88,7 +88,7 @@ export const ForgotPasswordPage = () => {
         </form>
 
         <div className="text-center mt-8">
-          <Link to="/login" className="text-[13px] font-medium text-gray-500 hover:text-pink-500 transition-colors">
+          <Link to="/login" className="text-[13px] font-medium text-gray-500 hover:text-brown transition-colors">
             Cancel
           </Link>
         </div>

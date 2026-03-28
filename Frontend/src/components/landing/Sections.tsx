@@ -12,7 +12,7 @@ const SERVICES = [
 
 export const ServicesStrip = () => {
   return (
-    <section className="bg-pink-500 py-8">
+    <section className="bg-brown py-8">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-6 sm:grid-cols-2 lg:grid-cols-5">
         {SERVICES.map((service, index) => (
           <div key={index} className="flex items-center gap-3 rounded-2xl bg-white/10 p-3 text-white">
@@ -50,12 +50,12 @@ const FEATURE_LIST = [
 
 export const Features = () => {
   return (
-    <section className="py-24 bg-gradient-to-r from-pink-50/70 to-cyan-50/70">
+    <section className="py-24 bg-gradient-to-r from-warm to-cream">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 md:grid-cols-3">
         {FEATURE_LIST.map((feature, idx) => (
           <div
             key={idx}
-            className="p-10 bg-white rounded-3xl border border-pink-100 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group"
+            className="p-10 bg-white rounded-3xl border border-sand shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group"
           >
             <div className="text-4xl mb-6 group-hover:scale-110 transition-transform inline-block">{feature.icon}</div>
             <h3 className="text-3xl mb-4 italic text-slate-800">{feature.title}</h3>
@@ -65,7 +65,7 @@ export const Features = () => {
       </div>
 
       <div className="mt-20 text-center">
-        <p className="text-pink-500 font-serif italic text-2xl">&quot;The world is a friendlier place with paws.&quot;</p>
+        <p className="text-brown font-serif italic text-2xl">&quot;The world is a friendlier place with paws.&quot;</p>
       </div>
     </section>
   );
@@ -111,16 +111,16 @@ export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: str
       <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-px bg-pink-500" />
-            <span className="text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold">Featured Products</span>
+            <div className="w-6 h-px bg-brown" />
+            <span className="text-xs uppercase tracking-[0.12em] text-brown font-semibold">Featured Products</span>
           </div>
           <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight">
-            Selected <span className="text-pink-500 italic font-normal">exclusively</span>
+            Selected <span className="text-brown italic font-normal">exclusively</span>
             <br />
             for your beloved pet
           </h2>
         </div>
-        <Link to="/products" className="text-pink-500 font-medium text-[15px] flex items-center gap-1.5 hover:gap-2.5 transition-all">
+        <Link to="/products" className="text-brown font-medium text-[15px] flex items-center gap-1.5 hover:gap-2.5 transition-all">
           View all →
         </Link>
       </div>
@@ -128,22 +128,22 @@ export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: str
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {loading
           ? [...Array(5)].map((_, idx) => (
-              <div key={idx} className="animate-pulse bg-white rounded-3xl overflow-hidden border border-pink-100">
-                <div className="aspect-square bg-pink-100/70" />
+              <div key={idx} className="animate-pulse bg-white rounded-3xl overflow-hidden border border-sand">
+                <div className="aspect-square bg-sand" />
                 <div className="p-6">
-                  <div className="h-3 w-20 bg-pink-100 rounded mb-3" />
-                  <div className="h-6 w-4/5 bg-pink-100 rounded mb-4" />
-                  <div className="h-5 w-24 bg-pink-100 rounded" />
+                  <div className="h-3 w-20 bg-sand rounded mb-3" />
+                  <div className="h-6 w-4/5 bg-sand rounded mb-4" />
+                  <div className="h-5 w-24 bg-sand rounded" />
                 </div>
               </div>
             ))
           : products.map((product) => (
               <div
                 key={product._id}
-                className="bg-white rounded-3xl overflow-hidden border border-pink-100 group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-pink-100"
+                className="bg-white rounded-3xl overflow-hidden border border-sand group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-sand"
                 onClick={() => onProductClick?.(product._id)}
               >
-                <div className="relative bg-pink-50 aspect-square transition-transform duration-500 group-hover:scale-[1.02]">
+                <div className="relative bg-warm aspect-square transition-transform duration-500 group-hover:scale-[1.02]">
                   <img
                     src={
                       product.images[0] ||
@@ -154,25 +154,25 @@ export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: str
                     loading="lazy"
                   />
                   {product.isHot && (
-                    <div className="absolute top-4 left-4 bg-pink-500 text-white px-3 py-1 rounded-full text-[11px] font-semibold">
+                    <div className="absolute top-4 left-4 bg-brown text-white px-3 py-1 rounded-full text-[11px] font-semibold">
                       Hot
                     </div>
                   )}
                 </div>
                 <div className="p-6">
                   <div className="text-[11px] uppercase tracking-widest text-gray-500 mb-1.5">{product.category}</div>
-                  <div className="text-pink-500 text-xs mb-2">
+                  <div className="text-brown text-xs mb-2">
                     ★ {product.averageRating.toFixed(1)} ({product.totalReviews})
                   </div>
                   <h3 className="text-xl font-serif font-bold text-gray-900 leading-tight mb-2 line-clamp-2">{product.name}</h3>
                   <div className="flex items-center justify-between mt-4">
                     <div>
-                      <span className="text-lg font-bold text-pink-500">{formatUsd(product.price)}</span>
+                      <span className="text-lg font-bold text-brown">{formatUsd(product.price)}</span>
                     </div>
                     <Link
                       to={`/products/${product._id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-9 h-9 bg-pink-500 text-white rounded-full inline-flex items-center justify-center text-xl transition-all hover:bg-pink-600 hover:rotate-90"
+                      className="w-9 h-9 bg-brown text-white rounded-full inline-flex items-center justify-center text-xl transition-all hover:bg-brown-dark hover:rotate-90"
                       aria-label={`View ${product.name}`}
                     >
                       +
@@ -201,16 +201,16 @@ export const SpaBooking = () => {
 
   return (
     <section className="py-24">
-    <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 rounded-[40px] bg-gradient-to-r from-pink-50 to-cyan-50 px-6 py-14 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-16 lg:py-20">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 rounded-[40px] bg-gradient-to-r from-warm to-cream px-6 py-14 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-16 lg:py-20">
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-px bg-pink-500" />
-          <span className="text-xs uppercase tracking-[0.12em] text-pink-500 font-semibold">Book a Spa</span>
+          <div className="w-6 h-px bg-brown" />
+          <span className="text-xs uppercase tracking-[0.12em] text-brown font-semibold">Book a Spa</span>
         </div>
         <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight mb-4">
           Care for your pet
           <br />
-          <span className="text-pink-500 italic font-normal">as you wish</span>
+          <span className="text-brown italic font-normal">as you wish</span>
         </h2>
         <p className="text-gray-600 text-[16px] font-light max-w-md leading-relaxed mb-10">
           Flexible schedules, dedicated staff, clean &amp; safe environment.
@@ -220,17 +220,17 @@ export const SpaBooking = () => {
           {SPA_SERVICES.map((s, idx) => (
             <div
               key={idx}
-              className="bg-white border border-pink-100 p-5 rounded-2xl cursor-pointer hover:border-pink-300 hover:-translate-y-0.5 transition-all group"
+              className="bg-white border border-sand p-5 rounded-2xl cursor-pointer hover:border-caramel hover:-translate-y-0.5 transition-all group"
             >
               <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div>
               <div className="text-[14px] font-semibold text-gray-900">{s.name}</div>
-              <div className="text-[13px] text-pink-500 font-medium">{s.price}</div>
+              <div className="text-[13px] text-brown font-medium">{s.price}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-[28px] p-10 text-white shadow-2xl">
+      <div className="bg-gradient-to-br from-brown to-brown-dark rounded-[28px] p-10 text-white shadow-2xl">
         <h3 className="text-2xl font-serif font-semibold mb-8">Quick Booking</h3>
 
         <div className="space-y-5">
@@ -270,7 +270,7 @@ export const SpaBooking = () => {
                     onClick={() => setSelectedSlot(slot)}
                     className={`text-[11px] p-2 rounded-lg border border-white/15 transition-all ${
                       selectedSlot === slot
-                        ? "bg-white text-pink-600 border-white"
+                        ? "bg-white text-brown-dark border-white"
                         : "bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100"
                     }`}
                     disabled={slot === "16:30"}
@@ -284,7 +284,7 @@ export const SpaBooking = () => {
           </div>
         </div>
 
-        <button className="w-full bg-white hover:bg-pink-50 text-pink-600 py-4 rounded-2xl font-semibold mt-10 transition-all hover:-translate-y-0.5 shadow-lg shadow-pink-700/20">
+        <button className="w-full bg-brown hover:bg-brown-dark text-white py-4 rounded-2xl font-semibold mt-10 transition-all hover:-translate-y-0.5 shadow-lg shadow-brown-dark/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel/70 focus-visible:ring-offset-2 focus-visible:ring-offset-brown-dark">
           Confirm Booking
         </button>
       </div>
@@ -318,7 +318,7 @@ const REVIEWS = [
 
 export const Testimonials = () => {
   return (
-    <section className="bg-gradient-to-r from-pink-500 to-cyan-500 py-24 text-white overflow-hidden relative">
+    <section className="bg-gradient-to-r from-brown to-forest py-24 text-white overflow-hidden relative">
       <div className="mx-auto max-w-6xl px-6">
       <div className="flex flex-col lg:flex-row justify-between items-end gap-10 mb-16">
         <div>
@@ -327,7 +327,7 @@ export const Testimonials = () => {
             <span className="text-xs uppercase tracking-[0.12em] text-white/90 font-semibold">Testimonials</span>
           </div>
           <h2 className="text-4xl lg:text-5xl font-serif font-bold leading-tight">
-            What our <span className="text-pink-100 italic font-normal">customers say</span> about us
+            What our <span className="text-sand italic font-normal">customers say</span> about us
           </h2>
         </div>
         <p className="text-white/50 text-[16px] font-light max-w-sm">
@@ -348,7 +348,7 @@ export const Testimonials = () => {
               {r.quote}
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-pink-200 to-cyan-200 text-gray-800 flex items-center justify-center text-xl">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-caramel to-sage text-gray-800 flex items-center justify-center text-xl">
                 {r.avatar}
               </div>
               <div>
@@ -367,11 +367,11 @@ export const Testimonials = () => {
 export const Newsletter = () => {
   return (
     <section className="py-24">
-    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-10 rounded-[40px] bg-gradient-to-r from-pink-50 to-cyan-50 px-6 py-14 sm:px-8 lg:flex-row lg:gap-12 lg:px-16 lg:py-20">
+    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-10 rounded-[40px] bg-gradient-to-r from-warm to-cream px-6 py-14 sm:px-8 lg:flex-row lg:gap-12 lg:px-16 lg:py-20">
       <div className="max-w-md">
         <h2 className="text-4xl font-serif font-bold text-gray-900 leading-[1.15] mb-4">
           Receive <br />
-          <span className="text-pink-500 italic font-normal">exclusive offers</span> every week
+          <span className="text-brown italic font-normal">exclusive offers</span> every week
         </h2>
         <p className="text-gray-600 text-[15px] font-light">Care tips, discount vouchers, and the latest news from PNetAI.</p>
       </div>
@@ -379,9 +379,9 @@ export const Newsletter = () => {
         <input
           type="email"
           placeholder="Your email address..."
-          className="flex-1 bg-white border border-pink-100 px-6 py-4 rounded-full outline-none focus:border-pink-300 transition-all text-gray-900"
+          className="flex-1 bg-white border border-sand px-6 py-4 rounded-full outline-none focus:border-caramel transition-all text-gray-900"
         />
-        <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-bold transition-all hover:-translate-y-0.5 shadow-md">
+        <button className="bg-brown hover:bg-brown-dark text-white px-8 py-4 rounded-full font-bold transition-all hover:-translate-y-0.5 shadow-md">
           Subscribe →
         </button>
       </div>
