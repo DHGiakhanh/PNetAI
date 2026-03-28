@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 
 import { AdminLayout } from "@/layout/AdminLayout";
 import MainLayout from "@/layout/MainLayout";
+import ServiceProviderLayout from "@/layout/ServiceProviderLayout";
 
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import AdminRoute from "@/routes/AdminRoute";
@@ -47,7 +48,11 @@ export default function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
         </Route>
-        <Route element={<ServiceProviderRoute />}>
+      </Route>
+
+      {/* Service Provider */}
+      <Route element={<ServiceProviderRoute />}>
+        <Route path="service-provider" element={<ServiceProviderLayout />}>
           <Route index element={<ServiceProviderOverview />} />
           <Route path="products" element={<ProductManagement />} />
           <Route path="categories" element={<CategoryManagement />} />
