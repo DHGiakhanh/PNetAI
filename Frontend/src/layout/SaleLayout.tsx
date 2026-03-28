@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CheckCircle2, LogOut, Users } from "lucide-react";
+import { CheckCircle2, LogOut, UserCircle2, Users } from "lucide-react";
 
 export default function SaleLayout() {
   const navigate = useNavigate();
@@ -45,6 +45,17 @@ export default function SaleLayout() {
               <CheckCircle2 className="h-5 w-5" />
               Approval Orders
             </NavLink>
+            <NavLink
+              to="/sale/profile"
+              className={({ isActive }) =>
+                `mt-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                }`
+              }
+            >
+              <UserCircle2 className="h-5 w-5" />
+              My Profile
+            </NavLink>
           </nav>
 
           <div className="border-t border-sand p-4">
@@ -53,9 +64,10 @@ export default function SaleLayout() {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex w-full items-center justify-center rounded-full bg-brown px-3 py-2 text-white hover:bg-brown-dark"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brown px-3 py-2 text-white hover:bg-brown-dark"
             >
               <LogOut className="h-4 w-4" />
+              <span className="text-sm font-semibold">Logout</span>
             </button>
           </div>
         </div>
@@ -65,7 +77,7 @@ export default function SaleLayout() {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-sand bg-white/85 px-6 backdrop-blur-xl">
           <h2 className="text-lg font-semibold text-ink">Sale Workspace</h2>
           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Service Provider Approval Flow
+            Service Provider
           </span>
         </header>
         <div className="p-6">

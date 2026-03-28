@@ -36,6 +36,7 @@ import BlogsPage from "@/pages/Blogs/BlogsPage";
 import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsPage";
 import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
+import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
 
 export default function AppRoutes() {
   return (
@@ -61,6 +62,7 @@ export default function AppRoutes() {
           <Route index element={<ServiceProviderApprovalsPage />} />
           <Route path="providers" element={<ServiceProviderApprovalsPage />} />
           <Route path="approvals" element={<SalePendingApprovalsPage />} />
+          <Route path="profile" element={<SaleProfilePage />} />
         </Route>
       </Route>
 
