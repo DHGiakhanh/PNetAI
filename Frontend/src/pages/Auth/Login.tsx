@@ -23,6 +23,10 @@ export const Login = () => {
       // Redirect based on role
       if (response.user.role === 'admin') {
         navigate('/admin');
+      } else if (response.user.role === 'service_provider' || response.user.role === 'shop') {
+        navigate('/service-provider');
+      } else if (response.user.role === 'sale') {
+        navigate('/sale/providers');
       } else {
         navigate('/');
       }
