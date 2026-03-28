@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
 import toast from "react-hot-toast";
 import apiClient from '../../utils/api.service';
+import Pagination from "@/components/common/Pagination";
 
 interface User {
   _id: string;
@@ -25,9 +26,17 @@ export const UserManagement = () => {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const pageSize = 10;
 
   useEffect(() => {
     fetchUsers();
+  }, [filter, search, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
   }, [filter, search]);
 
   const fetchUsers = async () => {
@@ -36,9 +45,13 @@ export const UserManagement = () => {
       const params: any = {};
       if (filter !== 'all') params.role = filter;
       if (search) params.search = search;
+      params.page = currentPage;
+      params.limit = pageSize;
 
       const response = await apiClient.get('/admin/users', { params });
-      setUsers(response.data.users);
+      setUsers(response.data.users || []);
+      setTotalPages(response.data?.pagination?.pages || 1);
+      setTotalUsers(response.data?.pagination?.total || 0);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -203,6 +216,14 @@ export const UserManagement = () => {
           </table>
         </div>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalUsers}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
 
       {showCreateModal && (
         <CreateSaleModal

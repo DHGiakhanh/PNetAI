@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Scissors, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import Pagination from "@/components/common/Pagination";
 
 type Service = {
   _id: string;
@@ -53,6 +54,8 @@ export const ServiceManagement = () => {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState<ServiceForm>(initialForm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const fetchServices = async () => {
     try {
@@ -71,6 +74,16 @@ export const ServiceManagement = () => {
   useEffect(() => {
     fetchServices();
   }, [search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(services.length / pageSize));
+  const paginatedServices = useMemo(
+    () => services.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [services, currentPage]
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -204,7 +217,7 @@ export const ServiceManagement = () => {
                   </td>
                 </tr>
               ) : (
-                services.map((service) => (
+                paginatedServices.map((service) => (
                   <tr key={service._id} className="border-t border-sand/70">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -248,6 +261,13 @@ export const ServiceManagement = () => {
           </table>
         </div>
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={services.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
 
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">

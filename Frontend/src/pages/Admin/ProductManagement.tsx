@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Edit3, Package, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import Pagination from "@/components/common/Pagination";
 
 type Product = {
   _id: string;
@@ -52,6 +53,8 @@ export const ProductManagement = () => {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(initialForm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const fetchData = async () => {
     try {
@@ -72,6 +75,16 @@ export const ProductManagement = () => {
   useEffect(() => {
     fetchData();
   }, [search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+  const paginatedProducts = useMemo(
+    () => products.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [products, currentPage]
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -194,7 +207,7 @@ export const ProductManagement = () => {
                   </td>
                 </tr>
               ) : (
-                products.map((product) => (
+                paginatedProducts.map((product) => (
                   <tr key={product._id} className="border-t border-sand/70">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -237,6 +250,13 @@ export const ProductManagement = () => {
           </table>
         </div>
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={products.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
 
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">
@@ -339,4 +359,3 @@ export const ProductManagement = () => {
     </div>
   );
 };
-

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/utils/api.service";
 import { Users } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/common/Pagination";
 
 type BookingCustomer = {
   user: {
@@ -18,6 +19,8 @@ type BookingCustomer = {
 export const CustomerBookingsPage = () => {
   const [customers, setCustomers] = useState<BookingCustomer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -33,6 +36,12 @@ export const CustomerBookingsPage = () => {
     };
     fetchCustomers();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(customers.length / pageSize));
+  const paginatedCustomers = useMemo(
+    () => customers.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [customers, currentPage]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-warm via-cream to-warm p-6">
@@ -73,7 +82,7 @@ export const CustomerBookingsPage = () => {
                   </td>
                 </tr>
               ) : (
-                customers.map((item) => (
+                paginatedCustomers.map((item) => (
                   <tr key={item.user._id} className="border-t border-sand/70">
                     <td className="px-4 py-3 text-sm font-semibold text-ink">{item.user.name}</td>
                     <td className="px-4 py-3 text-sm text-muted">{item.user.email}</td>
@@ -90,7 +99,13 @@ export const CustomerBookingsPage = () => {
           </table>
         </div>
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={customers.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };
-

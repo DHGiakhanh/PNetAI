@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import Pagination from "@/components/common/Pagination";
 
 type Provider = {
   _id: string;
@@ -17,6 +18,8 @@ export default function SalePendingApprovalsPage() {
   const [pendingProviders, setPendingProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
 
   const fetchPending = async () => {
     try {
@@ -33,6 +36,18 @@ export default function SalePendingApprovalsPage() {
   useEffect(() => {
     fetchPending();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(pendingProviders.length / pageSize));
+  const paginatedPendingProviders = useMemo(
+    () => pendingProviders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [pendingProviders, currentPage]
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const approveProvider = async (providerId: string) => {
     try {
@@ -75,7 +90,7 @@ export default function SalePendingApprovalsPage() {
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {pendingProviders.map((provider) => (
+            {paginatedPendingProviders.map((provider) => (
               <article key={provider._id} className="rounded-2xl border border-sand bg-warm/30 p-4">
                 <p className="text-base font-semibold text-ink">{provider.name}</p>
                 <p className="text-sm text-muted">{provider.email}</p>
@@ -98,8 +113,15 @@ export default function SalePendingApprovalsPage() {
             ))}
           </div>
         )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pendingProviders.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          className="mt-4"
+        />
       </section>
     </main>
   );
 }
-

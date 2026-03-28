@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { UserRoundCheck, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import Pagination from "@/components/common/Pagination";
 
 type Provider = {
   _id: string;
@@ -17,6 +18,8 @@ export default function ServiceProviderApprovalsPage() {
   const [managedProviders, setManagedProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeProviderId, setActiveProviderId] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -41,6 +44,17 @@ export default function ServiceProviderApprovalsPage() {
     () => managedProviders.find((provider) => provider._id === activeProviderId) || null,
     [managedProviders, activeProviderId],
   );
+  const totalPages = Math.max(1, Math.ceil(managedProviders.length / pageSize));
+  const paginatedManagedProviders = useMemo(
+    () => managedProviders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [managedProviders, currentPage]
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <main className="min-h-[calc(100vh-7rem)]">
@@ -71,7 +85,7 @@ export default function ServiceProviderApprovalsPage() {
               </p>
             ) : (
               <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
-                {managedProviders.map((provider) => {
+                {paginatedManagedProviders.map((provider) => {
                   const active = provider._id === activeProviderId;
                   return (
                     <button
@@ -100,6 +114,14 @@ export default function ServiceProviderApprovalsPage() {
                 })}
               </div>
             )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={managedProviders.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              className="mt-3"
+            />
           </section>
         </aside>
 
@@ -145,4 +167,3 @@ export default function ServiceProviderApprovalsPage() {
     </main>
   );
 }
-

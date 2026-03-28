@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Shapes, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import Pagination from "@/components/common/Pagination";
 
 type Category = {
   _id: string;
@@ -38,6 +39,8 @@ export const CategoryManagement = () => {
   const [editing, setEditing] = useState<Category | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CategoryForm>(initialForm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const fetchCategories = async () => {
     try {
@@ -54,6 +57,12 @@ export const CategoryManagement = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(categories.length / pageSize));
+  const paginatedCategories = useMemo(
+    () => categories.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [categories, currentPage]
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -153,7 +162,7 @@ export const CategoryManagement = () => {
                   </td>
                 </tr>
               ) : (
-                categories.map((category) => (
+                paginatedCategories.map((category) => (
                   <tr key={category._id} className="border-t border-sand/70">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -211,6 +220,13 @@ export const CategoryManagement = () => {
           </table>
         </div>
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={categories.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
 
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">
@@ -286,4 +302,3 @@ export const CategoryManagement = () => {
     </div>
   );
 };
-
