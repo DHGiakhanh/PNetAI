@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   Edit3,
   Heart,
+  ImageUp,
   PawPrint,
   Plus,
   Stethoscope,
@@ -78,6 +79,8 @@ export default function MyPetsPage() {
   const [editing, setEditing] = useState<Pet | null>(null);
   const [form, setForm] = useState<PetPayload>(initialForm);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchPets = async () => {
     try {
@@ -127,6 +130,24 @@ export default function MyPetsPage() {
     setModalOpen(false);
     setEditing(null);
     setForm(initialForm);
+  };
+
+  const handleAvatarUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingAvatar(true);
+      const { url } = await petService.uploadPetAvatar(file);
+      if (!url) throw new Error("Upload failed");
+      setForm((prev) => ({ ...prev, avatarUrl: url }));
+      toast.success("Pet avatar uploaded.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Could not upload image.");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
   };
 
   const handleSave = async (e: FormEvent) => {
@@ -267,12 +288,12 @@ export default function MyPetsPage() {
       </div>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 backdrop-blur-[2px] p-4">
+        <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/45 backdrop-blur-[2px] p-2 sm:p-4">
           <form
             onSubmit={handleSave}
-            className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-sand bg-[#FAF7F2] p-6 shadow-2xl md:p-8"
+            className="relative max-h-[96vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-sand bg-[#FAF7F2] shadow-2xl"
           >
-            <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-4 border-b border-sand bg-[#FAF7F2] px-6 pb-3 pt-4 md:-mx-8 md:-mt-8 md:px-8 md:pt-5">
+            <div className="sticky top-0 z-30 mb-4 border-b border-sand bg-[#FAF7F2] px-6 pb-3 pt-4 md:px-8 md:pt-5">
               <div className="mb-1.5 flex items-start justify-between gap-4">
                 <h3 className="font-serif text-[2rem] font-bold italic leading-tight text-ink md:text-[1.85rem]">
                   {editing ? "Edit" : "Create"} <span className="text-caramel">Pet Passport</span>
@@ -291,7 +312,7 @@ export default function MyPetsPage() {
               </p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+            <div className="grid gap-6 px-6 pb-6 md:px-8 md:pb-8 lg:grid-cols-[220px_1fr]">
               <aside className="rounded-3xl border border-sand bg-white p-5">
                 <p className="font-serif text-2xl font-bold italic text-ink">Avatar</p>
                 <div className="mt-4 grid place-items-center rounded-2xl border border-dashed border-sand bg-warm/40 p-5">
@@ -316,6 +337,22 @@ export default function MyPetsPage() {
                   }
                   placeholder="Paste image URL"
                   className="mt-4 w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-sand bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <ImageUp className="h-4 w-4 text-caramel" />
+                  {uploadingAvatar ? "Uploading..." : "Upload from device"}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
                 />
                 <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
                   Avatar URL
@@ -582,7 +619,7 @@ export default function MyPetsPage() {
               </section>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2 border-t border-sand pt-5">
+            <div className="mt-6 mb-6 flex justify-end gap-2 border-t border-sand pt-5">
               <button
                 type="button"
                 onClick={closeModal}

@@ -48,6 +48,18 @@ export const petService = {
     return response.data?.pet;
   },
 
+  uploadPetAvatar: async (file: File): Promise<{ url: string; publicId?: string }> => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await apiClient.post("/pets/upload-avatar", formData);
+
+    return {
+      url: response.data?.url,
+      publicId: response.data?.publicId,
+    };
+  },
+
   updatePet: async (id: string, payload: Partial<PetPayload>): Promise<Pet> => {
     const response = await apiClient.put(`/pets/${id}`, payload);
     return response.data?.pet;

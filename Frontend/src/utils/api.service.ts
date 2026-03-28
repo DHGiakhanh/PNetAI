@@ -11,6 +11,14 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (config.data instanceof FormData) {
+      if (config.headers && typeof (config.headers as any).set === 'function') {
+        (config.headers as any).set('Content-Type', undefined);
+      } else if (config.headers) {
+        delete (config.headers as any)['Content-Type'];
+      }
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
