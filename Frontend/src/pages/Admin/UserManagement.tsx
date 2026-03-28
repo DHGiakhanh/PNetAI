@@ -39,6 +39,10 @@ export const UserManagement = () => {
     setCurrentPage(1);
   }, [filter, search]);
 
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);

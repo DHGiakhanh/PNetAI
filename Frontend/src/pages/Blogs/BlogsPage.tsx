@@ -1,4 +1,6 @@
+import { useMemo, useState } from "react";
 import { CalendarDays, Clock3, PawPrint } from "lucide-react";
+import Pagination from "@/components/common/Pagination";
 
 type BlogPost = {
   id: string;
@@ -74,6 +76,14 @@ const blogPosts: BlogPost[] = [
 ];
 
 export default function BlogsPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
+  const totalPages = Math.max(1, Math.ceil(blogPosts.length / pageSize));
+  const paginatedPosts = useMemo(
+    () => blogPosts.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [currentPage]
+  );
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm to-cream px-4 pb-20 pt-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -86,7 +96,7 @@ export default function BlogsPage() {
         </p>
 
         <section className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {blogPosts.map((post) => (
+          {paginatedPosts.map((post) => (
             <article key={post.id} className="overflow-hidden rounded-3xl border border-sand bg-white shadow-sm">
               <div className="aspect-[4/3] bg-warm">
                 <img src={post.image} alt={post.title} className="h-full w-full object-cover" loading="lazy" />
@@ -115,6 +125,13 @@ export default function BlogsPage() {
             </article>
           ))}
         </section>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={blogPosts.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </main>
   );

@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
 import { cartService } from "../../services/cart.service";
+import Pagination from "@/components/common/Pagination";
 
 type CategoryItem = {
   id: string;
@@ -45,6 +46,7 @@ type ShopItem =
     id: string;
     title: string;
     subtitle: string;
+    providerName: string;
     meta: string;
     imageUrl: string;
     href: string;
@@ -59,6 +61,8 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   useEffect(() => {
     fetchData();
@@ -109,6 +113,11 @@ export default function ShopPage() {
 
   const items = useMemo<ShopItem[]>(() => {
     return products.map((p) => {
+      const providerName =
+        typeof p.providerId === "string"
+          ? "Service Provider"
+          : p.providerId?.name || "Service Provider";
+
       const filterKey: ShopItem["filterKey"] =
         p.category.toLowerCase() === "food"
           ? "food"
@@ -129,6 +138,7 @@ export default function ShopPage() {
         id: p._id,
         title: p.name,
         subtitle: p.category,
+        providerName,
         meta: new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
@@ -145,6 +155,16 @@ export default function ShopPage() {
     if (activeCategory === "all") return items;
     return items.filter((i) => i.filterKey === activeCategory);
   }, [activeCategory, items]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedItems = useMemo(
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filtered, currentPage]
+  );
 
   const handleAddToCart = async (productId: string) => {
     const token = localStorage.getItem("token");
@@ -262,7 +282,7 @@ export default function ShopPage() {
           </div>
         ) : (
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {filtered.map((p) => (
+            {paginatedItems.map((p) => (
               <article
                 key={p.id}
                 className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sand"
@@ -286,6 +306,9 @@ export default function ShopPage() {
                       {p.title}
                     </h3>
                   </Link>
+                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
+                    by {p.providerName}
+                  </p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-sm font-extrabold text-ink">
                       {"meta" in p ? p.meta : ""}
@@ -305,6 +328,15 @@ export default function ShopPage() {
             ))}
           </div>
         )}
+        {!loading ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        ) : null}
       </section>
 
       {/* Spacer section to match airy layout */}

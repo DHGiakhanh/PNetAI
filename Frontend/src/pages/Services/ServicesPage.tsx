@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, Scissors, Stethoscope } from "lucide-react";
 import { serviceService, Service } from "@/services/service.service";
+import Pagination from "@/components/common/Pagination";
 
 type ServiceCategory = "all" | "grooming" | "vet";
 
@@ -9,6 +10,8 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -31,6 +34,16 @@ export default function ServicesPage() {
     if (activeCategory === "grooming") return services.filter((s) => s.category === "Grooming");
     return services.filter((s) => s.category !== "Grooming");
   }, [activeCategory, services]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / pageSize));
+  const paginatedServices = useMemo(
+    () => filteredServices.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredServices, currentPage]
+  );
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16">
@@ -104,7 +117,7 @@ export default function ServicesPage() {
           </div>
         ) : (
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredServices.map((s) => (
+            {paginatedServices.map((s) => (
               <article key={s._id} className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sky-200/80">
                 <Link to={`/services/${s._id}`} className="block">
                   <div className="relative aspect-[4/3] bg-slate-50">
@@ -127,6 +140,9 @@ export default function ServicesPage() {
                   <Link to={`/services/${s._id}`} className="block">
                     <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-slate-900 hover:underline">{s.title}</h3>
                   </Link>
+                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-sky-700">
+                    by {s.providerId?.name || "Service Provider"}
+                  </p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-sm font-extrabold text-slate-900">${s.basePrice.toFixed(2)}</span>
                     <Link
@@ -143,6 +159,15 @@ export default function ServicesPage() {
             ))}
           </div>
         )}
+        {!loading ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredServices.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        ) : null}
       </section>
     </main>
   );

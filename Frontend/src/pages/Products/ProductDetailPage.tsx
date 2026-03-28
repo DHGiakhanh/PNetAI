@@ -12,6 +12,11 @@ function formatUsd(amount: number) {
   }).format(amount);
 }
 
+function getProductProviderName(product: Product) {
+  if (typeof product.providerId === "string") return "Service Provider";
+  return product.providerId?.name || "Service Provider";
+}
+
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -116,6 +121,7 @@ export default function ProductDetailPage() {
 
   const images = product.images.length ? product.images : [];
   const activeImage = images[Math.min(activeImageIdx, Math.max(images.length - 1, 0))];
+  const providerName = getProductProviderName(product);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16 pt-6">
@@ -183,6 +189,7 @@ export default function ProductDetailPage() {
             <h1 className="mt-2 font-serif text-3xl font-extrabold italic leading-snug text-ink">
               {product.name}
             </h1>
+            <p className="mt-1 text-xs font-semibold text-brown">Provided by {providerName}</p>
 
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -282,6 +289,10 @@ export default function ProductDetailPage() {
                   <span>Category</span>
                   <span className="text-xs font-extrabold text-muted">{product.category}</span>
                 </div>
+                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
+                  <span>Service Provider</span>
+                  <span className="text-xs font-extrabold text-muted">{providerName}</span>
+                </div>
                 {product.isHot && (
                   <div className="flex items-center justify-between rounded-2xl bg-[#fff5f1] px-4 py-3 text-sm font-semibold text-rust ring-1 ring-rust/25">
                     <span>Hot Product</span>
@@ -344,6 +355,9 @@ export default function ProductDetailPage() {
                 <p className="text-xs font-semibold text-muted">{p.category}</p>
                 <p className="mt-1 line-clamp-1 text-sm font-extrabold text-ink">
                   {p.name}
+                </p>
+                <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
+                  by {getProductProviderName(p)}
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-extrabold text-ink">

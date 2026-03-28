@@ -85,6 +85,10 @@ export const ServiceManagement = () => {
     [services, currentPage]
   );
 
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const openCreate = () => {
     setEditing(null);
     setForm(initialForm);

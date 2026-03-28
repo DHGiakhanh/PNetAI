@@ -86,6 +86,10 @@ export const ProductManagement = () => {
     [products, currentPage]
   );
 
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const openCreate = () => {
     setEditing(null);
     setForm(initialForm);

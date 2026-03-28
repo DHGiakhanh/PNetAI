@@ -43,6 +43,10 @@ export const CustomerBookingsPage = () => {
     [customers, currentPage]
   );
 
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-warm via-cream to-warm p-6">
       <div className="mb-6 flex items-center gap-3">
