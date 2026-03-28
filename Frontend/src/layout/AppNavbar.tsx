@@ -180,8 +180,8 @@ export function AppNavbar() {
             </Link>
             {isLoggedIn ? (
               <Link
-                to="/profile"
-                className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/profile") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+                to="/my-pets"
+                className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/my-pets") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
               >
                 <PawPrint className="h-4 w-4" />
                 My Pets
@@ -331,7 +331,7 @@ export function AppNavbar() {
               </Link>
               {isLoggedIn ? (
                 <Link
-                  to="/profile"
+                  to="/my-pets"
                   onClick={() => setMobileMenuOpen(false)}
                   className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
                 >
@@ -429,7 +429,7 @@ export function AppNavbar() {
                 className="rounded-2xl border border-sand bg-warm/40 px-3 py-2"
               >
                 <p className="text-sm font-semibold text-ink">{item.name}</p>
-                <p className="text-xs text-muted">Qty {item.qty}</p>
+                <p className="text-xs text-muted">Quantity {item.qty}</p>
                 <p className="mt-1 text-sm font-bold text-brown">
                   {item.priceText}
                 </p>
@@ -456,8 +456,8 @@ export function AppNavbar() {
                 Home
               </Link>
               <Link
-                to="/profile"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/profile") ? "text-brown" : "text-gray-500"}`}
+                to="/my-pets"
+                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/my-pets") ? "text-brown" : "text-gray-500"}`}
               >
                 <PawPrint className="mb-1 h-4 w-4" />
                 My Pets

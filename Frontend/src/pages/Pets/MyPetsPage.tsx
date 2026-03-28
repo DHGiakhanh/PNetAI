@@ -1,7 +1,17 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Edit3, Plus, Stethoscope, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  Edit3,
+  Heart,
+  PawPrint,
+  Plus,
+  Stethoscope,
+  Trash2,
+  Weight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import Select, { StylesConfig } from "react-select";
+import toast from "react-hot-toast";
 import { Pet, PetPayload, petService } from "@/services/pet.service";
 
 const initialForm: PetPayload = {
@@ -116,13 +126,17 @@ export default function MyPetsPage() {
       setSaving(true);
       if (editing?._id) {
         await petService.updatePet(editing._id, form);
+        toast.success("Pet profile updated.");
       } else {
         await petService.createPet(form);
+        toast.success("New pet added successfully.");
       }
       closeModal();
-      fetchPets();
+      await fetchPets();
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Could not save pet.");
+      const message = err?.response?.data?.message || "Could not save pet.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -132,9 +146,12 @@ export default function MyPetsPage() {
     if (!confirm("Delete this pet profile?")) return;
     try {
       await petService.deletePet(id);
-      fetchPets();
+      toast.success("Pet profile deleted.");
+      await fetchPets();
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Could not delete pet.");
+      const message = err?.response?.data?.message || "Could not delete pet.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -238,49 +255,206 @@ export default function MyPetsPage() {
       </div>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/20 p-4">
-          <form onSubmit={handleSave} className="w-full max-w-xl rounded-3xl border border-sand bg-white p-6 shadow-2xl">
-            <h3 className="font-serif text-3xl font-bold italic text-ink">{editing ? "Edit Pet" : "Add New Pet"}</h3>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Name"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <Select
-                options={speciesOptions}
-                value={speciesOptions.find((opt) => opt.value === form.species) || speciesOptions[0]}
-                onChange={(option) =>
-                  setForm((p) => ({ ...p, species: (option?.value as PetPayload["species"]) || "Dog" }))
-                }
-                styles={selectStyles}
-                isSearchable={false}
-              />
-              <input value={form.breed} onChange={(e) => setForm((p) => ({ ...p, breed: e.target.value }))} placeholder="Breed" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <Select
-                options={genderOptions}
-                value={genderOptions.find((opt) => opt.value === form.gender) || genderOptions[0]}
-                onChange={(option) =>
-                  setForm((p) => ({ ...p, gender: (option?.value as PetPayload["gender"]) || "Unknown" }))
-                }
-                styles={selectStyles}
-                isSearchable={false}
-              />
-              <input type="number" min={0} value={form.age} onChange={(e) => setForm((p) => ({ ...p, age: Number(e.target.value) }))} placeholder="Age" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <input type="number" min={0} step="0.1" value={form.weightKg} onChange={(e) => setForm((p) => ({ ...p, weightKg: Number(e.target.value) }))} placeholder="Weight (kg)" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <input value={form.healthStatus} onChange={(e) => setForm((p) => ({ ...p, healthStatus: e.target.value }))} placeholder="Health status" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <input type="date" value={form.lastVisitDate || ""} onChange={(e) => setForm((p) => ({ ...p, lastVisitDate: e.target.value }))} className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <input value={form.avatarUrl} onChange={(e) => setForm((p) => ({ ...p, avatarUrl: e.target.value }))} placeholder="Avatar URL" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2" />
-              <textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2" rows={3} />
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/45 backdrop-blur-[2px] p-4">
+          <form
+            onSubmit={handleSave}
+            className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-sand bg-[#FAF7F2] p-6 shadow-2xl md:p-8"
+          >
+            <div className="mb-6 border-b border-sand pb-5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-caramel">
+                Pet Passport
+              </p>
+              <h3 className="font-serif text-4xl font-bold italic text-ink">
+                {editing ? "Edit" : "Create"} <span className="text-caramel">Pet Passport</span>
+              </h3>
+              <p className="mt-2 text-sm text-muted">
+                Keep your furry friend profile complete for faster booking.
+              </p>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={closeModal} className="rounded-full border border-sand px-4 py-2 text-sm font-semibold text-ink hover:bg-warm">
+
+            <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+              <aside className="rounded-3xl border border-sand bg-white p-5">
+                <p className="font-serif text-2xl font-bold italic text-ink">Avatar</p>
+                <div className="mt-4 grid place-items-center rounded-2xl border border-dashed border-sand bg-warm/40 p-5">
+                  <div className="h-24 w-24 overflow-hidden rounded-full ring-2 ring-sand">
+                    <img
+                      src={
+                        form.avatarUrl ||
+                        "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"
+                      }
+                      alt={form.name || "Pet avatar"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                    Preview
+                  </p>
+                </div>
+                <input
+                  value={form.avatarUrl}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, avatarUrl: e.target.value }))
+                  }
+                  placeholder="Paste image URL"
+                  className="mt-4 w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                />
+              </aside>
+
+              <section className="rounded-3xl border border-sand bg-white p-5">
+                <div className="grid gap-5">
+                  <div>
+                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                      <PawPrint className="h-5 w-5 text-caramel" />
+                      Basic Information
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        required
+                        value={form.name}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        placeholder="Pet name"
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      <Select
+                        options={speciesOptions}
+                        value={
+                          speciesOptions.find(
+                            (opt) => opt.value === form.species,
+                          ) || speciesOptions[0]
+                        }
+                        onChange={(option) =>
+                          setForm((p) => ({
+                            ...p,
+                            species:
+                              (option?.value as PetPayload["species"]) || "Dog",
+                          }))
+                        }
+                        styles={selectStyles}
+                        isSearchable={false}
+                      />
+                      <input
+                        value={form.breed}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, breed: e.target.value }))
+                        }
+                        placeholder="Breed"
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      <Select
+                        options={genderOptions}
+                        value={
+                          genderOptions.find(
+                            (opt) => opt.value === form.gender,
+                          ) || genderOptions[0]
+                        }
+                        onChange={(option) =>
+                          setForm((p) => ({
+                            ...p,
+                            gender:
+                              (option?.value as PetPayload["gender"]) ||
+                              "Unknown",
+                          }))
+                        }
+                        styles={selectStyles}
+                        isSearchable={false}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-sand pt-5">
+                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                      <Weight className="h-5 w-5 text-caramel" />
+                      Physical Status
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <input
+                        type="number"
+                        min={0}
+                        value={form.age}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, age: Number(e.target.value) }))
+                        }
+                        placeholder="Age (years)"
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={form.weightKg}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            weightKg: Number(e.target.value),
+                          }))
+                        }
+                        placeholder="Weight (kg)"
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      <input
+                        value={form.healthStatus}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            healthStatus: e.target.value,
+                          }))
+                        }
+                        placeholder="Health status"
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      <input
+                        type="date"
+                        value={form.lastVisitDate || ""}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            lastVisitDate: e.target.value,
+                          }))
+                        }
+                        className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-3"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-sand pt-5">
+                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                      <Heart className="h-5 w-5 text-caramel" />
+                      Health & Notes
+                    </p>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, notes: e.target.value }))
+                      }
+                      placeholder="Allergies, medications, personality notes for staff..."
+                      className="mt-4 w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-sand pt-5">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full border border-sand px-5 py-2 text-sm font-semibold text-ink hover:bg-warm"
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={saving} className="rounded-full bg-brown px-5 py-2 text-sm font-semibold text-white hover:bg-brown-dark disabled:opacity-60">
-                {saving ? "Saving..." : editing ? "Update Pet" : "Create Pet"}
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-full bg-brown px-6 py-2 text-sm font-semibold text-white hover:bg-brown-dark disabled:opacity-60"
+              >
+                {saving
+                  ? "Saving..."
+                  : editing
+                    ? "Update Passport"
+                    : "Create Passport"}
               </button>
             </div>
           </form>

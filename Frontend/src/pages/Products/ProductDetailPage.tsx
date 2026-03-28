@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Star } from "lucide-react";
+import toast from "react-hot-toast";
 import { productService, Product } from "../../services/product.service";
 import { cartService } from "../../services/cart.service";
 
@@ -18,7 +19,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [addLoading, setAddLoading] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [qty, setQty] = useState(1);
@@ -30,12 +30,6 @@ export default function ProductDetailPage() {
       fetchRelatedProducts();
     }
   }, [productId]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const fetchProduct = async (id: string) => {
     try {
@@ -64,7 +58,7 @@ export default function ProductDetailPage() {
 
     const token = localStorage.getItem("token");
     if (!token) {
-      setToast({ type: "error", message: "Please login to add items to cart." });
+      toast.error("Please login to add items to cart.");
       navigate("/login");
       return;
     }
@@ -72,10 +66,10 @@ export default function ProductDetailPage() {
     try {
       setAddLoading(true);
       await cartService.addToCart(product._id, qty);
-      setToast({ type: "success", message: "Added to cart successfully." });
+      toast.success("Added to cart successfully.");
       window.dispatchEvent(new Event("cart:updated"));
     } catch (error: any) {
-      setToast({ type: "error", message: error?.response?.data?.message || "Could not add to cart." });
+      toast.error(error?.response?.data?.message || "Could not add to cart.");
     } finally {
       setAddLoading(false);
     }
@@ -125,15 +119,6 @@ export default function ProductDetailPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16 pt-6">
-      {toast ? (
-        <div
-          className={`fixed right-5 top-20 z-[80] rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg ${
-            toast.type === "success" ? "bg-brown" : "bg-rust"
-          }`}
-        >
-          {toast.message}
-        </div>
-      ) : null}
       {/* Breadcrumb + back */}
       <div className="mb-4 flex items-center justify-between">
         <Link
@@ -321,7 +306,7 @@ export default function ProductDetailPage() {
               <span className="font-extrabold text-ink">{size}</span>
             </div>
             <div className="mt-1 flex items-center justify-between text-sm font-semibold text-muted">
-              <span>Qty</span>
+              <span>Quantity</span>
               <span className="font-extrabold text-ink">{qty}</span>
             </div>
           </div>

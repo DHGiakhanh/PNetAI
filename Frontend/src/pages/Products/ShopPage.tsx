@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
 import { cartService } from "../../services/cart.service";
@@ -58,17 +59,10 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingId, setAddingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2200);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const fetchData = async () => {
     try {
@@ -155,7 +149,7 @@ export default function ShopPage() {
   const handleAddToCart = async (productId: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      setToast({ type: "error", message: "Please login to add items to cart." });
+      toast.error("Please login to add items to cart.");
       navigate("/login");
       return;
     }
@@ -164,10 +158,10 @@ export default function ShopPage() {
       setAddingId(productId);
       await cartService.addToCart(productId, 1);
       window.dispatchEvent(new Event("cart:updated"));
-      setToast({ type: "success", message: "Added to cart successfully." });
+      toast.success("Added to cart successfully.");
     } catch (error) {
       console.error("Add to cart failed:", error);
-      setToast({ type: "error", message: "Could not add item to cart." });
+      toast.error("Could not add item to cart.");
     } finally {
       setAddingId(null);
     }
@@ -175,15 +169,6 @@ export default function ShopPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-5 pb-16">
-      {toast ? (
-        <div
-          className={`fixed right-5 top-20 z-[80] rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg ${
-            toast.type === "success" ? "bg-brown" : "bg-rust"
-          }`}
-        >
-          {toast.message}
-        </div>
-      ) : null}
       {/* Hero */}
       <section className="mt-4 overflow-hidden rounded-[28px] bg-warm ring-1 ring-sand">
         <div className="grid items-center gap-6 p-6 md:grid-cols-2 md:p-10">

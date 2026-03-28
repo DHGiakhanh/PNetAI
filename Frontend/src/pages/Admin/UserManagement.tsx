@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
+import toast from "react-hot-toast";
 import apiClient from '../../utils/api.service';
 
 interface User {
@@ -50,9 +51,10 @@ export const UserManagement = () => {
 
     try {
       await apiClient.delete(`/admin/users/${userId}`);
+      toast.success("User deleted successfully.");
       fetchUsers();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to delete user');
+      toast.error(error.response?.data?.message || 'Failed to delete user');
     }
   };
 
@@ -61,9 +63,10 @@ export const UserManagement = () => {
       await apiClient.put(`/admin/users/${userId}`, {
         isVerified: !currentStatus
       });
+      toast.success("User status updated successfully.");
       fetchUsers();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update user');
+      toast.error(error.response?.data?.message || 'Failed to update user');
     }
   };
 
