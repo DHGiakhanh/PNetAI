@@ -38,7 +38,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="rounded-full border border-sand px-3 py-1.5 text-xs font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-sand px-3 py-1.5 text-xs font-semibold text-ink outline-none transition hover:bg-warm focus-visible:ring-2 focus-visible:ring-caramel/60 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Prev
         </button>
@@ -48,7 +48,7 @@ export default function Pagination({
             <button
               type="button"
               onClick={() => onPageChange(1)}
-              className="h-8 w-8 rounded-full border border-sand text-xs font-semibold text-ink"
+              className="h-8 w-8 rounded-full border border-sand text-xs font-semibold text-ink outline-none transition hover:bg-warm focus-visible:ring-2 focus-visible:ring-caramel/60"
             >
               1
             </button>
@@ -63,8 +63,8 @@ export default function Pagination({
             onClick={() => onPageChange(page)}
             className={`h-8 w-8 rounded-full text-xs font-semibold transition ${
               page === currentPage
-                ? "bg-brown text-white"
-                : "border border-sand text-ink hover:bg-warm"
+                ? "bg-brown text-white ring-1 ring-brown outline-none focus-visible:ring-2 focus-visible:ring-caramel/60"
+                : "border border-sand text-ink hover:bg-warm outline-none focus-visible:ring-2 focus-visible:ring-caramel/60"
             }`}
           >
             {page}
@@ -77,7 +77,7 @@ export default function Pagination({
             <button
               type="button"
               onClick={() => onPageChange(totalPages)}
-              className="h-8 w-8 rounded-full border border-sand text-xs font-semibold text-ink"
+              className="h-8 w-8 rounded-full border border-sand text-xs font-semibold text-ink outline-none transition hover:bg-warm focus-visible:ring-2 focus-visible:ring-caramel/60"
             >
               {totalPages}
             </button>
@@ -88,7 +88,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="rounded-full border border-sand px-3 py-1.5 text-xs font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-sand px-3 py-1.5 text-xs font-semibold text-ink outline-none transition hover:bg-warm focus-visible:ring-2 focus-visible:ring-caramel/60 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>

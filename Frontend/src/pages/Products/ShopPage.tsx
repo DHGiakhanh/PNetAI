@@ -188,7 +188,8 @@ export default function ShopPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-5 pb-16">
+    <main className="min-h-screen bg-gradient-to-b from-warm via-cream to-warm">
+      <div className="mx-auto max-w-6xl px-5 pb-16">
       {/* Hero */}
       <section className="mt-4 overflow-hidden rounded-[28px] bg-warm ring-1 ring-sand">
         <div className="grid items-center gap-6 p-6 md:grid-cols-2 md:p-10">
@@ -373,6 +374,7 @@ export default function ShopPage() {
           </div>
         </div>
       </section>
+      </div>
     </main>
   );
 }
