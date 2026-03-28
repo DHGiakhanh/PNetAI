@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Edit3, Plus, Stethoscope, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import Select, { StylesConfig } from "react-select";
 import { Pet, PetPayload, petService } from "@/services/pet.service";
 
 const initialForm: PetPayload = {
@@ -14,6 +15,44 @@ const initialForm: PetPayload = {
   avatarUrl: "",
   notes: "",
   lastVisitDate: "",
+};
+
+type SelectOption = { value: string; label: string };
+
+const speciesOptions: SelectOption[] = [
+  { value: "Dog", label: "Dog" },
+  { value: "Cat", label: "Cat" },
+  { value: "Other", label: "Other" },
+];
+
+const genderOptions: SelectOption[] = [
+  { value: "Unknown", label: "Unknown" },
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+];
+
+const selectStyles: StylesConfig<SelectOption, false> = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: 46,
+    borderRadius: 12,
+    borderColor: state.isFocused ? "#C4913A" : "#E4D5BC",
+    backgroundColor: "rgba(240, 232, 216, 0.5)",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#C4913A" },
+  }),
+  menu: (base) => ({
+    ...base,
+    border: "1px solid #E4D5BC",
+    borderRadius: 12,
+    overflow: "hidden",
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#F0E8D8" : "#fff",
+    color: "#2C2418",
+  }),
+  singleValue: (base) => ({ ...base, color: "#2C2418" }),
 };
 
 export default function MyPetsPage() {
@@ -210,25 +249,25 @@ export default function MyPetsPage() {
                 placeholder="Name"
                 className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
               />
-              <select
-                value={form.species}
-                onChange={(e) => setForm((p) => ({ ...p, species: e.target.value as PetPayload["species"] }))}
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              >
-                <option value="Dog">Dog</option>
-                <option value="Cat">Cat</option>
-                <option value="Other">Other</option>
-              </select>
+              <Select
+                options={speciesOptions}
+                value={speciesOptions.find((opt) => opt.value === form.species) || speciesOptions[0]}
+                onChange={(option) =>
+                  setForm((p) => ({ ...p, species: (option?.value as PetPayload["species"]) || "Dog" }))
+                }
+                styles={selectStyles}
+                isSearchable={false}
+              />
               <input value={form.breed} onChange={(e) => setForm((p) => ({ ...p, breed: e.target.value }))} placeholder="Breed" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
-              <select
-                value={form.gender}
-                onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value as PetPayload["gender"] }))}
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              >
-                <option value="Unknown">Unknown</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
+              <Select
+                options={genderOptions}
+                value={genderOptions.find((opt) => opt.value === form.gender) || genderOptions[0]}
+                onChange={(option) =>
+                  setForm((p) => ({ ...p, gender: (option?.value as PetPayload["gender"]) || "Unknown" }))
+                }
+                styles={selectStyles}
+                isSearchable={false}
+              />
               <input type="number" min={0} value={form.age} onChange={(e) => setForm((p) => ({ ...p, age: Number(e.target.value) }))} placeholder="Age" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
               <input type="number" min={0} step="0.1" value={form.weightKg} onChange={(e) => setForm((p) => ({ ...p, weightKg: Number(e.target.value) }))} placeholder="Weight (kg)" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />
               <input value={form.healthStatus} onChange={(e) => setForm((p) => ({ ...p, healthStatus: e.target.value }))} placeholder="Health status" className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel" />

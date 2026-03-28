@@ -9,7 +9,7 @@ import AdminRoute from "@/routes/AdminRoute";
 import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
 import OtpVerifyPage from "@/pages/Auth/OtpVerify";
 import ResetPasswordPage from "@/pages/Auth/ResetPassword";
-import UserProfile from "@/pages/Profile/UserProfile";
+import MyPetsPage from "@/pages/Pets/MyPetsPage";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
@@ -48,7 +48,8 @@ export default function AppRoutes() {
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
-          <Route path="profile" element={<UserProfile />} />
+          <Route path="profile" element={<MyPetsPage />} />
+          <Route path="my-pets" element={<MyPetsPage />} />
         </Route>
       </Route>
 

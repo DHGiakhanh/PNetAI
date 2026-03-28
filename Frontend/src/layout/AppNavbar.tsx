@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   ChevronDown,
   Menu,
   LogOut,
@@ -15,10 +14,6 @@ import {
   LogIn,
 } from "lucide-react";
 import { cartService, CartItem } from "@/services/cart.service";
-
-type AppNavbarProps = {
-  showBackButton?: boolean;
-};
 
 type LocalUser = {
   name?: string;
@@ -45,7 +40,7 @@ function formatUsd(amount: number) {
   }).format(amount);
 }
 
-export function AppNavbar({ showBackButton = false }: AppNavbarProps) {
+export function AppNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
