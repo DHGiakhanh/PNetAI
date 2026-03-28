@@ -287,6 +287,18 @@ export function AppNavbar() {
                       >
                         My Profile
                       </Link>
+                      <Link
+                        to="/my-bookings"
+                        className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
+                      >
+                        My Booking
+                      </Link>
+                      <Link
+                        to="/purchased-products"
+                        className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
+                      >
+                        Purchased Products
+                      </Link>
                       <button
                         type="button"
                         onClick={handleLogout}
@@ -379,9 +391,42 @@ export function AppNavbar() {
                 </Link>
               ) : null}
               {isLoggedIn ? (
-                <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">
-                  {user?.name ?? "Pet Parent"}
-                </p>
+                <>
+                  <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">
+                    {user?.name ?? "Pet Parent"}
+                  </p>
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  >
+                    My Profile
+                  </Link>
+                  <Link
+                    to="/my-bookings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  >
+                    My Booking
+                  </Link>
+                  <Link
+                    to="/purchased-products"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  >
+                    Purchased Products
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="rounded-xl px-3 py-2 text-left text-sm font-semibold text-rust hover:bg-warm"
+                  >
+                    Logout
+                  </button>
+                </>
               ) : (
                 <div className="flex gap-2 pt-1">
                   <Link

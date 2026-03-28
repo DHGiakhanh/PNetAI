@@ -38,6 +38,8 @@ import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsP
 import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
 import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
+import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
+import PurchasedProductsPage from "@/pages/Orders/PurchasedProductsPage";
 
 export default function AppRoutes() {
   return (
@@ -86,6 +88,8 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="profile" element={<UserProfile />} />
           <Route path="my-pets" element={<MyPetsPage />} />
+          <Route path="my-bookings" element={<MyBookingsPage />} />
+          <Route path="purchased-products" element={<PurchasedProductsPage />} />
         </Route>
       </Route>
 
