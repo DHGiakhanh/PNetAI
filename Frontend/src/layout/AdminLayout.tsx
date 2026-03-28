@@ -25,9 +25,11 @@ export const AdminLayout = () => {
   const menuItems =
     isServiceProvider
       ? [
+          { title: "Overview", icon: LayoutDashboard, path: "/admin", exact: true },
           { title: "Products", icon: Package, path: "/admin/products" },
           { title: "Categories", icon: Shapes, path: "/admin/categories" },
           { title: "Services", icon: Scissors, path: "/admin/services" },
+          { title: "Customers Booking", icon: Users, path: "/admin/bookings" },
         ]
       : [
           { title: "Dashboard", icon: LayoutDashboard, path: "/admin", exact: true },

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import { AdminLayout } from "@/layout/AdminLayout";
 import MainLayout from "@/layout/MainLayout";
@@ -19,6 +19,8 @@ import { UserManagement } from "@/pages/Admin/UserManagement";
 import { ProductManagement } from "@/pages/Admin/ProductManagement";
 import { CategoryManagement } from "@/pages/Admin/CategoryManagement";
 import { ServiceManagement } from "@/pages/Admin/ServiceManagement";
+import { ServiceProviderOverview } from "@/pages/Admin/ServiceProviderOverview";
+import { CustomerBookingsPage } from "@/pages/Admin/CustomerBookingsPage";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -43,10 +45,11 @@ export default function AppRoutes() {
           <Route path="users" element={<UserManagement />} />
         </Route>
         <Route element={<ServiceProviderRoute />}>
-          <Route index element={<Navigate to="products" replace />} />
+          <Route index element={<ServiceProviderOverview />} />
           <Route path="products" element={<ProductManagement />} />
           <Route path="categories" element={<CategoryManagement />} />
           <Route path="services" element={<ServiceManagement />} />
+          <Route path="bookings" element={<CustomerBookingsPage />} />
         </Route>
       </Route>
 

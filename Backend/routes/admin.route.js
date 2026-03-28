@@ -322,6 +322,50 @@ router.get('/services', verifyToken, isServiceProvider, async (req, res) => {
     }
 });
 
+// Get customers bookings for service provider dashboard
+router.get('/customers-bookings', verifyToken, isServiceProvider, async (req, res) => {
+    try {
+        const orders = await db.Order.find()
+            .populate('user', 'name email phone')
+            .sort({ createdAt: -1 })
+            .limit(300);
+
+        const bookingMap = new Map();
+
+        for (const order of orders) {
+            const user = order.user;
+            if (!user) continue;
+            const key = user._id.toString();
+            const existing = bookingMap.get(key) || {
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone || "",
+                },
+                totalOrders: 0,
+                totalSpent: 0,
+                lastBookedAt: order.createdAt,
+            };
+
+            existing.totalOrders += 1;
+            existing.totalSpent += Number(order.totalAmount || 0);
+            if (!existing.lastBookedAt || new Date(order.createdAt) > new Date(existing.lastBookedAt)) {
+                existing.lastBookedAt = order.createdAt;
+            }
+            bookingMap.set(key, existing);
+        }
+
+        const customers = Array.from(bookingMap.values()).sort(
+            (a, b) => new Date(b.lastBookedAt) - new Date(a.lastBookedAt)
+        );
+
+        res.status(200).json({ customers });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Assign customer to sale
 router.post('/users/:userId/assign-sale', verifyToken, isAdmin, async (req, res) => {
     try {
