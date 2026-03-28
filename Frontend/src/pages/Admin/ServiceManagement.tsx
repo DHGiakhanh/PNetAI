@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Edit3, Plus, Scissors, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
 import Pagination from "@/components/common/Pagination";
+import { serviceService } from "@/services/service.service";
 
 type Service = {
   _id: string;
@@ -55,6 +56,8 @@ export const ServiceManagement = () => {
   const [editing, setEditing] = useState<Service | null>(null);
   const [form, setForm] = useState<ServiceForm>(initialForm);
   const [currentPage, setCurrentPage] = useState(1);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pageSize = 8;
 
   const fetchServices = async () => {
@@ -170,6 +173,24 @@ export const ServiceManagement = () => {
     }
   };
 
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const { url } = await serviceService.uploadServiceImage(file);
+      if (!url) throw new Error("Upload failed");
+      setForm((prev) => ({ ...prev, imageUrl: url }));
+      toast.success("Image uploaded.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not upload image.");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-warm via-cream to-warm p-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -279,89 +300,138 @@ export const ServiceManagement = () => {
             <h2 className="font-serif text-3xl font-bold italic text-ink">
               {editing ? "Edit Service" : "Create Service"}
             </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input
-                required
-                value={form.title}
-                onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                placeholder="Service title"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                required
-                value={form.category}
-                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                placeholder="Category"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <textarea
-                required
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Description"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-              />
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                required
-                value={form.basePrice}
-                onChange={(e) => setForm((p) => ({ ...p, basePrice: Number(e.target.value) }))}
-                placeholder="Base price"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                type="number"
-                min={5}
-                step={5}
-                required
-                value={form.duration}
-                onChange={(e) => setForm((p) => ({ ...p, duration: Number(e.target.value) }))}
-                placeholder="Duration (min)"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                value={form.imageUrl}
-                onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-                placeholder="Image URL"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-              />
-              <input
-                value={form.features}
-                onChange={(e) => setForm((p) => ({ ...p, features: e.target.value }))}
-                placeholder="Features (comma separated)"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-              />
-              <input
-                value={form.address}
-                onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                placeholder="Address"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <input
-                value={form.city}
-                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-                placeholder="City"
-                className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-              />
-              <label className="inline-flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={form.isPopular}
-                  onChange={(e) => setForm((p) => ({ ...p, isPopular: e.target.checked }))}
-                />
-                Popular
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={form.isAvailable}
-                  onChange={(e) => setForm((p) => ({ ...p, isAvailable: e.target.checked }))}
-                />
-                Available
-              </label>
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Basic Information</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    required
+                    value={form.title}
+                    onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                    placeholder="Service title"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <input
+                    required
+                    value={form.category}
+                    onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                    placeholder="Category"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <textarea
+                    required
+                    rows={3}
+                    value={form.description}
+                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="Description"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price & Duration</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    required
+                    value={form.basePrice}
+                    onChange={(e) => setForm((p) => ({ ...p, basePrice: Number(e.target.value) }))}
+                    placeholder="Base price"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <input
+                    type="number"
+                    min={5}
+                    step={5}
+                    required
+                    value={form.duration}
+                    onChange={(e) => setForm((p) => ({ ...p, duration: Number(e.target.value) }))}
+                    placeholder="Duration (min)"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Media & Features</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="rounded-full border border-sand bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:opacity-60"
+                    >
+                      {uploadingImage ? "Uploading..." : "Upload from device"}
+                    </button>
+                  </div>
+                  <input
+                    value={form.imageUrl}
+                    onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
+                    placeholder="Image URL"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
+                  />
+                  {form.imageUrl ? (
+                    <div className="sm:col-span-2">
+                      <img
+                        src={form.imageUrl}
+                        alt="Service preview"
+                        className="h-28 w-28 rounded-xl object-cover ring-1 ring-sand"
+                      />
+                    </div>
+                  ) : null}
+                  <input
+                    value={form.features}
+                    onChange={(e) => setForm((p) => ({ ...p, features: e.target.value }))}
+                    placeholder="Features (comma separated)"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Location & Status</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    value={form.address}
+                    onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+                    placeholder="Address"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <input
+                    value={form.city}
+                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                    placeholder="City"
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  />
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={form.isPopular}
+                      onChange={(e) => setForm((p) => ({ ...p, isPopular: e.target.checked }))}
+                    />
+                    Popular
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={form.isAvailable}
+                      onChange={(e) => setForm((p) => ({ ...p, isAvailable: e.target.checked }))}
+                    />
+                    Available
+                  </label>
+                </div>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

@@ -1,9 +1,15 @@
 const express = require("express");
+const multer = require("multer");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
+const { cloudinary } = require("../config/cloudinary");
 
 const router = express.Router();
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 const toServiceResponse = (serviceDoc) => {
     const service = serviceDoc?.toObject ? serviceDoc.toObject() : serviceDoc;
@@ -109,6 +115,48 @@ router.get('/latest', async (req, res) => {
         res.status(200).json({ services: services.map(toServiceResponse) });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// Upload service image (Service Provider only)
+router.post('/upload-image', verifyToken, upload.single("image"), async (req, res) => {
+    try {
+        if (!isServiceProvider(req.role)) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: "Image file is required" });
+        }
+
+        if (!req.file.mimetype?.startsWith("image/")) {
+            return res.status(400).json({ message: "Only image files are allowed" });
+        }
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                {
+                    folder: "pnetai/services",
+                    resource_type: "image",
+                },
+                (error, result) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve(result);
+                }
+            );
+            stream.end(req.file.buffer);
+        });
+
+        return res.status(200).json({
+            message: "Service image uploaded successfully",
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
 });
 

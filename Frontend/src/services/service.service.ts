@@ -113,5 +113,14 @@ export const serviceService = {
   // Delete service (Service Provider owner only)
   deleteService: async (id: string): Promise<void> => {
     await apiClient.delete(`/services/${id}`);
+  },
+
+  // Upload service image (Service Provider only)
+  uploadServiceImage: async (file: File): Promise<{ url: string; publicId?: string }> => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await apiClient.post("/services/upload-image", formData);
+    return response.data;
   }
 };
