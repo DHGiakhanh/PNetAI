@@ -4,8 +4,8 @@
 
 - **Command**: `insertOne`, `insertMany`
 - **Usage**:
-  - Thêm một document mới vào collection.
-  - Thêm nhiều documents cùng lúc vào collection.
+  - Add a new document to the collection.
+  - Add multiple documents to the collection at once.
 
 ```javascript
 // Insert one document
@@ -31,8 +31,8 @@ db.collectionName.insertMany([
 
 - **Command**: `find`, `findOne`
 - **Usage**:
-  - Lấy tất cả các document phù hợp với điều kiện.
-  - Lấy một document đầu tiên phù hợp với điều kiện.
+  - Retrieve all documents that match the condition.
+  - Retrieve the first document that matches the condition.
 
 ```javascript
 // Find all documents where age is 25
@@ -86,8 +86,8 @@ db.collectionName.findOneAndReplace(
 
 - **Command**: `updateOne`, `updateMany`
 - **Usage**:
-  - Cập nhật một document đầu tiên phù hợp với điều kiện.
-  - Cập nhật tất cả các documents phù hợp với điều kiện.
+  - Update the first document that matches the condition.
+  - Update all documents that match the condition.
 
 ```javascript
 // Update one document where name is "John"
@@ -109,14 +109,14 @@ db.collectionName.replaceOne(
 const updatedDocument = db.collectionName.findOneAndUpdate(
   { name: "Alice" },
   { $set: { age: 30 } },
-  { returnNewDocument: true } // Trả về document đã được cập nhật
+  { returnNewDocument: true } // Returns the updated document
 );
 
 // Find and update a document by its ID
 const updatedById = db.collectionName.findByIdAndUpdate(
   "60d5ec49b9a8f914c4e8a6b1", // _id
   { $set: { city: "Los Angeles" } },
-  { new: true } // Trả về document đã được cập nhật
+  { new: true } // Returns the updated document
 );
 ```
 
@@ -124,8 +124,8 @@ const updatedById = db.collectionName.findByIdAndUpdate(
 
 - **Command**: `deleteOne`, `deleteMany`
 - **Usage**:
-  - Xóa một document đầu tiên phù hợp với điều kiện.
-  - Xóa tất cả các documents phù hợp với điều kiện.
+  - Delete the first document that matches the condition.
+  - Delete all documents that match the condition.
 
 ```javascript
 // Delete one document where name is "Alice"
@@ -134,13 +134,13 @@ db.collectionName.deleteOne({ name: "Alice" });
 // Delete all documents where age is less than 25
 db.collectionName.deleteMany({ age: { $lt: 25 } });
 
-// Xóa toàn bộ documents trong collection
+// Delete all documents in the collection
 db.collectionName.deleteMany({});
 
-// Xóa document với _id cụ thể
+// Delete document with a specific _id
 db.collectionName.deleteOne({ _id: ObjectId("60d5ec49b9a8f914c4e8a6b1") });
 
-// Xóa tất cả documents mà name là "Bob" hoặc age lớn hơn 30
+// Delete all documents where name is "Bob" or age is greater than 30
 db.collectionName.deleteMany({ $or: [{ name: "Bob" }, { age: { $gt: 30 } }] });
 
 ```
@@ -148,37 +148,37 @@ db.collectionName.deleteMany({ $or: [{ name: "Bob" }, { age: { $gt: 30 } }] });
 ## 10. Populate
 
 - **Command**: `populate`
-- **Usage**: Kết hợp dữ liệu từ các collection khác nhau bằng cách liên kết các documents thông qua khóa ngoại.
+- **Usage**: Combine data from different collections by linking documents via foreign keys.
 
 ```javascript
-// Populate đơn giản với một field
+// Simple populate with one field
 db.posts.find().populate('author');
 
-// Chỉ lấy tên và email của tác giả trong quá trình populate
+// Get only name and email of the author during populate
 db.posts.find().populate('author', 'name email');
 
-// Chỉ populate những tác giả có status là 'active'
+// Populate only authors with 'active' status
 db.posts.find().populate({
   path: 'author',
   match: { status: 'active' }
 });
 
-// Populate cả 'author' và 'comments'
+// Populate both 'author' and 'comments'
 db.posts.find().populate('author').populate('comments');
 
-// Populate 'author' và bên trong đó lấy thêm 'profile' của author
+// Populate 'author' and also populate 'profile' within it
 db.posts.find().populate({
   path: 'author',
   populate: { path: 'profile' }
 });
 
-// Chỉ lấy các field cần thiết từ author
+// Get only necessary fields from author
 db.posts.find().populate({
   path: 'author',
   select: 'name email'
 });
 
-// Populate với giới hạn số lượng comments
+// Populate with a limit on comments
 db.posts.find().populate({
   path: 'comments',
   options: { limit: 5 }
@@ -190,7 +190,7 @@ db.posts.find().populate({
 ## 5. Counting Documents
 
 - **Command**: `countDocuments`
-- **Usage**: Đếm số lượng documents phù hợp với điều kiện.
+- **Usage**: Count the number of documents that match the condition.
 
 ```javascript
 // Count all documents where city is "New York"
@@ -200,7 +200,7 @@ db.collectionName.countDocuments({ city: "New York" });
 ## 6. Sorting Results
 
 - **Command**: `sort`
-- **Usage**: Sắp xếp các documents dựa trên trường cụ thể.
+- **Usage**: Sort documents based on a specific field.
 
 ```javascript
 // Find all documents and sort by age in ascending order
@@ -209,16 +209,16 @@ db.collectionName.find().sort({ age: 1 });
 // Sort by age in descending order
 db.collectionName.find().sort({ age: -1 });
 
-// Sắp xếp tăng dần theo age, nếu trùng thì sắp xếp giảm dần theo name
+// Sort by age ascending, then by name descending if age is the same
 db.collectionName.find().sort({ age: 1, name: -1 });
 
-// Lấy 5 người có tuổi cao nhất
+// Get top 5 oldest people
 db.collectionName.find().sort({ age: -1 }).limit(5);
 
-// Sắp xếp theo tên và chỉ lấy các trường name và age
+// Sort by name and retrieve only name and age fields
 db.collectionName.find({}, { name: 1, age: 1 }).sort({ name: 1 });
 
-// Sắp xếp theo trường 'details.age' bên trong embedded document 'profile'
+// Sort by 'details.age' field within the 'profile' embedded document
 db.collectionName.find().sort({ "profile.details.age": 1 });
 
 
@@ -227,7 +227,7 @@ db.collectionName.find().sort({ "profile.details.age": 1 });
 ## 7. Limiting and Skipping Results
 
 - **Command**: `limit`, `skip`
-- **Usage**: Giới hạn số lượng documents trả về và bỏ qua một số lượng nhất định.
+- **Usage**: Limit the number of documents returned and skip a certain number.
 
 ```javascript
 // Limit the result to 5 documents
@@ -236,14 +236,14 @@ db.collectionName.find().limit(5);
 // Skip the first 3 documents and limit to 5
 db.collectionName.find().skip(3).limit(5);
 
-// Lấy document đầu tiên thỏa mãn điều kiện
+// Get the first document matching the condition
 db.collectionName.find({ age: { $gt: 25 } }).limit(1);
 
-// Lấy 10 documents đầu tiên và chỉ trả về các trường 'name' và 'age'
+// Get first 10 documents and return only 'name' and 'age' fields
 db.collectionName.find({}, { name: 1, age: 1 }).limit(10);
 
-// Lấy documents từ _id cụ thể trở đi, giới hạn kết quả
-const lastId = ObjectId("60f72f7c23b1b231d89abcde"); // _id cuối của trang trước
+// Get documents from a specific _id onwards, limiting results
+const lastId = ObjectId("60f72f7c23b1b231d89abcde"); // Last _id of the previous page
 db.collectionName.find({ _id: { $gt: lastId } }).limit(10);
 
 ```
@@ -251,39 +251,39 @@ db.collectionName.find({ _id: { $gt: lastId } }).limit(10);
 ## 8. Aggregation
 
 - **Command**: `aggregate`
-- **Usage**: Thực hiện thao tác phức tạp trên documents (tổng hợp, đếm, nhóm).
+- **Usage**: Perform complex operations on documents (summarizing, counting, grouping).
 
 ```javascript
-// Lọc những người có tuổi trên 25
+// Filter people aged over 25
 db.collectionName.aggregate([{ $match: { age: { $gt: 25 } } }]);
 
-// Nhóm theo thành phố và tính tổng tiền
+// Group by city and calculate total sales
 db.collectionName.aggregate([{ $group: { _id: "$city", totalSales: { $sum: "$amount" } } }]);
 
-// Chỉ lấy tên và số tuổi sau khi cộng thêm 5 tuổi
+// Get only name and age after adding 5 years
 db.collectionName.aggregate([{ $project: { name: 1, agePlusFive: { $add: ["$age", 5] } } }]);
 
-// Sắp xếp documents theo tuổi giảm dần
+// Sort documents by age descending
 db.collectionName.aggregate([{ $sort: { age: -1 } }]);
 
-// Lấy 10 documents đầu tiên sau khi bỏ qua 5 documents
+// Get 10 documents after skipping 5
 db.collectionName.aggregate([{ $skip: 5 }, { $limit: 10 }]);
 
-// Thực hiện join giữa hai collection 'orders' và 'customers'
+// Perform join between 'orders' and 'customers' collections
 db.orders.aggregate([
   { $lookup: { from: "customers", localField: "customerId", foreignField: "_id", as: "customerInfo" } }
 ]);
 
-// Tách từng phần tử của mảng 'tags' thành document riêng biệt
+// Deconstruct 'tags' array array into separate documents
 db.collectionName.aggregate([{ $unwind: "$tags" }]);
 
-// Thêm một field mới tính tổng số lượng và giá
+// Add a new field calculating total cost (quantity * price)
 db.collectionName.aggregate([{ $addFields: { totalCost: { $multiply: ["$quantity", "$price"] } } }]);
 
-// Đếm số lượng người có tuổi trên 18
+// Count people aged over 18
 db.collectionName.aggregate([{ $match: { age: { $gt: 18 } } }, { $count: "adultCount" }]);
 
-// Thực hiện đồng thời đếm và tính giá trung bình
+// Simultaneously count and calculate average age
 db.collectionName.aggregate([
   {
     $facet: {
@@ -298,13 +298,13 @@ db.collectionName.aggregate([
 ```
 
 ## 9. Comparison Operators in Queries 
-    $gt: Lớn hơn (greater than).
-    $lt: Nhỏ hơn (less than).
-    $gte: Lớn hơn hoặc bằng (greater than or equal to).
-    $lte: Nhỏ hơn hoặc bằng (less than or equal to).
-    $ne: Không bằng (not equal to).
-    $in: Có trong danh sách (in array).
-    $nin: Không có trong danh sách (not in array).
+    $gt: Greater than.
+    $lt: Less than.
+    $gte: Greater than or equal to.
+    $lte: Less than or equal to.
+    $ne: Not equal to.
+    $in: Included in the list (in array).
+    $nin: Not included in the list (not in array).
 ```javascript
     // Find all documents where age is greater than 30
     db.collectionName.find({ age: { $gt: 30 } });
@@ -330,9 +330,7 @@ db.collectionName.aggregate([
 
 ---
 
-Chú thích:
+Notes:
 
-- `collectionName` là tên của collection mà bạn đang thao tác.
-- `$set`, `$lt`, `$sum` là các toán tử của MongoDB.
-
-
+- `collectionName` is the name of the collection you are operating on.
+- `$set`, `$lt`, `$sum` are MongoDB operators.

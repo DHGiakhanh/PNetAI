@@ -217,6 +217,7 @@ export default function MyPetsPage() {
                           "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"
                         }
                         alt={pet.name}
+                        crossOrigin="anonymous"
                         className="h-full w-full object-cover"
                       />
                     </div>
@@ -322,6 +323,7 @@ export default function MyPetsPage() {
                         "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"
                       }
                       alt={form.name || "Pet avatar"}
+                      crossOrigin="anonymous"
                       className="h-full w-full object-cover"
                     />
                   </div>

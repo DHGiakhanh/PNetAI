@@ -56,23 +56,26 @@ export function AppNavbar() {
   const cartRef = useRef<HTMLDivElement | null>(null);
   const token = localStorage.getItem("token");
   const isLoggedIn = Boolean(token);
-  let user: LocalUser | null = null;
-  try {
-    const rawUser = localStorage.getItem("user");
-    user = rawUser ? JSON.parse(rawUser) : null;
-  } catch {
-    user = null;
-  }
+  const [userData, setUserData] = useState<LocalUser | null>(null);
+
+  const syncUser = () => {
+    try {
+      const rawUser = localStorage.getItem("user");
+      setUserData(rawUser ? JSON.parse(rawUser) : null);
+    } catch {
+      setUserData(null);
+    }
+  };
 
   const initials = useMemo(() => {
-    const name = user?.name?.trim();
+    const name = userData?.name?.trim();
     if (!name) return "PP";
     return name
       .split(" ")
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("");
-  }, [user]);
+  }, [userData]);
 
   const syncCart = async () => {
     if (!isLoggedIn) {
@@ -145,6 +148,7 @@ export function AppNavbar() {
 
   useEffect(() => {
     syncCart();
+    syncUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
@@ -152,9 +156,16 @@ export function AppNavbar() {
     const onCartUpdated = () => {
       syncCart();
     };
+    const onUserUpdated = () => {
+      syncUser();
+    };
 
     window.addEventListener("cart:updated", onCartUpdated);
-    return () => window.removeEventListener("cart:updated", onCartUpdated);
+    window.addEventListener("user:updated", onUserUpdated);
+    return () => {
+      window.removeEventListener("cart:updated", onCartUpdated);
+      window.removeEventListener("user:updated", onUserUpdated);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
@@ -213,7 +224,7 @@ export function AppNavbar() {
               <Users className="h-4 w-4" />
               Blog
             </Link>
-            {isLoggedIn && user?.role === "sale" ? (
+            {isLoggedIn && userData?.role === "sale" ? (
               <Link
                 to="/sale/providers"
                 className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/sale/providers") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
@@ -233,7 +244,7 @@ export function AppNavbar() {
                 <p className="text-sm font-semibold text-ink">
                   Hi,{" "}
                   <span className="font-serif italic text-brown">
-                    {user?.name ?? "Pet Parent"}
+                    {userData?.name ?? "Pet Parent"}
                   </span>
                 </p>
               </div>
@@ -260,10 +271,10 @@ export function AppNavbar() {
                     onClick={() => setAccountOpen((prev) => !prev)}
                     className="flex items-center gap-2 rounded-full border border-sand bg-white px-2 py-1 hover:bg-warm"
                   >
-                    {user?.avatar || user?.avatarUrl ? (
+                    {userData?.avatar || userData?.avatarUrl ? (
                       <img
-                        src={user.avatar ?? user.avatarUrl}
-                        alt={user?.name ?? "Profile"}
+                        src={userData.avatar ?? userData.avatarUrl}
+                        alt={userData?.name ?? "Profile"}
                         className="h-8 w-8 rounded-full object-cover"
                       />
                     ) : (
@@ -272,7 +283,7 @@ export function AppNavbar() {
                       </span>
                     )}
                     <span className="text-sm font-semibold text-gray-700">
-                      {user?.name ?? "Pet Parent"}
+                      {userData?.name ?? "Pet Parent"}
                     </span>
                     <ChevronDown
                       className={`h-4 w-4 text-muted transition-transform ${accountOpen ? "rotate-180" : ""}`}
@@ -381,7 +392,7 @@ export function AppNavbar() {
               >
                 Blog
               </Link>
-              {isLoggedIn && user?.role === "sale" ? (
+              {isLoggedIn && userData?.role === "sale" ? (
                 <Link
                   to="/sale/providers"
                   onClick={() => setMobileMenuOpen(false)}
@@ -393,7 +404,7 @@ export function AppNavbar() {
               {isLoggedIn ? (
                 <>
                   <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">
-                    {user?.name ?? "Pet Parent"}
+                    {userData?.name ?? "Pet Parent"}
                   </p>
                   <Link
                     to="/profile"

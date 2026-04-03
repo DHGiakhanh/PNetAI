@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { productService, Product } from "@/services/product.service";
 
 const SERVICES = [
-  { icon: "🛁", name: "Bath & Hygiene", desc: "From 80,000đ" },
-  { icon: "✂️", name: "Haircut", desc: "From 150,000đ" },
-  { icon: "💅", name: "Nails & Ears", desc: "From 50,000đ" },
-  { icon: "🦷", name: "Dental Care", desc: "From 120,000đ" },
-  { icon: "🏨", name: "Stay", desc: "From 200,000đ/night" },
+  { icon: "🛁", name: "Bath & Hygiene", desc: "From $3.5" },
+  { icon: "✂️", name: "Haircut", desc: "From $6.5" },
+  { icon: "💅", name: "Nails & Ears", desc: "From $2.2" },
+  { icon: "🦷", name: "Dental Care", desc: "From $5.0" },
+  { icon: "🏨", name: "Stay", desc: "From $8.5/night" },
 ];
 
 export const ServicesStrip = () => {
@@ -188,10 +188,10 @@ export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: str
 };
 
 const SPA_SERVICES = [
-  { icon: "🛁", name: "Bath & Shampoo", price: "From 80k" },
-  { icon: "✂️", name: "Haircut", price: "From 150k" },
-  { icon: "💅", name: "Nails & Ears", price: "From 50k" },
-  { icon: "⭐", name: "Full Package", price: "From 350k" },
+  { icon: "🛁", name: "Bath & Shampoo", price: "From $3.5" },
+  { icon: "✂️", name: "Haircut", price: "From $6.5" },
+  { icon: "💅", name: "Nails & Ears", price: "From $2.2" },
+  { icon: "⭐", name: "Full Package", price: "From $15.5" },
 ];
 
 const TIME_SLOTS = ["8:00", "9:30", "11:00", "13:30", "15:00", "16:30"];
@@ -297,20 +297,20 @@ const REVIEWS = [
   {
     quote:
       '"PNetAI has completely changed how I care for Mochi. From booking a spa to buying food, everything is so convenient and reliable!"',
-    author: "Nguyễn Minh Châu",
+    author: "Alice Nguyen",
     pet: "Mochi's owner - Poodle, 2 years old",
     avatar: "👩",
     isBig: true,
   },
   {
     quote: '"Super fast delivery, 100% authentic products. My cat Bong loves the interactive toy!"',
-    author: "Trần Hoàng Nam",
+    author: "David Tran",
     pet: "Bong's owner - British Shorthair",
     avatar: "👨",
   },
   {
     quote: '"The spa staff are very gentle, my dog is no longer afraid of bathing!"',
-    author: "Lê Thị Hoa",
+    author: "Helen Le",
     pet: "Butter's owner - Golden Retriever",
     avatar: "👩",
   },

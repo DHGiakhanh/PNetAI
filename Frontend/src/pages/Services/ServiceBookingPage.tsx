@@ -219,11 +219,10 @@ export default function ServiceBookingPage() {
                     type="button"
                     onClick={() => setSelectedPetId(pet._id)}
                     disabled={!isLoggedIn}
-                    className={`rounded-[18px] border p-4 text-left transition ${
-                      active
+                    className={`rounded-[18px] border p-4 text-left transition ${active
                         ? "border-caramel bg-warm"
                         : "border-sand bg-white hover:bg-warm"
-                    } ${!isLoggedIn ? "opacity-60" : ""}`}
+                      } ${!isLoggedIn ? "opacity-60" : ""}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 overflow-hidden rounded-xl bg-sand ring-1 ring-sand">
@@ -251,11 +250,10 @@ export default function ServiceBookingPage() {
 
               <Link
                 to="/my-pets"
-                className={`rounded-[18px] border border-dashed p-4 text-left transition ${
-                  isLoggedIn
+                className={`rounded-[18px] border border-dashed p-4 text-left transition ${isLoggedIn
                     ? "border-caramel bg-white hover:bg-warm"
                     : "border-sand bg-white/60 opacity-60"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-warm ring-1 ring-sand">
@@ -321,11 +319,10 @@ export default function ServiceBookingPage() {
                       type="button"
                       onClick={() => setSelectedDateIdx(idx)}
                       disabled={!isLoggedIn}
-                      className={`w-[74px] rounded-[18px] border px-3 py-3 text-center transition ${
-                        active
+                      className={`w-[74px] rounded-[18px] border px-3 py-3 text-center transition ${active
                           ? "border-caramel bg-caramel/30"
                           : "border-sand bg-white hover:bg-warm"
-                      }`}
+                        }`}
                     >
                       <p className="text-[11px] font-extrabold text-muted">
                         {d.dow}
@@ -352,11 +349,10 @@ export default function ServiceBookingPage() {
                         type="button"
                         onClick={() => setSelectedTime(t)}
                         disabled={!isLoggedIn}
-                        className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 transition ${
-                          active
+                        className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 transition ${active
                             ? "bg-caramel/20 text-brown ring-caramel/40"
                             : "bg-white text-ink ring-sand hover:bg-warm"
-                        }`}
+                          }`}
                       >
                         {t}
                       </button>
@@ -379,11 +375,10 @@ export default function ServiceBookingPage() {
                         type="button"
                         onClick={() => setSelectedTime(t)}
                         disabled={!isLoggedIn}
-                        className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 transition ${
-                          active
+                        className={`rounded-full px-4 py-2 text-sm font-extrabold ring-1 transition ${active
                             ? "bg-caramel/20 text-brown ring-caramel/40"
                             : "bg-white text-ink ring-sand hover:bg-warm"
-                        }`}
+                          }`}
                       >
                         {t}
                       </button>
@@ -413,9 +408,8 @@ export default function ServiceBookingPage() {
                 <span className="font-semibold text-muted">Pet</span>
                 <span className="font-extrabold text-ink">
                   {selectedPet
-                    ? `${selectedPet.name}${
-                        selectedPet.breed ? ` (${selectedPet.breed})` : ""
-                      }`
+                    ? `${selectedPet.name}${selectedPet.breed ? ` (${selectedPet.breed})` : ""
+                    }`
                     : isLoggedIn
                       ? "—"
                       : "Login to select"}
@@ -464,9 +458,8 @@ export default function ServiceBookingPage() {
             <button
               type="button"
               disabled={!canBook}
-              className={`mt-5 inline-flex w-full items-center justify-center rounded-[18px] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition ${
-                canBook ? "bg-brown hover:bg-brown-dark" : "bg-sand"
-              }`}
+              className={`mt-5 inline-flex w-full items-center justify-center rounded-[18px] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition ${canBook ? "bg-brown hover:bg-brown-dark" : "bg-sand"
+                }`}
             >
               Confirm Booking
             </button>

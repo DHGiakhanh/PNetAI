@@ -14,6 +14,7 @@ import OtpVerifyPage from "@/pages/Auth/OtpVerify";
 import ResetPasswordPage from "@/pages/Auth/ResetPassword";
 import MyPetsPage from "@/pages/Pets/MyPetsPage";
 import UserProfile from "@/pages/Profile/UserProfile";
+import BlogDetailPage from "@/pages/Blogs/BlogDetailPage";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
@@ -83,6 +84,7 @@ export default function AppRoutes() {
         <Route path="otp-verify" element={<OtpVerifyPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="blogs" element={<BlogsPage />} />
+        <Route path="blogs/:blogId" element={<BlogDetailPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
