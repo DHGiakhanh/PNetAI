@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 
 export const Login = () => {
@@ -9,6 +9,8 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location.state?.successMessage || '';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -55,6 +57,11 @@ export const Login = () => {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <p className="text-green-700 text-sm">{successMessage}</p>
             </div>
           )}
 

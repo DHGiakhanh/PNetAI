@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, CheckCircle, Check } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 
@@ -58,13 +58,20 @@ export const Register = () => {
         role: formData.role,
         saleCode: formData.role === 'service_provider' ? formData.saleCode : undefined
       });
+
+      if (formData.role === 'user') {
+        navigate('/otp-verify', {
+          state: {
+            email: formData.email,
+            from: 'signup',
+            notice: response?.message
+          }
+        });
+        return;
+      }
+
       setSuccessMessage(response?.message || 'Registration successful.');
       setSuccess(true);
-      if (formData.role !== 'service_provider') {
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -86,11 +93,13 @@ export const Register = () => {
               <Check className="w-4 h-4" /> Sale ID linked: {formData.saleCode}
             </p>
           )}
-          {formData.role === 'service_provider' ? (
-            <p className="text-sm text-gray-500">Please wait for your sale representative to approve your account.</p>
-          ) : (
-            <p className="text-sm text-gray-500">Redirecting to login...</p>
-          )}
+          <p className="text-sm text-gray-500">Please wait for your sale representative to approve your account.</p>
+          <Link
+            to="/login"
+            className="inline-block mt-5 bg-brown hover:bg-brown-dark text-white font-semibold py-2.5 px-6 rounded-full text-sm transition"
+          >
+            Go to Login
+          </Link>
         </div>
       </div>
     );

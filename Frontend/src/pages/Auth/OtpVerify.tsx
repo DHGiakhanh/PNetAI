@@ -3,15 +3,21 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Mail } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthLayout } from "./layouts/AuthLayout";
+import { authService } from "@/services/auth.service";
 
 export const OtpVerifyPage = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(120);
+  const [timer, setTimer] = useState(600);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "user@example.com";
+  const email = location.state?.email || "";
   const from = location.state?.from || "signup";
+  const initialNotice = location.state?.notice || "";
+  const [infoMessage, setInfoMessage] = useState(initialNotice);
+  const isSignupFlow = from === "signup";
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -45,16 +51,74 @@ export const OtpVerifyPage = () => {
   };
 
   const handleVerify = async () => {
-    if (otp.some((v) => v === "")) return;
+    if (!email) {
+      setError("Email is missing. Please register again.");
+      return;
+    }
+
+    if (otp.some((v) => v === "")) {
+      setError("Please enter all 6 digits.");
+      return;
+    }
+
     setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      if (from === "forgot") {
-        navigate("/reset-password");
-      } else {
-        navigate("/login");
+    setError("");
+    setInfoMessage("");
+
+    try {
+      if (isSignupFlow) {
+        const code = otp.join("");
+        const response = await authService.verifyEmailOtp({ email, otp: code });
+        const successText = response?.message || "Email verified successfully. You can now login.";
+        setInfoMessage(successText);
+        setTimeout(() => {
+          navigate("/login", {
+            state: {
+              successMessage: successText,
+            },
+          });
+        }, 700);
+        return;
       }
-    }, 1500);
+
+      // Keep current placeholder behavior for forgot-password flow
+      setTimeout(() => {
+        navigate("/reset-password");
+      }, 600);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Verification failed. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (timer > 0 || isResending) return;
+
+    if (!email) {
+      setError("Email is missing. Please register again.");
+      return;
+    }
+
+    if (!isSignupFlow) {
+      setTimer(600);
+      return;
+    }
+
+    setIsResending(true);
+    setError("");
+    setInfoMessage("");
+    try {
+      const response = await authService.resendVerificationOtp(email);
+      setInfoMessage(response?.message || "A new OTP code has been sent.");
+      setTimer(600);
+      setOtp(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Could not resend OTP. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -80,11 +144,22 @@ export const OtpVerifyPage = () => {
         </h1>
 
         <div className="inline-flex items-center gap-2 bg-warm border border-sand rounded-full px-3.5 py-1.5 text-[13px] text-brown-dark font-medium mb-6">
-          <Mail className="w-4 h-4" /> {email}
+          <Mail className="w-4 h-4" /> {email || "unknown@email.com"}
         </div>
         <p className="text-sm text-gray-600 font-light mb-9 leading-relaxed">
           The 6-digit code was sent to your email. Please check your inbox and spam folder.
         </p>
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600 text-center">
+            {error}
+          </div>
+        )}
+        {infoMessage && (
+          <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700 text-center">
+            {infoMessage}
+          </div>
+        )}
 
         <div className="flex gap-2.5 justify-center mb-8">
           {otp.map((digit, i) => (
@@ -108,11 +183,11 @@ export const OtpVerifyPage = () => {
           Code expires in <strong className="text-gray-900 font-bold">{formatTime(timer)}</strong>
           <br />
           <button
-            disabled={timer > 0}
+            disabled={timer > 0 || isResending}
             className="mt-2 text-brown font-medium hover:underline border-0 bg-transparent cursor-pointer disabled:opacity-50 disabled:no-underline"
-            onClick={() => setTimer(120)}
+            onClick={handleResend}
           >
-            Resend OTP
+            {isResending ? "Sending..." : "Resend OTP"}
           </button>
         </div>
 

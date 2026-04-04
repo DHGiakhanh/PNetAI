@@ -6,6 +6,7 @@ const db = require("../models");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/emailService");
 
 const router = express.Router();
+const generateOtpCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // Register
 router.post('/register', async (req, res) => {
@@ -37,14 +38,18 @@ router.post('/register', async (req, res) => {
         }
 
         const hashedPassword = await bcryptjs.hash(password, 10);
+        const emailVerificationOtp = normalizedRole === "user" ? generateOtpCode() : undefined;
         
         const newUser = new db.User({
             email,
             password: hashedPassword,
             name,
             role: normalizedRole,
-            // Service providers must be approved by sale; normal users auto-verified
-            isVerified: normalizedRole === "service_provider" ? false : true
+            // Users must verify email. Service providers must be approved by sale.
+            isVerified: false,
+            verificationToken: emailVerificationOtp,
+            verificationTokenExpires:
+                normalizedRole === "user" ? new Date(Date.now() + 10 * 60 * 1000) : undefined
         });
 
         // Link to sale user if sale code provided
@@ -60,11 +65,27 @@ router.post('/register', async (req, res) => {
 
         await newUser.save();
 
+        let verificationEmailSent = true;
+        if (normalizedRole === "user" && emailVerificationOtp) {
+            try {
+                await sendVerificationEmail(newUser.email, emailVerificationOtp);
+            } catch (emailError) {
+                console.error("Failed to send verification email:", emailError.message);
+                verificationEmailSent = false;
+            }
+        }
+
         res.status(201).json({
             message:
-                normalizedRole === "service_provider"
-                    ? "Service Provider account created. Waiting for sale approval."
-                    : "User created successfully. You can now login.",
+                normalizedRole === "user"
+                    ? verificationEmailSent
+                        ? "Account created. We sent a 6-digit verification code to your email."
+                        : "Account created but email delivery failed. Please use Resend OTP on verification screen."
+                    : normalizedRole === "service_provider"
+                        ? "Service Provider account created. Waiting for sale approval."
+                        : "User created successfully. You can now login.",
+            requiresEmailVerification: normalizedRole === "user",
+            verificationEmailSent: normalizedRole === "user" ? verificationEmailSent : undefined,
             user: {
                 id: newUser._id,
                 email: newUser.email,
@@ -91,6 +112,12 @@ router.post('/login', async (req, res) => {
         const isPasswordValid = await bcryptjs.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid password" });
+        }
+
+        if (user.role === "user" && !user.isVerified) {
+            return res.status(403).json({
+                message: "Please verify your email before logging in."
+            });
         }
 
         if ((user.role === "service_provider" || user.role === "shop") && !user.isVerified) {
@@ -120,18 +147,105 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Verify Email
+// Verify Email by OTP (for user registration)
+router.post('/verify-email-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP are required." });
+        }
+
+        if (!/^\d{6}$/.test(String(otp))) {
+            return res.status(400).json({ message: "OTP must be a 6-digit code." });
+        }
+
+        const user = await db.User.findOne({ email, role: "user" });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        if (user.isVerified) {
+            return res.status(200).json({ message: "Email already verified. You can login now." });
+        }
+
+        if (!user.verificationToken || !user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
+            return res.status(400).json({ message: "OTP is expired. Please request a new code." });
+        }
+
+        if (user.verificationToken !== String(otp)) {
+            return res.status(400).json({ message: "Invalid OTP code." });
+        }
+
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "Email verified successfully. You can now login." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Resend verification OTP (only for user)
+router.post('/resend-verification-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required." });
+        }
+
+        const user = await db.User.findOne({ email, role: "user" });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ message: "Email is already verified." });
+        }
+
+        const otpCode = generateOtpCode();
+        user.verificationToken = otpCode;
+        user.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
+        await user.save();
+
+        await sendVerificationEmail(user.email, otpCode);
+
+        res.status(200).json({ message: "A new verification code has been sent to your email." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Legacy verify by link token (kept for backward compatibility)
 router.get('/verify/:token', async (req, res) => {
     try {
         const { token } = req.params;
+        const { email } = req.query;
 
-        const user = await db.User.findOne({ verificationToken: token });
+        if (/^\d{6}$/.test(token) && !email) {
+            return res.status(400).json({ message: "Email query is required for OTP verification links." });
+        }
+
+        const query = {
+            verificationToken: token,
+            verificationTokenExpires: { $gt: new Date() },
+        };
+
+        if (email) {
+            query.email = email;
+        }
+
+        const user = await db.User.findOne(query);
         if (!user) {
             return res.status(400).json({ message: "Invalid or expired verification token" });
         }
 
         user.isVerified = true;
         user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
         await user.save();
 
         res.status(200).json({ message: "Email verified successfully. You can now login." });

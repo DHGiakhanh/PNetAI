@@ -13,6 +13,11 @@ export interface RegisterData {
   saleCode?: string;
 }
 
+export interface VerifyEmailOtpData {
+  email: string;
+  otp: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -32,6 +37,21 @@ export const authService = {
 
   register: async (data: RegisterData) => {
     const response = await apiClient.post('/auth/register', data);
+    return response.data;
+  },
+
+  verifyEmail: async (token: string) => {
+    const response = await apiClient.get(`/auth/verify/${token}`);
+    return response.data;
+  },
+
+  verifyEmailOtp: async (data: VerifyEmailOtpData) => {
+    const response = await apiClient.post('/auth/verify-email-otp', data);
+    return response.data;
+  },
+
+  resendVerificationOtp: async (email: string) => {
+    const response = await apiClient.post('/auth/resend-verification-otp', { email });
     return response.data;
   },
 
