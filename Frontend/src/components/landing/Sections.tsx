@@ -239,7 +239,6 @@ export const SpaBooking = () => {
             <select className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors appearance-none">
               <option className="text-gray-900">Basic Bath</option>
               <option className="text-gray-900">Grooming</option>
-              <option className="text-gray-900">Full Spa Package</option>
             </select>
           </div>
 

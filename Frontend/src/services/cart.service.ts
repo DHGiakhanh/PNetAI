@@ -5,6 +5,7 @@ export type CartProduct = {
   name: string;
   price: number;
   images?: string[];
+  stock?: number;
 };
 
 export type CartItem = {
@@ -32,7 +33,7 @@ export const cartService = {
   },
 
   updateCartItem: async (productId: string, quantity: number): Promise<Cart> => {
-    const response = await apiClient.put(`/cart/update/${productId}`, { quantity });
+    const response = await apiClient.put(`/cart/update/${productId}`, { productId, quantity });
     return response.data?.cart;
   },
 

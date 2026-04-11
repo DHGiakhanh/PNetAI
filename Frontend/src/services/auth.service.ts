@@ -24,6 +24,7 @@ export interface UserProfile {
   name: string;
   phone?: string;
   address?: string;
+  avatarUrl?: string;
   saleCode?: string;
   role?: string;
   createdAt: string;
@@ -68,15 +69,23 @@ export const authService = {
       name: user.name ?? "",
       phone: user.phone ?? "",
       address: user.address ?? "",
+      avatarUrl: user.avatarUrl ?? "",
       saleCode: user.saleCode ?? "",
       role: user.role ?? "",
       createdAt: user.createdAt ?? "",
     };
   },
 
-  updateProfile: async (data: Partial<Pick<UserProfile, 'name' | 'phone' | 'address'>>) => {
+  updateProfile: async (data: Partial<Pick<UserProfile, 'name' | 'phone' | 'address' | 'avatarUrl'>>) => {
     const response = await apiClient.put('/user/profile', data);
     return response.data?.user;
+  },
+
+  uploadAvatar: async (file: File): Promise<{ url: string; publicId?: string }> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await apiClient.post('/user/upload-avatar', formData);
+    return response.data;
   },
 
   changePassword: async (data: { currentPassword: string; newPassword: string }) => {

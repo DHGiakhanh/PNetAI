@@ -143,13 +143,37 @@ export default function UserProfile() {
     setHasChanges(true);
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Optional: Local preview (immediate feedback)
+    const previewUrl = URL.createObjectURL(file);
+    setProfile(p => ({ ...p, avatarUrl: previewUrl }));
+
+    try {
+      const { url } = await authService.uploadAvatar(file);
+      setProfile(p => ({ ...p, avatarUrl: url }));
+      
+      // Update local storage so navbar and other parts sync
+      const currentLocal = JSON.parse(localStorage.getItem("user") || "{}");
+      localStorage.setItem("user", JSON.stringify({ ...currentLocal, avatarUrl: url }));
+      window.dispatchEvent(new Event("user:updated"));
+      
+      toast.success("Avatar updated in your Atelier");
+    } catch (err) {
+      toast.error("Failed to upload avatar");
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
       const updatedUser = await authService.updateProfile({ 
         name: profile.name, 
         phone: profile.phone, 
-        address: profile.address 
+        address: profile.address,
+        avatarUrl: profile.avatarUrl
       });
       
       // Update local state and persistence
@@ -213,15 +237,21 @@ export default function UserProfile() {
       <div className="max-w-6xl mx-auto px-6 pt-12">
         {/* Header - Matches FunLeo Sample */}
         <header className="mb-12 flex flex-col md:flex-row items-center gap-10">
-          <div className="relative">
-            <div className="w-40 h-40 rounded-full border-[1px] border-caramel/40 p-2 flex items-center justify-center bg-white shadow-xl shadow-caramel/5">
-              <div className="w-full h-full rounded-full bg-sand/30 flex items-center justify-center text-5xl font-serif font-bold text-brown/70 italic">
-                {profile.name ? profile.name.split(" ").map((n: string) => n[0]).slice(0, 1).join("") : <User className="w-16 h-16" />}
+          <div className="relative group">
+            <div className="w-40 h-40 rounded-full border-[1px] border-caramel/40 p-2 flex items-center justify-center bg-white shadow-xl shadow-caramel/5 overflow-hidden transition-all group-hover:border-caramel/80">
+              <div className="w-full h-full rounded-full bg-sand/30 flex items-center justify-center text-5xl font-serif font-bold text-brown/70 italic relative overflow-hidden">
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" crossOrigin="anonymous" referrerPolicy="no-referrer" />
+                ) : (
+                  profile.name ? profile.name.split(" ").map((n: string) => n[0]).slice(0, 1).join("") : <User className="w-16 h-16" />
+                )}
               </div>
             </div>
-            <button className="absolute bottom-2 right-2 bg-caramel p-3 rounded-full text-white shadow-xl border-4 border-white hover:scale-110 transition-transform">
+            
+            <label className="absolute bottom-2 right-2 bg-caramel p-3 rounded-full text-white shadow-xl border-4 border-white hover:scale-110 transition-transform cursor-pointer">
               <Camera className="w-5 h-5" />
-            </button>
+              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+            </label>
           </div>
 
           <div className="text-center md:text-left flex-1">

@@ -252,7 +252,7 @@ export default function ShopPage() {
         </div>
       </section>
 
-      {/* Results */}
+      Results
       <section className="mt-10">
         <div className="flex items-end justify-between">
           <div>

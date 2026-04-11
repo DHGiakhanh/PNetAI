@@ -148,17 +148,17 @@ export const VNAddressPicker: React.FC<VNAddressPickerProps> = ({ initialValue, 
   };
 
   return (
-    <div className="space-y-4" ref={containerRef}>
+    <div className="space-y-6" ref={containerRef}>
       {/* Main Select Input */}
-      <div className="relative group">
-        <label className="absolute -top-2.5 left-5 bg-white px-2 text-[10px] font-bold text-muted uppercase tracking-widest z-10">
+      <div className={`relative group ${isOpen ? 'z-[60]' : 'z-10'}`}>
+        <label className="absolute -top-2.5 left-5 bg-white px-2 text-[10px] font-bold text-muted uppercase tracking-widest z-10 transition-colors group-focus-within:text-caramel">
           Location
         </label>
         <div 
           onClick={() => setIsOpen(!isOpen)}
           className={`
-            w-full h-16 bg-white border cursor-pointer rounded-3xl px-6 flex items-center justify-between transition-all
-            ${isOpen ? 'border-caramel ring-4 ring-caramel/5 shadow-lg' : 'border-sand group-hover:border-caramel/50'}
+            w-full h-16 bg-white border cursor-pointer rounded-3xl px-6 flex items-center justify-between transition-all relative z-20
+            ${isOpen ? 'border-caramel ring-4 ring-caramel/5 shadow-2xl scale-[1.01]' : 'border-sand group-hover:border-caramel/50 shadow-sm'}
           `}
         >
           <div className="flex items-center gap-3 overflow-hidden">
@@ -189,10 +189,10 @@ export const VNAddressPicker: React.FC<VNAddressPickerProps> = ({ initialValue, 
         <AnimatePresence>
           {isOpen && (
             <motion.div 
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute top-full left-0 right-0 mt-3 bg-white border border-sand rounded-[2rem] shadow-2xl z-[100] overflow-hidden"
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              className="absolute top-full left-0 right-0 mt-2 bg-white border border-sand rounded-[2rem] shadow-2xl z-50 overflow-hidden"
             >
               {/* Tabs */}
               <div className="flex border-b border-sand bg-warm/10">
@@ -273,8 +273,8 @@ export const VNAddressPicker: React.FC<VNAddressPickerProps> = ({ initialValue, 
       </div>
 
       {/* Street Input */}
-      <div className="relative group">
-        <label className="absolute -top-2.5 left-5 bg-[#FBF9F2] px-2 text-[10px] font-bold text-muted uppercase tracking-widest z-10 group-focus-within:text-caramel transition-colors">
+      <div className="relative group z-0">
+        <label className="absolute -top-2.5 left-5 bg-white px-2 text-[10px] font-bold text-muted uppercase tracking-widest z-10 group-focus-within:text-caramel transition-colors">
           Street Details
         </label>
         <input 
@@ -282,7 +282,7 @@ export const VNAddressPicker: React.FC<VNAddressPickerProps> = ({ initialValue, 
           value={street}
           onChange={(e) => { setStreet(e.target.value); updateParent(e.target.value, selectedW, selectedD, selectedP); }}
           placeholder="House number, street name, building..."
-          className="w-full bg-white border border-sand rounded-3xl h-16 px-6 text-sm font-bold text-ink outline-none focus:border-caramel focus:ring-4 focus:ring-caramel/5 transition-all"
+          className="w-full bg-white border border-sand rounded-3xl h-16 px-6 text-sm font-bold text-ink outline-none focus:border-caramel focus:ring-4 focus:ring-caramel/5 transition-all shadow-sm"
         />
       </div>
     </div>

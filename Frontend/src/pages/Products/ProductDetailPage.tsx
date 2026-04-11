@@ -69,6 +69,22 @@ export default function ProductDetailPage() {
 
     try {
       setAddLoading(true);
+      
+      // 1. Check current cart for existing quantity of this product
+      const currentCart = await cartService.getCart();
+      const existingItem = currentCart.items.find(item => {
+        const p = item.product as any;
+        return (p._id || p) === product._id;
+      });
+      
+      const existingQty = existingItem?.quantity || 0;
+      const totalPlannedQty = existingQty + qty;
+      
+      if (totalPlannedQty > product.stock) {
+        toast.error("Out of stock");
+        return;
+      }
+
       await cartService.addToCart(product._id, qty);
       toast.success("Added to cart successfully.");
       window.dispatchEvent(new Event("cart:updated"));
@@ -227,9 +243,10 @@ export default function ProductDetailPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQty((q) => Math.min(99, q + 1))}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm"
+                    onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm disabled:opacity-50"
                     aria-label="Increase quantity"
+                    disabled={qty >= product.stock}
                   >
                     <Plus className="h-4 w-4 text-ink" />
                   </button>
