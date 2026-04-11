@@ -1,9 +1,10 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Edit3, Package, Plus, Trash2 } from "lucide-react";
+import { Edit3, Package, Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
 import Pagination from "@/components/common/Pagination";
 import { productService } from "@/services/product.service";
+import { useNavigate } from "react-router-dom";
 
 type Product = {
   _id: string;
@@ -46,6 +47,7 @@ const initialForm: ProductForm = {
 };
 
 export const ProductManagement = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +122,15 @@ export const ProductManagement = () => {
     setForm(initialForm);
   };
 
+  const handleProviderNotReady = (error: any) => {
+    if (error?.response?.data?.code !== "PROVIDER_NOT_READY") {
+      return false;
+    }
+    toast.error("Complete legal documents before publishing products or services.");
+    navigate("/service-provider/profile?section=legal-documents");
+    return true;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -146,6 +157,7 @@ export const ProductManagement = () => {
       closeModal();
       await fetchData();
     } catch (error: any) {
+      if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not save product.");
     } finally {
       setSaving(false);
@@ -159,6 +171,7 @@ export const ProductManagement = () => {
       toast.success("Product deleted.");
       await fetchData();
     } catch (error: any) {
+      if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not delete product.");
     }
   };
@@ -174,6 +187,7 @@ export const ProductManagement = () => {
       setForm((prev) => ({ ...prev, imageUrl: url }));
       toast.success("Image uploaded.");
     } catch (error: any) {
+      if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not upload image.");
     } finally {
       setUploadingImage(false);
@@ -286,9 +300,19 @@ export const ProductManagement = () => {
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">
           <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-3xl border border-sand bg-white p-6 shadow-2xl">
-            <h2 className="font-serif text-3xl font-bold italic text-ink">
-              {editing ? "Edit Product" : "Create Product"}
-            </h2>
+            <div className="flex items-start justify-between gap-4">
+              <h2 className="font-serif text-3xl font-bold italic text-ink">
+                {editing ? "Edit Product" : "Create Product"}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <div className="mt-4 space-y-4">
               <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Basic Information</p>

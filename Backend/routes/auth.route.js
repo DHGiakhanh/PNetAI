@@ -7,6 +7,49 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/ema
 
 const router = express.Router();
 const generateOtpCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+const isServiceProviderRole = (role) => role === "service_provider" || role === "shop";
+
+const getProviderOnboardingStatus = (user) => {
+    if (!isServiceProviderRole(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "approved" : "pending_sale_approval";
+};
+
+const canProviderPublish = (user) => {
+    if (!isServiceProviderRole(user?.role)) return false;
+    if (!user.isVerified) return false;
+    return getProviderOnboardingStatus(user) === "approved";
+};
+
+const findBalancedSaleAssignee = async () => {
+    const saleUsers = await db.User.find({ role: "sale" }).select("_id saleCode createdAt");
+    if (saleUsers.length === 0) {
+        return null;
+    }
+
+    const assignmentLoads = await db.User.aggregate([
+        {
+            $match: {
+                role: { $in: ["service_provider", "shop"] },
+                managedBy: { $exists: true, $ne: null },
+            },
+        },
+        {
+            $group: {
+                _id: "$managedBy",
+                totalProviders: { $sum: 1 },
+            },
+        },
+    ]);
+
+    const loadMap = new Map(assignmentLoads.map((item) => [String(item._id), item.totalProviders]));
+    const loads = saleUsers.map((sale) => loadMap.get(String(sale._id)) ?? 0);
+    const minLoad = Math.min(...loads);
+    const leastLoadedSales = saleUsers.filter((sale) => (loadMap.get(String(sale._id)) ?? 0) === minLoad);
+
+    const randomIndex = Math.floor(Math.random() * leastLoadedSales.length);
+    return leastLoadedSales[randomIndex];
+};
 
 // Register
 router.post('/register', async (req, res) => {
@@ -19,21 +62,26 @@ router.post('/register', async (req, res) => {
         }
 
         const normalizedRole = role === "service_provider" ? "service_provider" : "user";
+        const normalizedSaleCode = typeof saleCode === "string" ? saleCode.trim() : "";
+        let assignedSale = null;
+        let isAutoAssignedSale = false;
 
-        // Service Provider registration requires sale code
-        if (normalizedRole === "service_provider" && !saleCode) {
-            return res.status(400).json({ message: "Sale ID is required for Service Provider account." });
-        }
+        if (normalizedRole === "service_provider") {
+            if (normalizedSaleCode) {
+                assignedSale = await db.User.findOne({
+                    role: "sale",
+                    saleCode: normalizedSaleCode,
+                }).select("_id saleCode");
 
-        // If sale code is provided, validate it exists
-        if (saleCode) {
-            const saleUser = await db.User.findOne({ 
-                role: 'sale',
-                saleCode: saleCode
-            });
-            
-            if (!saleUser) {
-                return res.status(400).json({ message: "Invalid sale code. Please check and try again." });
+                if (!assignedSale) {
+                    return res.status(400).json({ message: "Invalid sale code. Please check and try again." });
+                }
+            } else {
+                assignedSale = await findBalancedSaleAssignee();
+                if (!assignedSale) {
+                    return res.status(400).json({ message: "No sale account available for assignment yet." });
+                }
+                isAutoAssignedSale = true;
             }
         }
 
@@ -47,20 +95,17 @@ router.post('/register', async (req, res) => {
             role: normalizedRole,
             // Users must verify email. Service providers must be approved by sale.
             isVerified: false,
+            providerOnboardingStatus:
+                normalizedRole === "service_provider" ? "pending_sale_approval" : undefined,
             verificationToken: emailVerificationOtp,
             verificationTokenExpires:
                 normalizedRole === "user" ? new Date(Date.now() + 10 * 60 * 1000) : undefined
         });
 
-        // Link to sale user if sale code provided
-        if (saleCode) {
-            const saleUser = await db.User.findOne({ 
-                role: 'sale',
-                saleCode: saleCode
-            });
-            
-            newUser.saleCode = saleCode;
-            newUser.managedBy = saleUser._id;
+        // Link to sale user if service provider
+        if (normalizedRole === "service_provider" && assignedSale) {
+            newUser.saleCode = assignedSale.saleCode || assignedSale._id.toString();
+            newUser.managedBy = assignedSale._id;
         }
 
         await newUser.save();
@@ -82,7 +127,9 @@ router.post('/register', async (req, res) => {
                         ? "Account created. We sent a 6-digit verification code to your email."
                         : "Account created but email delivery failed. Please use Resend OTP on verification screen."
                     : normalizedRole === "service_provider"
-                        ? "Service Provider account created. Waiting for sale approval."
+                        ? isAutoAssignedSale
+                            ? `Service Provider account created. Automatically assigned to sale ${newUser.saleCode}. Waiting for sale approval.`
+                            : "Service Provider account created. Waiting for sale approval."
                         : "User created successfully. You can now login.",
             requiresEmailVerification: normalizedRole === "user",
             verificationEmailSent: normalizedRole === "user" ? verificationEmailSent : undefined,
@@ -91,8 +138,10 @@ router.post('/register', async (req, res) => {
                 email: newUser.email,
                 name: newUser.name,
                 role: newUser.role,
-                saleCode: newUser.saleCode
-            }
+                saleCode: newUser.saleCode,
+                providerOnboardingStatus: newUser.providerOnboardingStatus,
+            },
+            assignmentMode: normalizedRole === "service_provider" ? (isAutoAssignedSale ? "auto" : "manual") : undefined,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -120,11 +169,14 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        if ((user.role === "service_provider" || user.role === "shop") && !user.isVerified) {
+        if (isServiceProviderRole(user.role) && !user.isVerified) {
             return res.status(403).json({
                 message: "Your Service Provider account is pending sale approval."
             });
         }
+
+        const providerOnboardingStatus = getProviderOnboardingStatus(user);
+        const providerCanPublish = canProviderPublish(user);
 
         const token = jwt.sign(
             { userId: user._id, role: user.role }, 
@@ -133,14 +185,20 @@ router.post('/login', async (req, res) => {
         );
 
         res.status(200).json({ 
-            message: "Login successful",
+            message:
+                isServiceProviderRole(user.role) && !providerCanPublish
+                    ? "Login successful. Complete legal documents and wait for sale approval to publish services/products."
+                    : "Login successful",
             token,
             user: {
                 id: user._id,
                 email: user.email,
                 name: user.name,
-                role: user.role
-            }
+                role: user.role,
+                saleCode: user.saleCode,
+                providerOnboardingStatus,
+                canPublishServices: isServiceProviderRole(user.role) ? providerCanPublish : undefined,
+            },
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

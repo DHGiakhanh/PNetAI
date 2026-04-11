@@ -6,6 +6,31 @@ const { cloudinary } = require("../config/cloudinary");
 
 const router = express.Router();
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
+const getProviderOnboardingStatus = (user) => {
+    if (!isServiceProvider(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "approved" : "pending_sale_approval";
+};
+const canProviderPublish = (user) =>
+    isServiceProvider(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
+const ensureProviderCanPublish = async (req, res) => {
+    const provider = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
+    if (!provider || !isServiceProvider(provider.role)) {
+        res.status(403).json({ message: "Access denied" });
+        return null;
+    }
+
+    if (!canProviderPublish(provider)) {
+        res.status(403).json({
+            message: "Complete legal documents and wait for sale approval before publishing products/services.",
+            code: "PROVIDER_NOT_READY",
+            providerOnboardingStatus: getProviderOnboardingStatus(provider),
+        });
+        return null;
+    }
+
+    return provider;
+};
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -116,9 +141,8 @@ router.get('/:id', async (req, res) => {
 // Upload product image (Service Provider only)
 router.post('/upload-image', verifyToken, upload.single("image"), async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        const provider = await ensureProviderCanPublish(req, res);
+        if (!provider) return;
 
         if (!req.file) {
             return res.status(400).json({ message: "Image file is required" });
@@ -158,9 +182,8 @@ router.post('/upload-image', verifyToken, upload.single("image"), async (req, re
 // Create product (Service Provider only)
 router.post('/', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        const provider = await ensureProviderCanPublish(req, res);
+        if (!provider) return;
 
         const product = new db.Product({
             ...req.body,
@@ -177,9 +200,8 @@ router.post('/', verifyToken, async (req, res) => {
 // Update product (Service Provider only)
 router.put('/:id', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        const provider = await ensureProviderCanPublish(req, res);
+        if (!provider) return;
 
         const existing = await db.Product.findById(req.params.id);
         if (!existing) {
@@ -210,9 +232,8 @@ router.put('/:id', verifyToken, async (req, res) => {
 // Delete product (Service Provider only)
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        if (!isServiceProvider(req.role)) {
-            return res.status(403).json({ message: "Access denied" });
-        }
+        const provider = await ensureProviderCanPublish(req, res);
+        if (!provider) return;
 
         const existing = await db.Product.findById(req.params.id);
         if (!existing) {

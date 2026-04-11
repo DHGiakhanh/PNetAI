@@ -16,6 +16,7 @@ export const Register = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [assignedSaleCode, setAssignedSaleCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
@@ -44,19 +45,16 @@ export const Register = () => {
       return;
     }
 
-    if (formData.role === 'service_provider' && !formData.saleCode.trim()) {
-      setError('Sale ID is required for Service Provider account');
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await authService.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         role: formData.role,
-        saleCode: formData.role === 'service_provider' ? formData.saleCode : undefined
+        saleCode:
+          formData.role === 'service_provider' && formData.saleCode.trim()
+            ? formData.saleCode.trim()
+            : undefined
       });
 
       if (formData.role === 'user') {
@@ -71,6 +69,7 @@ export const Register = () => {
       }
 
       setSuccessMessage(response?.message || 'Registration successful.');
+      setAssignedSaleCode(response?.user?.saleCode || '');
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -88,9 +87,9 @@ export const Register = () => {
           </div>
           <h2 className="font-serif italic text-2xl font-bold text-ink mb-2">Registration Successful!</h2>
           <p className="text-muted mb-4">{successMessage || 'Your account has been created successfully.'}</p>
-          {formData.role === 'service_provider' && formData.saleCode && (
+          {formData.role === 'service_provider' && assignedSaleCode && (
             <p className="text-sm text-brown mb-2 flex items-center justify-center gap-1">
-              <Check className="w-4 h-4" /> Sale ID linked: {formData.saleCode}
+              <Check className="w-4 h-4" /> Sale ID linked: {assignedSaleCode}
             </p>
           )}
           <p className="text-sm text-gray-500">Please wait for your sale representative to approve your account.</p>
@@ -248,20 +247,19 @@ export const Register = () => {
             {formData.role === 'service_provider' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sale ID <span className="text-rust">*</span>
+                  Sale ID <span className="text-gray-400">(optional)</span>
                 </label>
                 <input
                   type="text"
                   name="saleCode"
-                  placeholder="Enter sale ID (example: SALE001)"
+                  placeholder="Enter sale ID (example: SALE001) or leave blank"
                   value={formData.saleCode}
                   onChange={handleChange}
                   className="w-full rounded-xl border border-sand bg-warm/60 focus:bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-caramel/40 focus:border-caramel placeholder:text-gray-400"
                   disabled={loading}
-                  required
                 />
                 <p className="mt-1 text-xs text-gray-400">
-                  Your account will be pending until this sale representative approves it.
+                  If empty, the system will auto-assign a sale representative evenly.
                 </p>
               </div>
             ) : null}

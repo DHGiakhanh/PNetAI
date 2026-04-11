@@ -16,7 +16,6 @@ const userSchema = new Schema({
     saleCode: { type: String }, // Code of the sale person who manages this customer
     managedBy: { type: Schema.Types.ObjectId, ref: "User" }, // Reference to sale user
     isVerified: { type: Boolean, default: false },
-    avatarUrl: { type: String },
     verificationToken: { type: String },
     verificationTokenExpires: { type: Date },
     resetPasswordToken: { type: String },

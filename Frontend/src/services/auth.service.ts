@@ -27,7 +27,41 @@ export interface UserProfile {
   avatarUrl?: string;
   saleCode?: string;
   role?: string;
+  providerOnboardingStatus?:
+    | "pending_sale_approval"
+    | "pending_legal_submission"
+    | "pending_legal_approval"
+    | "approved";
+  canPublishServices?: boolean;
+  legalDocuments?: {
+    clinicName?: string;
+    clinicLicenseNumber?: string;
+    clinicLicenseUrl?: string;
+    businessLicenseUrl?: string;
+    submissionNote?: string;
+    submittedAt?: string;
+    reviewedAt?: string;
+    reviewNote?: string;
+  };
   createdAt: string;
+}
+
+export interface ProviderLegalDocumentsPayload {
+  clinicName: string;
+  clinicLicenseNumber: string;
+  clinicLicenseUrl: string;
+  businessLicenseUrl?: string;
+  note?: string;
+}
+
+export type LegalFileType = "clinic_license" | "business_license";
+
+export interface ProviderLegalUploadResponse {
+  message: string;
+  fileType: LegalFileType;
+  url: string;
+  publicId: string;
+  originalName: string;
 }
 
 export const authService = {
@@ -72,6 +106,9 @@ export const authService = {
       avatarUrl: user.avatarUrl ?? "",
       saleCode: user.saleCode ?? "",
       role: user.role ?? "",
+      providerOnboardingStatus: user.providerOnboardingStatus,
+      canPublishServices: user.canPublishServices,
+      legalDocuments: user.legalDocuments ?? undefined,
       createdAt: user.createdAt ?? "",
     };
   },
@@ -90,6 +127,23 @@ export const authService = {
 
   changePassword: async (data: { currentPassword: string; newPassword: string }) => {
     const response = await apiClient.post('/user/change-password', data);
+    return response.data;
+  },
+
+  submitProviderLegalDocuments: async (data: ProviderLegalDocumentsPayload) => {
+    const response = await apiClient.post('/user/provider/legal-documents', data);
+    return response.data;
+  },
+
+  uploadProviderLegalFile: async (
+    file: File,
+    fileType: LegalFileType
+  ): Promise<ProviderLegalUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("fileType", fileType);
+
+    const response = await apiClient.post("/user/provider/upload-legal-file", formData);
     return response.data;
   },
 };
