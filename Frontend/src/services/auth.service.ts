@@ -26,7 +26,31 @@ export interface UserProfile {
   address?: string;
   saleCode?: string;
   role?: string;
+  providerOnboardingStatus?:
+    | "pending_sale_approval"
+    | "pending_legal_submission"
+    | "pending_legal_approval"
+    | "approved";
+  canPublishServices?: boolean;
+  legalDocuments?: {
+    clinicName?: string;
+    clinicLicenseNumber?: string;
+    clinicLicenseUrl?: string;
+    businessLicenseUrl?: string;
+    submissionNote?: string;
+    submittedAt?: string;
+    reviewedAt?: string;
+    reviewNote?: string;
+  };
   createdAt: string;
+}
+
+export interface ProviderLegalDocumentsPayload {
+  clinicName: string;
+  clinicLicenseNumber: string;
+  clinicLicenseUrl: string;
+  businessLicenseUrl?: string;
+  note?: string;
 }
 
 export const authService = {
@@ -70,6 +94,9 @@ export const authService = {
       address: user.address ?? "",
       saleCode: user.saleCode ?? "",
       role: user.role ?? "",
+      providerOnboardingStatus: user.providerOnboardingStatus,
+      canPublishServices: user.canPublishServices,
+      legalDocuments: user.legalDocuments ?? undefined,
       createdAt: user.createdAt ?? "",
     };
   },
@@ -81,6 +108,11 @@ export const authService = {
 
   changePassword: async (data: { currentPassword: string; newPassword: string }) => {
     const response = await apiClient.post('/user/change-password', data);
+    return response.data;
+  },
+
+  submitProviderLegalDocuments: async (data: ProviderLegalDocumentsPayload) => {
+    const response = await apiClient.post('/user/provider/legal-documents', data);
     return response.data;
   },
 };

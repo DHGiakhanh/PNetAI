@@ -11,6 +11,12 @@ type Provider = {
   phone?: string;
   saleCode?: string;
   isVerified: boolean;
+  canPublishServices?: boolean;
+  providerOnboardingStatus?:
+    | "pending_sale_approval"
+    | "pending_legal_submission"
+    | "pending_legal_approval"
+    | "approved";
   createdAt: string;
 };
 
@@ -20,6 +26,19 @@ export default function ServiceProviderApprovalsPage() {
   const [activeProviderId, setActiveProviderId] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
+  const getStatusMeta = (provider: Provider) => {
+    const status = provider.providerOnboardingStatus;
+    if (!provider.isVerified || status === "pending_sale_approval") {
+      return { label: "Pending Initial Approval", className: "bg-amber-100 text-amber-700" };
+    }
+    if (status === "pending_legal_submission") {
+      return { label: "Waiting Legal Submission", className: "bg-slate-100 text-slate-700" };
+    }
+    if (status === "pending_legal_approval") {
+      return { label: "Pending Legal Approval", className: "bg-orange-100 text-orange-700" };
+    }
+    return { label: "Approved", className: "bg-emerald-100 text-emerald-700" };
+  };
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -44,6 +63,7 @@ export default function ServiceProviderApprovalsPage() {
     () => managedProviders.find((provider) => provider._id === activeProviderId) || null,
     [managedProviders, activeProviderId],
   );
+  const activeStatus = activeProvider ? getStatusMeta(activeProvider) : null;
   const totalPages = Math.max(1, Math.ceil(managedProviders.length / pageSize));
   const paginatedManagedProviders = useMemo(
     () => managedProviders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
@@ -87,6 +107,7 @@ export default function ServiceProviderApprovalsPage() {
               <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1">
                 {paginatedManagedProviders.map((provider) => {
                   const active = provider._id === activeProviderId;
+                  const status = getStatusMeta(provider);
                   return (
                     <button
                       key={provider._id}
@@ -101,13 +122,9 @@ export default function ServiceProviderApprovalsPage() {
                       <p className="text-sm font-semibold text-ink">{provider.name}</p>
                       <p className="text-xs text-muted">{provider.email}</p>
                       <span
-                        className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          provider.isVerified
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
+                        className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${status.className}`}
                       >
-                        {provider.isVerified ? "Approved" : "Pending"}
+                        {status.label}
                       </span>
                     </button>
                   );
@@ -137,6 +154,12 @@ export default function ServiceProviderApprovalsPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-sand bg-warm/40 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Status</p>
+                <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${activeStatus?.className}`}>
+                  {activeStatus?.label}
+                </span>
+              </div>
+              <div className="rounded-2xl border border-sand bg-warm/40 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Name</p>
                 <p className="mt-1 text-sm font-semibold text-ink">{activeProvider.name}</p>
               </div>
@@ -149,15 +172,15 @@ export default function ServiceProviderApprovalsPage() {
                 <p className="mt-1 text-sm font-semibold text-ink">{activeProvider.saleCode || "-"}</p>
               </div>
               <div className="rounded-2xl border border-sand bg-warm/40 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Status</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Publish Permission</p>
                 <span
                   className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                    activeProvider.isVerified
+                    activeProvider.canPublishServices
                       ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
+                      : "bg-slate-100 text-slate-700"
                   }`}
                 >
-                  {activeProvider.isVerified ? "Approved" : "Pending"}
+                  {activeProvider.canPublishServices ? "Can Publish" : "Blocked"}
                 </span>
               </div>
             </div>

@@ -3,6 +3,14 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
+const isServiceProviderRole = (role) => role === "service_provider" || role === "shop";
+const getProviderOnboardingStatus = (user) => {
+    if (!isServiceProviderRole(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "approved" : "pending_sale_approval";
+};
+const canProviderPublish = (user) =>
+    isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
 
 const isSale = (req, res, next) => {
     if (req.role !== "sale") {
@@ -14,12 +22,22 @@ const isSale = (req, res, next) => {
 // List service providers assigned to this sale
 router.get("/service-providers", verifyToken, isSale, async (req, res) => {
     try {
-        const providers = await db.User.find({
+        const providerDocs = await db.User.find({
             role: { $in: ["service_provider", "shop"] },
             managedBy: req.userId,
         })
             .select("-password -verificationToken -resetPasswordToken -resetPasswordExpires")
             .sort({ createdAt: -1 });
+
+        const providers = providerDocs.map((provider) => {
+            const providerData = provider.toObject();
+            const providerOnboardingStatus = getProviderOnboardingStatus(providerData);
+            return {
+                ...providerData,
+                providerOnboardingStatus,
+                canPublishServices: canProviderPublish(providerData),
+            };
+        });
 
         res.status(200).json({ providers });
     } catch (error) {
@@ -33,12 +51,23 @@ router.get("/service-providers/pending", verifyToken, isSale, async (req, res) =
         const pendingProviders = await db.User.find({
             role: { $in: ["service_provider", "shop"] },
             managedBy: req.userId,
-            isVerified: false,
+            $or: [
+                { isVerified: false },
+                { providerOnboardingStatus: "pending_legal_approval" },
+            ],
         })
             .select("-password -verificationToken -resetPasswordToken -resetPasswordExpires")
             .sort({ createdAt: -1 });
 
-        res.status(200).json({ pendingProviders });
+        res.status(200).json({
+            pendingProviders: pendingProviders.map((provider) => {
+                const providerData = provider.toObject();
+                return {
+                    ...providerData,
+                    providerOnboardingStatus: getProviderOnboardingStatus(providerData),
+                };
+            }),
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -57,17 +86,45 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
             return res.status(404).json({ message: "Service provider not found" });
         }
 
-        provider.isVerified = true;
+        const currentStatus = getProviderOnboardingStatus(provider);
+        let message = "";
+        let approvalStage = "";
+
+        if (!provider.isVerified) {
+            provider.isVerified = true;
+            provider.providerOnboardingStatus = "pending_legal_submission";
+            message = "Initial account approval completed. Provider can login and submit legal documents.";
+            approvalStage = "initial_account";
+        } else if (currentStatus === "pending_legal_approval") {
+            provider.providerOnboardingStatus = "approved";
+            if (!provider.legalDocuments) {
+                provider.legalDocuments = {};
+            }
+            provider.legalDocuments.reviewedAt = new Date();
+            if (typeof req.body?.reviewNote === "string") {
+                provider.legalDocuments.reviewNote = req.body.reviewNote.trim();
+            }
+            message = "Legal documents approved. Provider can now publish products/services.";
+            approvalStage = "legal_documents";
+        } else if (currentStatus === "pending_legal_submission") {
+            return res.status(400).json({ message: "Provider has not submitted legal documents yet." });
+        } else {
+            return res.status(400).json({ message: "Provider is already fully approved." });
+        }
+
         await provider.save();
 
         res.status(200).json({
-            message: "Service provider approved successfully",
+            message,
+            approvalStage,
             provider: {
                 id: provider._id,
                 name: provider.name,
                 email: provider.email,
                 role: provider.role,
                 isVerified: provider.isVerified,
+                providerOnboardingStatus: getProviderOnboardingStatus(provider),
+                canPublishServices: canProviderPublish(provider),
             },
         });
     } catch (error) {
@@ -76,4 +133,3 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
 });
 
 module.exports = router;
-

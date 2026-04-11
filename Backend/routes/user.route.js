@@ -4,6 +4,14 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
+const isServiceProviderRole = (role) => role === "service_provider" || role === "shop";
+const getProviderOnboardingStatus = (user) => {
+    if (!isServiceProviderRole(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "approved" : "pending_sale_approval";
+};
+const canProviderPublish = (user) =>
+    isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
 
 // Get User Profile
 router.get('/profile', verifyToken, async (req, res) => {
@@ -14,7 +22,74 @@ router.get('/profile', verifyToken, async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        res.status(200).json({ user });
+        const userData = user.toObject();
+        const providerOnboardingStatus = getProviderOnboardingStatus(userData);
+        if (providerOnboardingStatus) {
+            userData.providerOnboardingStatus = providerOnboardingStatus;
+            userData.canPublishServices = canProviderPublish(userData);
+        }
+
+        res.status(200).json({ user: userData });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Submit legal documents for service provider onboarding
+router.post('/provider/legal-documents', verifyToken, async (req, res) => {
+    try {
+        const user = await db.User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!isServiceProviderRole(user.role)) {
+            return res.status(403).json({ message: "Access denied. Service Provider only." });
+        }
+
+        if (!user.isVerified) {
+            return res.status(403).json({
+                message: "Your account is still waiting for first sale approval.",
+            });
+        }
+
+        const currentStatus = getProviderOnboardingStatus(user);
+        if (currentStatus === "approved") {
+            return res.status(400).json({ message: "Legal documents already approved." });
+        }
+
+        if (currentStatus === "pending_sale_approval") {
+            return res.status(400).json({
+                message: "Your account has not passed initial sale approval yet.",
+            });
+        }
+
+        const { clinicName, clinicLicenseNumber, clinicLicenseUrl, businessLicenseUrl, note } = req.body;
+
+        if (!clinicName || !clinicLicenseNumber || !clinicLicenseUrl) {
+            return res.status(400).json({
+                message: "clinicName, clinicLicenseNumber and clinicLicenseUrl are required.",
+            });
+        }
+
+        user.legalDocuments = {
+            clinicName: String(clinicName).trim(),
+            clinicLicenseNumber: String(clinicLicenseNumber).trim(),
+            clinicLicenseUrl: String(clinicLicenseUrl).trim(),
+            businessLicenseUrl: businessLicenseUrl ? String(businessLicenseUrl).trim() : "",
+            submissionNote: note ? String(note).trim() : "",
+            submittedAt: new Date(),
+            reviewedAt: undefined,
+            reviewNote: undefined,
+        };
+        user.providerOnboardingStatus = "pending_legal_approval";
+        await user.save();
+
+        res.status(200).json({
+            message: "Legal documents submitted successfully. Waiting for sale approval.",
+            providerOnboardingStatus: user.providerOnboardingStatus,
+            legalDocuments: user.legalDocuments,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -43,7 +118,11 @@ router.put('/profile', verifyToken, async (req, res) => {
                 email: user.email,
                 name: user.name,
                 phone: user.phone,
-                address: user.address
+                address: user.address,
+                role: user.role,
+                saleCode: user.saleCode,
+                providerOnboardingStatus: getProviderOnboardingStatus(user),
+                canPublishServices: canProviderPublish(user),
             }
         });
     } catch (error) {

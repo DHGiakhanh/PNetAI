@@ -16,6 +16,20 @@ const userSchema = new Schema({
     saleCode: { type: String }, // Code of the sale person who manages this customer
     managedBy: { type: Schema.Types.ObjectId, ref: "User" }, // Reference to sale user
     isVerified: { type: Boolean, default: false },
+    providerOnboardingStatus: {
+        type: String,
+        enum: ["pending_sale_approval", "pending_legal_submission", "pending_legal_approval", "approved"],
+    },
+    legalDocuments: {
+        clinicName: { type: String },
+        clinicLicenseNumber: { type: String },
+        clinicLicenseUrl: { type: String },
+        businessLicenseUrl: { type: String },
+        submissionNote: { type: String },
+        submittedAt: { type: Date },
+        reviewedAt: { type: Date },
+        reviewNote: { type: String },
+    },
     verificationToken: { type: String },
     verificationTokenExpires: { type: Date },
     resetPasswordToken: { type: String },
