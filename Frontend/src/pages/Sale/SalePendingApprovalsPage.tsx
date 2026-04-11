@@ -20,8 +20,18 @@ type Provider = {
     submittedAt?: string;
     clinicName?: string;
     clinicLicenseNumber?: string;
+    clinicLicenseUrl?: string;
+    businessLicenseUrl?: string;
   };
   createdAt: string;
+};
+
+const isImageDocumentUrl = (url?: string) => {
+  if (!url) return false;
+  return (
+    /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url) ||
+    url.includes("/image/upload/")
+  );
 };
 
 export default function SalePendingApprovalsPage() {
@@ -146,6 +156,66 @@ export default function SalePendingApprovalsPage() {
                             : "-"}
                         </span>
                       </p>
+                      {provider.legalDocuments?.clinicLicenseUrl ? (
+                        <div className="mt-2 rounded-xl border border-sand bg-white/70 p-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                            Clinic License
+                          </p>
+                          {isImageDocumentUrl(provider.legalDocuments.clinicLicenseUrl) ? (
+                            <a
+                              href={provider.legalDocuments.clinicLicenseUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 block"
+                            >
+                              <img
+                                src={provider.legalDocuments.clinicLicenseUrl}
+                                alt="Clinic license"
+                                className="h-36 w-full rounded-lg object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={provider.legalDocuments.clinicLicenseUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                            >
+                              Open clinic license document
+                            </a>
+                          )}
+                        </div>
+                      ) : null}
+                      {provider.legalDocuments?.businessLicenseUrl ? (
+                        <div className="mt-2 rounded-xl border border-sand bg-white/70 p-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                            Business License
+                          </p>
+                          {isImageDocumentUrl(provider.legalDocuments.businessLicenseUrl) ? (
+                            <a
+                              href={provider.legalDocuments.businessLicenseUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 block"
+                            >
+                              <img
+                                src={provider.legalDocuments.businessLicenseUrl}
+                                alt="Business license"
+                                className="h-36 w-full rounded-lg object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={provider.legalDocuments.businessLicenseUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                            >
+                              Open business license document
+                            </a>
+                          )}
+                        </div>
+                      ) : null}
                     </>
                   ) : null}
                   <button

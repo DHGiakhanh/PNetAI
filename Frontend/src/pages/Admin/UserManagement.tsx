@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, X } from 'lucide-react';
 import toast from "react-hot-toast";
 import apiClient from '../../utils/api.service';
 import Pagination from "@/components/common/Pagination";
@@ -279,7 +279,17 @@ const CreateSaleModal = ({ onClose, onSuccess }: { onClose: () => void; onSucces
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 max-w-md w-full border border-sand shadow-2xl">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Create Sale Account</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold text-gray-800">Create Sale Account</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
+            aria-label="Close modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">

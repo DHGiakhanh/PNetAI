@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Edit3, Plus, Shapes, Trash2 } from "lucide-react";
+import { Edit3, Plus, Shapes, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
 import Pagination from "@/components/common/Pagination";
@@ -235,9 +235,19 @@ export const CategoryManagement = () => {
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">
           <form onSubmit={handleSubmit} className="w-full max-w-xl rounded-3xl border border-sand bg-white p-6 shadow-2xl">
-            <h2 className="font-serif text-3xl font-bold italic text-ink">
-              {editing ? "Edit Category" : "Create Category"}
-            </h2>
+            <div className="flex items-start justify-between gap-4">
+              <h2 className="font-serif text-3xl font-bold italic text-ink">
+                {editing ? "Edit Category" : "Create Category"}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <div className="mt-4 grid gap-3">
               <input
                 required

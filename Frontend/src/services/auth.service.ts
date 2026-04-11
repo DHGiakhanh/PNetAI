@@ -53,6 +53,16 @@ export interface ProviderLegalDocumentsPayload {
   note?: string;
 }
 
+export type LegalFileType = "clinic_license" | "business_license";
+
+export interface ProviderLegalUploadResponse {
+  message: string;
+  fileType: LegalFileType;
+  url: string;
+  publicId: string;
+  originalName: string;
+}
+
 export const authService = {
   login: async (credentials: LoginCredentials) => {
     const response = await apiClient.post('/auth/login', credentials);
@@ -113,6 +123,18 @@ export const authService = {
 
   submitProviderLegalDocuments: async (data: ProviderLegalDocumentsPayload) => {
     const response = await apiClient.post('/user/provider/legal-documents', data);
+    return response.data;
+  },
+
+  uploadProviderLegalFile: async (
+    file: File,
+    fileType: LegalFileType
+  ): Promise<ProviderLegalUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("fileType", fileType);
+
+    const response = await apiClient.post("/user/provider/upload-legal-file", formData);
     return response.data;
   },
 };

@@ -17,7 +17,23 @@ type Provider = {
     | "pending_legal_submission"
     | "pending_legal_approval"
     | "approved";
+  legalDocuments?: {
+    submittedAt?: string;
+    reviewedAt?: string;
+    clinicName?: string;
+    clinicLicenseNumber?: string;
+    clinicLicenseUrl?: string;
+    businessLicenseUrl?: string;
+  };
   createdAt: string;
+};
+
+const isImageDocumentUrl = (url?: string) => {
+  if (!url) return false;
+  return (
+    /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url) ||
+    url.includes("/image/upload/")
+  );
 };
 
 export default function ServiceProviderApprovalsPage() {
@@ -182,6 +198,91 @@ export default function ServiceProviderApprovalsPage() {
                 >
                   {activeProvider.canPublishServices ? "Can Publish" : "Blocked"}
                 </span>
+              </div>
+              <div className="rounded-2xl border border-sand bg-warm/40 px-4 py-3 sm:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Legal Documents</p>
+                <p className="mt-1 text-sm text-ink">
+                  Clinic: <span className="font-semibold">{activeProvider.legalDocuments?.clinicName || "-"}</span>
+                </p>
+                <p className="text-sm text-ink">
+                  License No: <span className="font-semibold">{activeProvider.legalDocuments?.clinicLicenseNumber || "-"}</span>
+                </p>
+                <p className="text-sm text-ink">
+                  Submitted:{" "}
+                  <span className="font-semibold">
+                    {activeProvider.legalDocuments?.submittedAt
+                      ? new Date(activeProvider.legalDocuments.submittedAt).toLocaleString()
+                      : "-"}
+                  </span>
+                </p>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-xl border border-sand bg-white/70 p-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      Clinic License
+                    </p>
+                    {activeProvider.legalDocuments?.clinicLicenseUrl ? (
+                      isImageDocumentUrl(activeProvider.legalDocuments.clinicLicenseUrl) ? (
+                        <a
+                          href={activeProvider.legalDocuments.clinicLicenseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 block"
+                        >
+                          <img
+                            src={activeProvider.legalDocuments.clinicLicenseUrl}
+                            alt="Clinic license"
+                            className="h-40 w-full rounded-lg object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={activeProvider.legalDocuments.clinicLicenseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                        >
+                          Open clinic license document
+                        </a>
+                      )
+                    ) : (
+                      <p className="mt-2 text-xs text-muted">No file</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-sand bg-white/70 p-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      Business License
+                    </p>
+                    {activeProvider.legalDocuments?.businessLicenseUrl ? (
+                      isImageDocumentUrl(activeProvider.legalDocuments.businessLicenseUrl) ? (
+                        <a
+                          href={activeProvider.legalDocuments.businessLicenseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 block"
+                        >
+                          <img
+                            src={activeProvider.legalDocuments.businessLicenseUrl}
+                            alt="Business license"
+                            className="h-40 w-full rounded-lg object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={activeProvider.legalDocuments.businessLicenseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                        >
+                          Open business license document
+                        </a>
+                      )
+                    ) : (
+                      <p className="mt-2 text-xs text-muted">No file</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

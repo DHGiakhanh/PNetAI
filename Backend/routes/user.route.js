@@ -1,9 +1,21 @@
 const express = require("express");
 const bcryptjs = require("bcryptjs");
+const multer = require("multer");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
+const { cloudinary } = require("../config/cloudinary");
 
 const router = express.Router();
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+});
+const allowedDocumentMimeTypes = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+]);
 const isServiceProviderRole = (role) => role === "service_provider" || role === "shop";
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProviderRole(user?.role)) return undefined;
@@ -32,6 +44,71 @@ router.get('/profile', verifyToken, async (req, res) => {
         res.status(200).json({ user: userData });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// Upload legal document file for provider onboarding
+router.post('/provider/upload-legal-file', verifyToken, upload.single("file"), async (req, res) => {
+    try {
+        const user = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!isServiceProviderRole(user.role)) {
+            return res.status(403).json({ message: "Access denied. Service Provider only." });
+        }
+
+        if (!user.isVerified || getProviderOnboardingStatus(user) === "pending_sale_approval") {
+            return res.status(403).json({
+                message: "Your account has not passed initial sale approval yet.",
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: "File is required" });
+        }
+
+        if (!allowedDocumentMimeTypes.has(req.file.mimetype)) {
+            return res.status(400).json({
+                message: "Only PDF or image files (jpg, png, webp) are allowed.",
+            });
+        }
+
+        const fileType = typeof req.body.fileType === "string" ? req.body.fileType : "";
+        if (!["clinic_license", "business_license"].includes(fileType)) {
+            return res.status(400).json({
+                message: "fileType must be clinic_license or business_license.",
+            });
+        }
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                {
+                    folder: `pnetai/legal-documents/${req.userId}`,
+                    resource_type: "auto",
+                    public_id: `${fileType}_${Date.now()}`,
+                },
+                (error, result) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve(result);
+                }
+            );
+            stream.end(req.file.buffer);
+        });
+
+        return res.status(200).json({
+            message: "Legal document uploaded successfully.",
+            fileType,
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            originalName: req.file.originalname,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
 });
 

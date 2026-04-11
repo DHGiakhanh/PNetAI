@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { authService } from "@/services/auth.service";
+import { authService, type LegalFileType } from "@/services/auth.service";
+import { useLocation } from "react-router-dom";
 
 type OnboardingStatus =
   | "pending_sale_approval"
@@ -43,10 +44,73 @@ const resolveStatus = (value?: string): OnboardingStatus => {
   return "pending_sale_approval";
 };
 
+const isImageDocumentUrl = (url?: string) => {
+  if (!url) return false;
+  return (
+    /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url) ||
+    url.includes("/image/upload/")
+  );
+};
+
+const isPdfDocumentUrl = (url?: string) => {
+  if (!url) return false;
+  return /\.pdf(\?|$)/i.test(url) || url.includes("/raw/upload/");
+};
+
+const DocumentPreview = ({
+  url,
+  label,
+}: {
+  url?: string;
+  label: string;
+}) => {
+  if (!url) return null;
+
+  return (
+    <div className="mt-2 rounded-xl border border-sand bg-white/70 p-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
+      {isImageDocumentUrl(url) ? (
+        <a href={url} target="_blank" rel="noreferrer" className="mt-2 block">
+          <img src={url} alt={label} className="h-44 w-full rounded-lg object-cover" />
+        </a>
+      ) : isPdfDocumentUrl(url) ? (
+        <>
+          <iframe
+            src={`${url}#toolbar=0&navpanes=0`}
+            title={label}
+            className="mt-2 h-56 w-full rounded-lg border border-sand"
+          />
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+          >
+            Open full document
+          </a>
+        </>
+      ) : (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+        >
+          Open uploaded file
+        </a>
+      )}
+    </div>
+  );
+};
+
 export default function ServiceProviderProfilePage() {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submittingLegal, setSubmittingLegal] = useState(false);
+  const [uploadingClinicLicense, setUploadingClinicLicense] = useState(false);
+  const [uploadingBusinessLicense, setUploadingBusinessLicense] = useState(false);
+  const [activeTab, setActiveTab] = useState<"profile" | "legal">("profile");
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>("pending_sale_approval");
   const [canPublishServices, setCanPublishServices] = useState(false);
   const [legalSubmittedAt, setLegalSubmittedAt] = useState<string>("");
@@ -97,6 +161,14 @@ export default function ServiceProviderProfilePage() {
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get("section");
+    if (section === "legal-documents") {
+      setActiveTab("legal");
+    }
+  }, [location.search]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -126,6 +198,10 @@ export default function ServiceProviderProfilePage() {
       toast.error("Your account still needs initial sale approval.");
       return;
     }
+    if (!legalForm.clinicLicenseUrl) {
+      toast.error("Please upload Clinic License file.");
+      return;
+    }
 
     try {
       setSubmittingLegal(true);
@@ -145,7 +221,49 @@ export default function ServiceProviderProfilePage() {
     }
   };
 
+  const handleUploadLegalFile = async (
+    e: ChangeEvent<HTMLInputElement>,
+    fileType: LegalFileType
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const setUploading =
+      fileType === "clinic_license"
+        ? setUploadingClinicLicense
+        : setUploadingBusinessLicense;
+
+    try {
+      setUploading(true);
+      const res = await authService.uploadProviderLegalFile(file, fileType);
+      setLegalForm((prev) => ({
+        ...prev,
+        clinicLicenseUrl:
+          fileType === "clinic_license" ? res.url : prev.clinicLicenseUrl,
+        businessLicenseUrl:
+          fileType === "business_license" ? res.url : prev.businessLicenseUrl,
+      }));
+      toast.success(
+        fileType === "clinic_license"
+          ? "Clinic license uploaded."
+          : "Business license uploaded."
+      );
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not upload file.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const status = statusMeta[onboardingStatus];
+  const hasCurrentLegalData = Boolean(
+    legalForm.clinicName ||
+      legalForm.clinicLicenseNumber ||
+      legalForm.clinicLicenseUrl ||
+      legalForm.businessLicenseUrl ||
+      legalSubmittedAt
+  );
 
   return (
     <main className="min-h-[calc(100vh-7rem)]">
@@ -154,27 +272,56 @@ export default function ServiceProviderProfilePage() {
         <p className="mt-2 text-sm text-muted">Update your service provider information.</p>
       </div>
 
-      <section className="mb-6 max-w-3xl rounded-3xl border border-sand bg-white/90 p-6 shadow-sm">
+      <section className="mb-4 max-w-3xl rounded-3xl border border-sand bg-white/90 p-6 shadow-sm">
         {loading ? (
           <p className="text-sm text-muted">Loading...</p>
         ) : (
-          <>
-            <div className="mb-4">
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
-                {status.label}
+          <div>
+            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>
+              {status.label}
+            </span>
+            <p className="mt-2 text-sm text-muted">{status.description}</p>
+            <p className="mt-1 text-sm text-ink">
+              Publish permission:{" "}
+              <span className={canPublishServices ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
+                {canPublishServices ? "Enabled" : "Blocked"}
               </span>
-              <p className="mt-2 text-sm text-muted">{status.description}</p>
-              <p className="mt-1 text-sm text-ink">
-                Publish permission:{" "}
-                <span className={canPublishServices ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
-                  {canPublishServices ? "Enabled" : "Blocked"}
-                </span>
-              </p>
-              {legalSubmittedAt ? (
-                <p className="mt-1 text-xs text-muted">Legal submitted at: {new Date(legalSubmittedAt).toLocaleString()}</p>
-              ) : null}
-            </div>
+            </p>
+            {legalSubmittedAt ? (
+              <p className="mt-1 text-xs text-muted">Legal submitted at: {new Date(legalSubmittedAt).toLocaleString()}</p>
+            ) : null}
+          </div>
+        )}
+      </section>
 
+      <section className="mb-4 max-w-3xl rounded-3xl border border-sand bg-white/90 p-2 shadow-sm">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("profile")}
+            className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === "profile" ? "bg-brown text-white" : "bg-warm/60 text-ink hover:bg-warm"
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("legal")}
+            className={`rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === "legal" ? "bg-brown text-white" : "bg-warm/60 text-ink hover:bg-warm"
+            }`}
+          >
+            Legal Information
+          </button>
+        </div>
+      </section>
+
+      {activeTab === "profile" ? (
+        <section className="max-w-3xl rounded-3xl border border-sand bg-white/90 p-6 shadow-sm">
+          {loading ? (
+            <p className="text-sm text-muted">Loading...</p>
+          ) : (
             <form onSubmit={handleSubmit} className="grid gap-4">
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
@@ -235,15 +382,44 @@ export default function ServiceProviderProfilePage() {
                 </button>
               </div>
             </form>
-          </>
-        )}
-      </section>
+          )}
+        </section>
+      ) : null}
 
-      <section className="max-w-3xl rounded-3xl border border-sand bg-white/90 p-6 shadow-sm">
+      {activeTab === "legal" ? (
+        <section className="max-w-3xl rounded-3xl border border-sand bg-white/90 p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-ink">Legal Documents</h2>
         <p className="mt-1 text-sm text-muted">
           Submit clinic/legal information so sale can complete the final approval.
         </p>
+
+        {hasCurrentLegalData ? (
+          <div className="mt-4 rounded-2xl border border-sand bg-warm/30 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Current Legal Information</p>
+            <div className="mt-2 grid gap-2">
+              <p className="text-sm text-ink">
+                Clinic Name: <span className="font-semibold">{legalForm.clinicName || "-"}</span>
+              </p>
+              <p className="text-sm text-ink">
+                License Number: <span className="font-semibold">{legalForm.clinicLicenseNumber || "-"}</span>
+              </p>
+              <p className="text-sm text-ink">
+                Submitted At:{" "}
+                <span className="font-semibold">
+                  {legalSubmittedAt ? new Date(legalSubmittedAt).toLocaleString() : "Not submitted yet"}
+                </span>
+              </p>
+              <DocumentPreview
+                url={legalForm.clinicLicenseUrl}
+                label="Clinic License"
+              />
+              <DocumentPreview
+                url={legalForm.businessLicenseUrl}
+                label="Business License"
+              />
+            </div>
+          </div>
+        ) : null}
 
         {loading ? null : onboardingStatus === "approved" ? (
           <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -277,27 +453,48 @@ export default function ServiceProviderProfilePage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                Clinic License URL
+                Clinic License File
               </label>
               <input
-                type="url"
-                value={legalForm.clinicLicenseUrl}
-                onChange={(e) => setLegalForm((p) => ({ ...p, clinicLicenseUrl: e.target.value }))}
+                type="file"
+                accept=".pdf,image/png,image/jpeg,image/webp"
+                onChange={(e) => handleUploadLegalFile(e, "clinic_license")}
                 className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
-                placeholder="https://..."
-                required
+                disabled={uploadingClinicLicense || onboardingStatus === "pending_sale_approval"}
+              />
+              <p className="mt-1 text-xs text-muted">
+                {uploadingClinicLicense
+                  ? "Uploading..."
+                  : legalForm.clinicLicenseUrl
+                    ? "Uploaded successfully."
+                    : "Required: PDF/JPG/PNG/WEBP"}
+              </p>
+              <DocumentPreview
+                url={legalForm.clinicLicenseUrl}
+                label="Clinic License Preview"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                Business License URL (optional)
+                Business License File (optional)
               </label>
               <input
-                type="url"
-                value={legalForm.businessLicenseUrl}
-                onChange={(e) => setLegalForm((p) => ({ ...p, businessLicenseUrl: e.target.value }))}
+                type="file"
+                accept=".pdf,image/png,image/jpeg,image/webp"
+                onChange={(e) => handleUploadLegalFile(e, "business_license")}
                 className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
-                placeholder="https://..."
+                disabled={uploadingBusinessLicense || onboardingStatus === "pending_sale_approval"}
+              />
+              <p className="mt-1 text-xs text-muted">
+                {uploadingBusinessLicense
+                  ? "Uploading..."
+                  : legalForm.businessLicenseUrl
+                    ? "Uploaded successfully."
+                    : "Optional: PDF/JPG/PNG/WEBP"}
+              </p>
+              <DocumentPreview
+                url={legalForm.businessLicenseUrl}
+                label="Business License Preview"
               />
             </div>
             <div>
@@ -323,7 +520,8 @@ export default function ServiceProviderProfilePage() {
             </div>
           </form>
         )}
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }
