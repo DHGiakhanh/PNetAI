@@ -26,7 +26,11 @@ export const Login = () => {
       if (response.user.role === 'admin') {
         navigate('/admin');
       } else if (response.user.role === 'service_provider' || response.user.role === 'shop') {
-        navigate('/service-provider');
+        if (response.user.providerOnboardingStatus === "approved") {
+          navigate('/service-provider');
+        } else {
+          navigate('/service-provider/profile?section=legal-documents');
+        }
       } else if (response.user.role === 'sale') {
         navigate('/sale/providers');
       } else {

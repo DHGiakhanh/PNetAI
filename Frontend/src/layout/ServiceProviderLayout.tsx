@@ -1,9 +1,23 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Boxes, LayoutDashboard, LogOut, Scissors, UserCircle2, Users } from "lucide-react";
 
+const resolveProviderStatus = (value?: string) => {
+  if (
+    value === "pending_sale_approval" ||
+    value === "pending_legal_submission" ||
+    value === "pending_legal_approval" ||
+    value === "approved"
+  ) {
+    return value;
+  }
+  return "pending_sale_approval";
+};
+
 export default function ServiceProviderLayout() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const onboardingStatus = resolveProviderStatus(user?.providerOnboardingStatus);
+  const isApproved = onboardingStatus === "approved";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -23,51 +37,59 @@ export default function ServiceProviderLayout() {
           </div>
 
           <nav className="flex-1 overflow-y-auto p-3">
-            <NavLink
-              to="/service-provider"
-              end
-              className={({ isActive }) =>
-                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <LayoutDashboard className="h-5 w-5" />
-              Overview
-            </NavLink>
-            <NavLink
-              to="/service-provider/products"
-              className={({ isActive }) =>
-                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <Boxes className="h-5 w-5" />
-              Products
-            </NavLink>
-            <NavLink
-              to="/service-provider/services"
-              className={({ isActive }) =>
-                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <Scissors className="h-5 w-5" />
-              Services
-            </NavLink>
-            <NavLink
-              to="/service-provider/bookings"
-              className={({ isActive }) =>
-                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <Users className="h-5 w-5" />
-              Customers Booking
-            </NavLink>
+            {isApproved ? (
+              <>
+                <NavLink
+                  to="/service-provider"
+                  end
+                  className={({ isActive }) =>
+                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                    }`
+                  }
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                  Overview
+                </NavLink>
+                <NavLink
+                  to="/service-provider/products"
+                  className={({ isActive }) =>
+                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                    }`
+                  }
+                >
+                  <Boxes className="h-5 w-5" />
+                  Products
+                </NavLink>
+                <NavLink
+                  to="/service-provider/services"
+                  className={({ isActive }) =>
+                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                    }`
+                  }
+                >
+                  <Scissors className="h-5 w-5" />
+                  Services
+                </NavLink>
+                <NavLink
+                  to="/service-provider/bookings"
+                  className={({ isActive }) =>
+                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                    }`
+                  }
+                >
+                  <Users className="h-5 w-5" />
+                  Customers Booking
+                </NavLink>
+              </>
+            ) : (
+              <p className="mb-2 rounded-xl border border-sand bg-warm/60 px-4 py-3 text-xs text-muted">
+                Account chưa hoạt động. Vui lòng cập nhật hồ sơ và nộp giấy tờ để Sale duyệt.
+              </p>
+            )}
             <NavLink
               to="/service-provider/profile"
               className={({ isActive }) =>

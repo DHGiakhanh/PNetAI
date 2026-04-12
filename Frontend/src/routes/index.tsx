@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import { AdminLayout } from "@/layout/AdminLayout";
 import MainLayout from "@/layout/MainLayout";
@@ -70,7 +70,9 @@ export default function AppRoutes() {
         <Route path="sale" element={<SaleLayout />}>
           <Route index element={<ServiceProviderApprovalsPage />} />
           <Route path="providers" element={<ServiceProviderApprovalsPage />} />
-          <Route path="approvals" element={<SalePendingApprovalsPage />} />
+          <Route path="approvals" element={<Navigate to="/sale/approvals/accounts" replace />} />
+          <Route path="approvals/accounts" element={<SalePendingApprovalsPage mode="account" />} />
+          <Route path="approvals/legal" element={<SalePendingApprovalsPage mode="legal" />} />
           <Route path="profile" element={<SaleProfilePage />} />
         </Route>
       </Route>

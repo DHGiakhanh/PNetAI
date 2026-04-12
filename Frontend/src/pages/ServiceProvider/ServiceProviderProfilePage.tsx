@@ -44,19 +44,6 @@ const resolveStatus = (value?: string): OnboardingStatus => {
   return "pending_sale_approval";
 };
 
-const isImageDocumentUrl = (url?: string) => {
-  if (!url) return false;
-  return (
-    /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url) ||
-    url.includes("/image/upload/")
-  );
-};
-
-const isPdfDocumentUrl = (url?: string) => {
-  if (!url) return false;
-  return /\.pdf(\?|$)/i.test(url) || url.includes("/raw/upload/");
-};
-
 const DocumentPreview = ({
   url,
   label,
@@ -69,36 +56,14 @@ const DocumentPreview = ({
   return (
     <div className="mt-2 rounded-xl border border-sand bg-white/70 p-2">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
-      {isImageDocumentUrl(url) ? (
-        <a href={url} target="_blank" rel="noreferrer" className="mt-2 block">
-          <img src={url} alt={label} className="h-44 w-full rounded-lg object-cover" />
-        </a>
-      ) : isPdfDocumentUrl(url) ? (
-        <>
-          <iframe
-            src={`${url}#toolbar=0&navpanes=0`}
-            title={label}
-            className="mt-2 h-56 w-full rounded-lg border border-sand"
-          />
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-          >
-            Open full document
-          </a>
-        </>
-      ) : (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-        >
-          Open uploaded file
-        </a>
-      )}
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+      >
+        Open uploaded file
+      </a>
     </div>
   );
 };
@@ -150,6 +115,18 @@ export default function ServiceProviderProfilePage() {
         businessLicenseUrl: user.legalDocuments?.businessLicenseUrl || "",
         note: user.legalDocuments?.submissionNote || "",
       });
+
+      const raw = localStorage.getItem("user");
+      const current = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...current,
+          ...user,
+          providerOnboardingStatus: nextStatus,
+          canPublishServices: Boolean(user.canPublishServices),
+        })
+      );
     } catch {
       toast.error("Could not load profile.");
     } finally {
@@ -198,6 +175,10 @@ export default function ServiceProviderProfilePage() {
       toast.error("Your account still needs initial sale approval.");
       return;
     }
+    if (!form.phone.trim() || !form.address.trim()) {
+      toast.error("Phone and address are required.");
+      return;
+    }
     if (!legalForm.clinicLicenseUrl) {
       toast.error("Please upload Clinic License file.");
       return;
@@ -205,15 +186,41 @@ export default function ServiceProviderProfilePage() {
 
     try {
       setSubmittingLegal(true);
-      await authService.submitProviderLegalDocuments({
+      await authService.updateProfile({
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+      });
+
+      const submitRes = await authService.submitProviderLegalDocuments({
         clinicName: legalForm.clinicName,
         clinicLicenseNumber: legalForm.clinicLicenseNumber,
         clinicLicenseUrl: legalForm.clinicLicenseUrl,
         businessLicenseUrl: legalForm.businessLicenseUrl || undefined,
         note: legalForm.note || undefined,
       });
-      toast.success("Legal documents submitted.");
-      await loadProfile();
+
+      const nextStatus = resolveStatus(submitRes?.providerOnboardingStatus || "pending_legal_approval");
+      setOnboardingStatus(nextStatus);
+      setCanPublishServices(false);
+      if (submitRes?.legalDocuments?.submittedAt) {
+        setLegalSubmittedAt(submitRes.legalDocuments.submittedAt);
+      } else {
+        setLegalSubmittedAt(new Date().toISOString());
+      }
+
+      const raw = localStorage.getItem("user");
+      const current = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...current,
+          providerOnboardingStatus: nextStatus,
+          canPublishServices: false,
+        })
+      );
+
+      toast.success("Legal documents submitted. Waiting for sale approval.");
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Could not submit legal documents.");
     } finally {
@@ -258,9 +265,7 @@ export default function ServiceProviderProfilePage() {
 
   const status = statusMeta[onboardingStatus];
   const hasCurrentLegalData = Boolean(
-    legalForm.clinicName ||
-      legalForm.clinicLicenseNumber ||
-      legalForm.clinicLicenseUrl ||
+    legalForm.clinicLicenseUrl ||
       legalForm.businessLicenseUrl ||
       legalSubmittedAt
   );
@@ -425,8 +430,42 @@ export default function ServiceProviderProfilePage() {
           <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             Legal approval completed. You can publish services and products.
           </p>
+        ) : onboardingStatus === "pending_legal_approval" ? (
+          <p className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+            Legal documents have been submitted. Waiting for sale approval.
+          </p>
         ) : (
           <form onSubmit={handleSubmitLegal} className="mt-4 grid gap-4">
+            <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Contact Information (Required)</p>
+              <div className="grid gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                    Phone
+                  </label>
+                  <input
+                    value={form.phone}
+                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
+                    placeholder="Phone number"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                    Address
+                  </label>
+                  <textarea
+                    value={form.address}
+                    onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+                    className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
+                    rows={3}
+                    placeholder="Address"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
                 Clinic Name

@@ -12,7 +12,7 @@ const isServiceProviderRole = (role) => role === "service_provider" || role === 
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProviderRole(user?.role)) return undefined;
     if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
-    return user.isVerified ? "approved" : "pending_sale_approval";
+    return user.isVerified ? "pending_legal_submission" : "pending_sale_approval";
 };
 
 const canProviderPublish = (user) => {

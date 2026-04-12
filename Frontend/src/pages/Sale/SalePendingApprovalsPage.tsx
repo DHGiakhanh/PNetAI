@@ -26,15 +26,11 @@ type Provider = {
   createdAt: string;
 };
 
-const isImageDocumentUrl = (url?: string) => {
-  if (!url) return false;
-  return (
-    /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url) ||
-    url.includes("/image/upload/")
-  );
+type SalePendingApprovalsPageProps = {
+  mode: "account" | "legal";
 };
 
-export default function SalePendingApprovalsPage() {
+export default function SalePendingApprovalsPage({ mode }: SalePendingApprovalsPageProps) {
   const [pendingProviders, setPendingProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -57,10 +53,19 @@ export default function SalePendingApprovalsPage() {
     fetchPending();
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(pendingProviders.length / pageSize));
+  const isAccountPending = (provider: Provider) =>
+    !provider.isVerified || provider.providerOnboardingStatus === "pending_sale_approval";
+  const isLegalPending = (provider: Provider) => provider.providerOnboardingStatus === "pending_legal_approval";
+
+  const filteredProviders = useMemo(
+    () => pendingProviders.filter((provider) => (mode === "account" ? isAccountPending(provider) : isLegalPending(provider))),
+    [pendingProviders, mode]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredProviders.length / pageSize));
   const paginatedPendingProviders = useMemo(
-    () => pendingProviders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [pendingProviders, currentPage]
+    () => filteredProviders.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredProviders, currentPage]
   );
 
   useEffect(() => {
@@ -68,6 +73,10 @@ export default function SalePendingApprovalsPage() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [mode]);
 
   const approveProvider = async (providerId: string) => {
     try {
@@ -83,25 +92,30 @@ export default function SalePendingApprovalsPage() {
     }
   };
 
-  const getPendingStage = (provider: Provider) => {
-    if (!provider.isVerified || provider.providerOnboardingStatus === "pending_sale_approval") {
+  const getPendingStage = () => {
+    if (mode === "legal") {
       return {
-        label: "Initial Account Approval",
-        actionText: "Approve Account",
+        label: "Legal Documents Approval",
+        actionText: "Approve Legal Docs",
       };
     }
     return {
-      label: "Legal Documents Approval",
-      actionText: "Approve Legal Docs",
+      label: "Initial Account Approval",
+      actionText: "Approve Account",
     };
   };
+  const stage = getPendingStage();
 
   return (
     <main className="min-h-[calc(100vh-7rem)]">
       <div className="mb-6">
-        <h1 className="font-serif text-4xl font-bold italic text-ink">Approval Orders</h1>
+        <h1 className="font-serif text-4xl font-bold italic text-ink">
+          {mode === "legal" ? "Legal Document Approvals" : "Account Approvals"}
+        </h1>
         <p className="mt-2 text-sm text-muted">
-          Approve initial registrations and legal documents from your assigned Service Providers.
+          {mode === "legal"
+            ? "Review legal submissions from assigned Service Providers."
+            : "Approve initial account registrations from assigned Service Providers."}
         </p>
       </div>
 
@@ -112,20 +126,21 @@ export default function SalePendingApprovalsPage() {
             Pending Actions
           </h2>
           <span className="rounded-full bg-warm px-3 py-1 text-xs font-semibold text-ink ring-1 ring-sand">
-            {pendingProviders.length}
+            {filteredProviders.length}
           </span>
         </div>
 
         {loading ? (
           <p className="text-sm text-muted">Loading...</p>
-        ) : pendingProviders.length === 0 ? (
+        ) : filteredProviders.length === 0 ? (
           <p className="rounded-2xl border border-sand bg-warm/40 px-4 py-3 text-sm text-muted">
-            No pending Service Provider accounts.
+            {mode === "legal"
+              ? "No pending legal documents."
+              : "No pending account approvals."}
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {paginatedPendingProviders.map((provider) => {
-              const stage = getPendingStage(provider);
               return (
                 <article key={provider._id} className="rounded-2xl border border-sand bg-warm/30 p-4">
                   <p className="mb-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
@@ -139,7 +154,7 @@ export default function SalePendingApprovalsPage() {
                   <p className="text-xs text-muted">
                     Registered: {new Date(provider.createdAt).toLocaleString()}
                   </p>
-                  {provider.providerOnboardingStatus === "pending_legal_approval" ? (
+                  {mode === "legal" ? (
                     <>
                       <p className="text-xs text-muted">
                         Clinic: <span className="font-semibold text-ink">{provider.legalDocuments?.clinicName || "-"}</span>
@@ -161,29 +176,17 @@ export default function SalePendingApprovalsPage() {
                           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                             Clinic License
                           </p>
-                          {isImageDocumentUrl(provider.legalDocuments.clinicLicenseUrl) ? (
-                            <a
-                              href={provider.legalDocuments.clinicLicenseUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 block"
-                            >
-                              <img
-                                src={provider.legalDocuments.clinicLicenseUrl}
-                                alt="Clinic license"
-                                className="h-36 w-full rounded-lg object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <a
-                              href={provider.legalDocuments.clinicLicenseUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-                            >
-                              Open clinic license document
-                            </a>
-                          )}
+                          <a
+                            href={provider.legalDocuments.clinicLicenseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                          >
+                            Open clinic license document
+                          </a>
+                          <p className="mt-1 break-all text-[11px] text-muted">
+                            {provider.legalDocuments.clinicLicenseUrl}
+                          </p>
                         </div>
                       ) : null}
                       {provider.legalDocuments?.businessLicenseUrl ? (
@@ -191,29 +194,17 @@ export default function SalePendingApprovalsPage() {
                           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                             Business License
                           </p>
-                          {isImageDocumentUrl(provider.legalDocuments.businessLicenseUrl) ? (
-                            <a
-                              href={provider.legalDocuments.businessLicenseUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 block"
-                            >
-                              <img
-                                src={provider.legalDocuments.businessLicenseUrl}
-                                alt="Business license"
-                                className="h-36 w-full rounded-lg object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <a
-                              href={provider.legalDocuments.businessLicenseUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-                            >
-                              Open business license document
-                            </a>
-                          )}
+                          <a
+                            href={provider.legalDocuments.businessLicenseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                          >
+                            Open business license document
+                          </a>
+                          <p className="mt-1 break-all text-[11px] text-muted">
+                            {provider.legalDocuments.businessLicenseUrl}
+                          </p>
                         </div>
                       ) : null}
                     </>
@@ -235,7 +226,7 @@ export default function SalePendingApprovalsPage() {
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={pendingProviders.length}
+          totalItems={filteredProviders.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           className="mt-4"

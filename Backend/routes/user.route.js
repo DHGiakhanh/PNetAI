@@ -10,7 +10,7 @@ const isServiceProviderRole = (role) => role === "service_provider" || role === 
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProviderRole(user?.role)) return undefined;
     if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
-    return user.isVerified ? "approved" : "pending_sale_approval";
+    return user.isVerified ? "pending_legal_submission" : "pending_sale_approval";
 };
 const canProviderPublish = (user) =>
     isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
@@ -139,6 +139,14 @@ router.post('/provider/legal-documents', verifyToken, async (req, res) => {
         if (currentStatus === "pending_sale_approval") {
             return res.status(400).json({
                 message: "Your account has not passed initial sale approval yet.",
+            });
+        }
+
+        const hasPhone = typeof user.phone === "string" && user.phone.trim();
+        const hasAddress = typeof user.address === "string" && user.address.trim();
+        if (!hasPhone || !hasAddress) {
+            return res.status(400).json({
+                message: "Please update phone and address in your profile before submitting legal documents.",
             });
         }
 

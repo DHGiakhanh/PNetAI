@@ -20,6 +20,38 @@ const isServiceProvider = (req, res, next) => {
     next();
 };
 
+const getProviderOnboardingStatus = (user) => {
+    if (user?.role !== "service_provider" && user?.role !== "shop") return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "pending_legal_submission" : "pending_sale_approval";
+};
+
+const canProviderOperate = (user) =>
+    (user?.role === "service_provider" || user?.role === "shop") &&
+    user.isVerified &&
+    getProviderOnboardingStatus(user) === "approved";
+
+const ensureProviderFullyApproved = async (req, res, next) => {
+    try {
+        const provider = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
+        if (!provider || (provider.role !== "service_provider" && provider.role !== "shop")) {
+            return res.status(403).json({ message: "Access denied. Service Provider only." });
+        }
+
+        if (!canProviderOperate(provider)) {
+            return res.status(403).json({
+                message: "Upload legal documents and wait for sale approval before accessing provider workspace.",
+                code: "PROVIDER_NOT_READY",
+                providerOnboardingStatus: getProviderOnboardingStatus(provider),
+            });
+        }
+
+        return next();
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
 // Get all users with filters
 router.get('/users', verifyToken, isAdmin, async (req, res) => {
     try {
@@ -273,7 +305,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
 });
 
 // Get all products (Service Provider)
-router.get('/products', verifyToken, isServiceProvider, async (req, res) => {
+router.get('/products', verifyToken, isServiceProvider, ensureProviderFullyApproved, async (req, res) => {
     try {
         const { search } = req.query;
         let query = { providerId: req.userId };
@@ -295,7 +327,7 @@ router.get('/products', verifyToken, isServiceProvider, async (req, res) => {
 });
 
 // Get all categories (Service Provider, includes inactive)
-router.get('/categories', verifyToken, isServiceProvider, async (req, res) => {
+router.get('/categories', verifyToken, isServiceProvider, ensureProviderFullyApproved, async (req, res) => {
     try {
         const categories = await db.Category.find().sort({ sortOrder: 1, name: 1 });
         res.status(200).json({ categories });
@@ -305,7 +337,7 @@ router.get('/categories', verifyToken, isServiceProvider, async (req, res) => {
 });
 
 // Get service provider services (owned by current user)
-router.get('/services', verifyToken, isServiceProvider, async (req, res) => {
+router.get('/services', verifyToken, isServiceProvider, ensureProviderFullyApproved, async (req, res) => {
     try {
         const { search } = req.query;
         let query = { providerId: req.userId };
@@ -325,7 +357,7 @@ router.get('/services', verifyToken, isServiceProvider, async (req, res) => {
 });
 
 // Get customers bookings for service provider dashboard
-router.get('/customers-bookings', verifyToken, isServiceProvider, async (req, res) => {
+router.get('/customers-bookings', verifyToken, isServiceProvider, ensureProviderFullyApproved, async (req, res) => {
     try {
         const orders = await db.Order.find()
             .populate('user', 'name email phone')

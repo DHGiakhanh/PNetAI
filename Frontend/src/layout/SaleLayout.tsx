@@ -35,7 +35,19 @@ export default function SaleLayout() {
               Providers You Manage
             </NavLink>
             <NavLink
-              to="/sale/approvals"
+              to="/sale/approvals/accounts"
+              end
+              className={({ isActive }) =>
+                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                }`
+              }
+            >
+              <CheckCircle2 className="h-5 w-5" />
+              Account Approvals
+            </NavLink>
+            <NavLink
+              to="/sale/approvals/legal"
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
                   isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
@@ -43,7 +55,7 @@ export default function SaleLayout() {
               }
             >
               <CheckCircle2 className="h-5 w-5" />
-              Approval Orders
+              Legal Approvals
             </NavLink>
             <NavLink
               to="/sale/profile"

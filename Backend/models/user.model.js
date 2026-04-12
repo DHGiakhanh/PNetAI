@@ -8,6 +8,7 @@ const userSchema = new Schema({
     name: { type: String, required: [true, "Name is required"] },
     phone: { type: String },
     address: { type: String },
+    avatarUrl: { type: String },
     role: {
         type: String,
         enum: ["user", "admin", "sale", "service_provider", "shop"],
@@ -20,6 +21,25 @@ const userSchema = new Schema({
     verificationTokenExpires: { type: Date },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    providerOnboardingStatus: {
+        type: String,
+        enum: [
+            "pending_sale_approval",
+            "pending_legal_submission",
+            "pending_legal_approval",
+            "approved",
+        ],
+    },
+    legalDocuments: {
+        clinicName: { type: String },
+        clinicLicenseNumber: { type: String },
+        clinicLicenseUrl: { type: String },
+        businessLicenseUrl: { type: String },
+        submissionNote: { type: String },
+        submittedAt: { type: Date },
+        reviewedAt: { type: Date },
+        reviewNote: { type: String },
+    },
     createdAt: { type: Date, default: Date.now },
 });
 

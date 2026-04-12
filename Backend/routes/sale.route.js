@@ -7,7 +7,7 @@ const isServiceProviderRole = (role) => role === "service_provider" || role === 
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProviderRole(user?.role)) return undefined;
     if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
-    return user.isVerified ? "approved" : "pending_sale_approval";
+    return user.isVerified ? "pending_legal_submission" : "pending_sale_approval";
 };
 const canProviderPublish = (user) =>
     isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
@@ -96,6 +96,30 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
             message = "Initial account approval completed. Provider can login and submit legal documents.";
             approvalStage = "initial_account";
         } else if (currentStatus === "pending_legal_approval") {
+            const hasPhone = typeof provider.phone === "string" && provider.phone.trim();
+            const hasAddress = typeof provider.address === "string" && provider.address.trim();
+            const legal = provider.legalDocuments || {};
+            const hasRequiredLegalInfo =
+                typeof legal.clinicName === "string" &&
+                legal.clinicName.trim() &&
+                typeof legal.clinicLicenseNumber === "string" &&
+                legal.clinicLicenseNumber.trim() &&
+                typeof legal.clinicLicenseUrl === "string" &&
+                legal.clinicLicenseUrl.trim() &&
+                legal.submittedAt;
+
+            if (!hasPhone || !hasAddress) {
+                return res.status(400).json({
+                    message: "Provider must update phone and address before final approval.",
+                });
+            }
+
+            if (!hasRequiredLegalInfo) {
+                return res.status(400).json({
+                    message: "Provider legal documents are incomplete. Cannot approve yet.",
+                });
+            }
+
             provider.providerOnboardingStatus = "approved";
             if (!provider.legalDocuments) {
                 provider.legalDocuments = {};
