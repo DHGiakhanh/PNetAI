@@ -18,6 +18,7 @@ type Service = {
   isPopular: boolean;
   isAvailable: boolean;
   location?: { address?: string; city?: string };
+  availability?: { days?: string[]; hours?: { start?: string; end?: string } };
 };
 
 type ServiceForm = {
@@ -32,6 +33,8 @@ type ServiceForm = {
   isAvailable: boolean;
   address: string;
   city: string;
+  workStart: string;
+  workEnd: string;
 };
 
 const initialForm: ServiceForm = {
@@ -46,6 +49,8 @@ const initialForm: ServiceForm = {
   isAvailable: true,
   address: "",
   city: "",
+  workStart: "09:00",
+  workEnd: "17:00",
 };
 
 export const ServiceManagement = () => {
@@ -114,6 +119,8 @@ export const ServiceManagement = () => {
       isAvailable: service.isAvailable,
       address: service.location?.address || "",
       city: service.location?.city || "",
+      workStart: service.availability?.hours?.start || "09:00",
+      workEnd: service.availability?.hours?.end || "17:00",
     });
     setShowModal(true);
   };
@@ -135,6 +142,11 @@ export const ServiceManagement = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (form.workStart >= form.workEnd) {
+      toast.error("Working end time must be later than start time.");
+      return;
+    }
+
     try {
       setSaving(true);
       const payload = {
@@ -153,6 +165,13 @@ export const ServiceManagement = () => {
         location: {
           address: form.address,
           city: form.city,
+        },
+        availability: {
+          days: editing?.availability?.days || [],
+          hours: {
+            start: form.workStart,
+            end: form.workEnd,
+          },
         },
       };
 
@@ -310,7 +329,10 @@ export const ServiceManagement = () => {
 
       {showModal ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4">
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-3xl border border-sand bg-white p-6 shadow-2xl">
+          <form
+            onSubmit={handleSubmit}
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-sand bg-white p-6 shadow-2xl"
+          >
             <div className="flex items-start justify-between gap-4">
               <h2 className="font-serif text-3xl font-bold italic text-ink">
                 {editing ? "Edit Service" : "Create Service"}
@@ -376,6 +398,26 @@ export const ServiceManagement = () => {
                     placeholder="Duration (min)"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">Working Start</p>
+                    <input
+                      type="time"
+                      required
+                      value={form.workStart}
+                      onChange={(e) => setForm((p) => ({ ...p, workStart: e.target.value }))}
+                      className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">Working End</p>
+                    <input
+                      type="time"
+                      required
+                      value={form.workEnd}
+                      onChange={(e) => setForm((p) => ({ ...p, workEnd: e.target.value }))}
+                      className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                    />
+                  </div>
                 </div>
               </div>
 

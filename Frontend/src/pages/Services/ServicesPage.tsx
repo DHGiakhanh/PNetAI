@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Scissors, Stethoscope } from "lucide-react";
+import { CalendarDays, Clock3, Scissors, Stethoscope } from "lucide-react";
 import { serviceService, Service } from "@/services/service.service";
 import Pagination from "@/components/common/Pagination";
 
@@ -10,6 +10,13 @@ const getProviderName = (service: Service) => {
   if (service.providerName) return service.providerName;
   if (typeof service.providerId === "string") return "";
   return service.providerId?.name || "";
+};
+
+const getWorkingHoursText = (service: Service) => {
+  const start = service.availability?.hours?.start;
+  const end = service.availability?.hours?.end;
+  if (!start || !end) return "Flexible hours";
+  return `${start} - ${end}`;
 };
 
 export default function ServicesPage() {
@@ -151,6 +158,10 @@ export default function ServicesPage() {
                       by {getProviderName(s)}
                     </p>
                   ) : null}
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-muted">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Working hours: {getWorkingHoursText(s)}
+                  </p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-sm font-extrabold text-slate-900">${s.basePrice.toFixed(2)}</span>
                     <Link

@@ -6,6 +6,25 @@ const verifyToken = require("../middlewares/verifyToken");
 const { cloudinary } = require("../config/cloudinary");
 
 const router = express.Router();
+const isServiceProviderRole = (role) => role === "service_provider" || role === "shop";
+const getProviderOnboardingStatus = (user) => {
+    if (!isServiceProviderRole(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "approved" : "pending_sale_approval";
+};
+const canProviderPublish = (user) =>
+    isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
+const allowedDocumentMimeTypes = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+]);
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 // Get User Profile
 router.get('/profile', verifyToken, async (req, res) => {

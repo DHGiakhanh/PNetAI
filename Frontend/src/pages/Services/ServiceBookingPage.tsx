@@ -17,6 +17,13 @@ function getProviderName(service: Service) {
   return service.providerId?.name || "";
 }
 
+function getWorkingHoursText(service: Service) {
+  const start = service.availability?.hours?.start;
+  const end = service.availability?.hours?.end;
+  if (!start || !end) return "Flexible hours";
+  return `${start} - ${end}`;
+}
+
 const dateOptions = [
   { dow: "MON", day: 12, label: "Mon, Aug 12" },
   { dow: "TUE", day: 13, label: "Tue, Aug 13" },
@@ -95,6 +102,7 @@ export default function ServiceBookingPage() {
 
   const canBook = isLoggedIn && pets.length > 0 && Boolean(service);
   const providerName = service ? getProviderName(service) : "";
+  const workingHours = service ? getWorkingHoursText(service) : "Flexible hours";
 
   if (loading) {
     return (
@@ -175,6 +183,10 @@ export default function ServiceBookingPage() {
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-4 w-4 text-muted" />
                     {service.duration} min
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="h-4 w-4 text-muted" />
+                    Working: {workingHours}
                   </span>
                 </div>
               </div>
@@ -310,6 +322,10 @@ export default function ServiceBookingPage() {
             </div>
 
             <div className={`mt-4 ${!isLoggedIn ? "opacity-60" : ""}`}>
+              <div className="rounded-2xl bg-warm/70 px-4 py-3 ring-1 ring-sand">
+                <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-muted">Working Hours</p>
+                <p className="mt-1 text-sm font-semibold text-ink">{workingHours}</p>
+              </div>
               <div className="flex flex-wrap gap-3">
                 {dateOptions.map((d, idx) => {
                   const active = idx === selectedDateIdx;
@@ -425,6 +441,12 @@ export default function ServiceBookingPage() {
                 <span className="font-semibold text-muted">Time</span>
                 <span className="font-extrabold text-ink">
                   {selectedTime}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-muted">Working Hours</span>
+                <span className="font-extrabold text-ink">
+                  {workingHours}
                 </span>
               </div>
             </div>

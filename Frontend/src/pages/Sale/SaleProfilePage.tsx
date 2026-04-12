@@ -13,7 +13,6 @@ import {
   User,
   Users,
   Award,
-  Wallet,
   Clock
 } from "lucide-react";
 import { authService, UserProfile as UserProfileData } from "@/services/auth.service";
