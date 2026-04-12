@@ -184,9 +184,6 @@ export default function SalePendingApprovalsPage({ mode }: SalePendingApprovalsP
                           >
                             Open clinic license document
                           </a>
-                          <p className="mt-1 break-all text-[11px] text-muted">
-                            {provider.legalDocuments.clinicLicenseUrl}
-                          </p>
                         </div>
                       ) : null}
                       {provider.legalDocuments?.businessLicenseUrl ? (
@@ -202,9 +199,6 @@ export default function SalePendingApprovalsPage({ mode }: SalePendingApprovalsP
                           >
                             Open business license document
                           </a>
-                          <p className="mt-1 break-all text-[11px] text-muted">
-                            {provider.legalDocuments.businessLicenseUrl}
-                          </p>
                         </div>
                       ) : null}
                     </>

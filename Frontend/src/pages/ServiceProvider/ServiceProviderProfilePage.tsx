@@ -496,7 +496,7 @@ export default function ServiceProviderProfilePage() {
               </label>
               <input
                 type="file"
-                accept=".pdf,image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => handleUploadLegalFile(e, "clinic_license")}
                 className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
                 disabled={uploadingClinicLicense || onboardingStatus === "pending_sale_approval"}
@@ -506,7 +506,7 @@ export default function ServiceProviderProfilePage() {
                   ? "Uploading..."
                   : legalForm.clinicLicenseUrl
                     ? "Uploaded successfully."
-                    : "Required: PDF/JPG/PNG/WEBP"}
+                    : "Required: JPG/PNG/WEBP"}
               </p>
               <DocumentPreview
                 url={legalForm.clinicLicenseUrl}
@@ -519,7 +519,7 @@ export default function ServiceProviderProfilePage() {
               </label>
               <input
                 type="file"
-                accept=".pdf,image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => handleUploadLegalFile(e, "business_license")}
                 className="w-full rounded-xl border border-sand bg-warm/50 px-4 py-3 text-sm outline-none focus:border-caramel"
                 disabled={uploadingBusinessLicense || onboardingStatus === "pending_sale_approval"}
@@ -529,7 +529,7 @@ export default function ServiceProviderProfilePage() {
                   ? "Uploading..."
                   : legalForm.businessLicenseUrl
                     ? "Uploaded successfully."
-                    : "Optional: PDF/JPG/PNG/WEBP"}
+                    : "Optional: JPG/PNG/WEBP"}
               </p>
               <DocumentPreview
                 url={legalForm.businessLicenseUrl}

@@ -15,7 +15,6 @@ const getProviderOnboardingStatus = (user) => {
 const canProviderPublish = (user) =>
     isServiceProviderRole(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
 const allowedDocumentMimeTypes = new Set([
-    "application/pdf",
     "image/jpeg",
     "image/jpg",
     "image/png",
@@ -25,6 +24,12 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
 });
+const fileExtensionByMimeType = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+};
 
 // Get User Profile
 router.get('/profile', verifyToken, async (req, res) => {
@@ -72,7 +77,7 @@ router.post('/provider/upload-legal-file', verifyToken, upload.single("file"), a
 
         if (!allowedDocumentMimeTypes.has(req.file.mimetype)) {
             return res.status(400).json({
-                message: "Only PDF or image files (jpg, png, webp) are allowed.",
+                message: "Only image files (jpg, png, webp) are allowed.",
             });
         }
 
@@ -84,11 +89,12 @@ router.post('/provider/upload-legal-file', verifyToken, upload.single("file"), a
         }
 
         const uploadResult = await new Promise((resolve, reject) => {
+            const extension = fileExtensionByMimeType[req.file.mimetype] || "bin";
             const stream = cloudinary.uploader.upload_stream(
                 {
                     folder: `pnetai/legal-documents/${req.userId}`,
-                    resource_type: "auto",
-                    public_id: `${fileType}_${Date.now()}`,
+                    resource_type: "image",
+                    public_id: `${fileType}_${Date.now()}.${extension}`,
                 },
                 (error, result) => {
                     if (error) {

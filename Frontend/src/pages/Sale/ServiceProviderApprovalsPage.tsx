@@ -245,9 +245,6 @@ export default function ServiceProviderApprovalsPage() {
                         >
                           Open clinic license document
                         </a>
-                        <p className="mt-1 break-all text-[11px] text-muted">
-                          {activeProvider.legalDocuments.clinicLicenseUrl}
-                        </p>
                       </>
                     ) : (
                       <p className="mt-2 text-xs text-muted">No file</p>
@@ -282,9 +279,6 @@ export default function ServiceProviderApprovalsPage() {
                         >
                           Open business license document
                         </a>
-                        <p className="mt-1 break-all text-[11px] text-muted">
-                          {activeProvider.legalDocuments.businessLicenseUrl}
-                        </p>
                       </>
                     ) : (
                       <p className="mt-2 text-xs text-muted">No file</p>
