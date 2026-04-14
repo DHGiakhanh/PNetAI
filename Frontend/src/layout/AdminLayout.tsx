@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Bell,
   ExternalLink,
-  Settings
+  Settings,
+  BookOpen
 } from 'lucide-react';
 
 export const AdminLayout = () => {
@@ -34,6 +35,7 @@ export const AdminLayout = () => {
       : [
           { title: "Dashboard", icon: LayoutDashboard, path: "/admin", exact: true },
           { title: "User Management", icon: Users, path: "/admin/users" },
+          { title: "Blog Moderation", icon: BookOpen, path: "/admin/blogs/approvals" },
         ];
 
   const isActive = (path: string, exact?: boolean) => {

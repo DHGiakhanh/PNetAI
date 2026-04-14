@@ -49,7 +49,7 @@ export default function SaleLayout() {
             <NavLink
               to="/sale/approvals/legal"
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
                   isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
                 }`
               }

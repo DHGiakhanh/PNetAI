@@ -15,6 +15,8 @@ import ResetPasswordPage from "@/pages/Auth/ResetPassword";
 import MyPetsPage from "@/pages/Pets/MyPetsPage";
 import UserProfile from "@/pages/Profile/UserProfile";
 import BlogDetailPage from "@/pages/Blogs/BlogDetailPage";
+import MyBlogsPage from "@/pages/Blogs/MyBlogsPage";
+import BlogEditorPage from "@/pages/Blogs/BlogEditorPage";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
 import { UserManagement } from "@/pages/Admin/UserManagement";
@@ -39,6 +41,7 @@ import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsP
 import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
 import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
+import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
 import PurchasedProductsPage from "@/pages/Orders/PurchasedProductsPage";
 import CheckoutPage from "@/pages/Shop/CheckoutPage";
@@ -51,6 +54,7 @@ export default function AppRoutes() {
         <Route element={<AdminRoute />}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="blogs/approvals" element={<AdminBlogApprovalsPage />} />
         </Route>
       </Route>
 
@@ -95,6 +99,9 @@ export default function AppRoutes() {
           <Route path="my-pets" element={<MyPetsPage />} />
           <Route path="my-bookings" element={<MyBookingsPage />} />
           <Route path="purchased-products" element={<PurchasedProductsPage />} />
+          <Route path="my-blogs" element={<MyBlogsPage />} />
+          <Route path="blogs/new" element={<BlogEditorPage />} />
+          <Route path="blogs/edit/:id" element={<BlogEditorPage />} />
         </Route>
       </Route>
 

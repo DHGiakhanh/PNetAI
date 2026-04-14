@@ -423,6 +423,12 @@ export function AppNavbar() {
                       >
                         Purchased Products
                       </Link>
+                      <Link
+                        to="/my-blogs"
+                        className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
+                      >
+                        My Blog
+                      </Link>
                       <button
                         type="button"
                         onClick={handleLogout}
@@ -539,6 +545,13 @@ export function AppNavbar() {
                     className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
                   >
                     Purchased Products
+                  </Link>
+                  <Link
+                    to="/my-blogs"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  >
+                    My Blog
                   </Link>
                   <button
                     type="button"
