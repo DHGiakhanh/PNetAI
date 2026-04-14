@@ -139,7 +139,8 @@ export default function SaleProfilePage() {
       
       if (updatedUser) {
         setProfile(p => ({ ...p, ...updatedUser }));
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        const currentLocal = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem("user", JSON.stringify({ ...currentLocal, ...updatedUser }));
         window.dispatchEvent(new Event("user:updated"));
       }
 
@@ -400,4 +401,3 @@ export default function SaleProfilePage() {
     </div>
   );
 }
-

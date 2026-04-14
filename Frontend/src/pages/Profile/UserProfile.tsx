@@ -179,7 +179,8 @@ export default function UserProfile() {
       // Update local state and persistence
       if (updatedUser) {
         setProfile(p => ({ ...p, ...updatedUser }));
-        localStorage.setItem("user", JSON.stringify(updatedUser)); // Vital for Navbar
+        const currentLocal = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem("user", JSON.stringify({ ...currentLocal, ...updatedUser })); // Vital for Navbar
         window.dispatchEvent(new Event("user:updated")); // Notify Navbar
       }
 
