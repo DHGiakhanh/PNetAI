@@ -5,6 +5,7 @@ import apiClient from "@/utils/api.service";
 import Pagination from "@/components/common/Pagination";
 import { productService } from "@/services/product.service";
 import { useNavigate } from "react-router-dom";
+import { formatVnd } from "@/utils/currency";
 
 type Product = {
   _id: string;
@@ -260,7 +261,7 @@ export const ProductManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-ink">{product.category}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-ink">${product.price.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-ink">{formatVnd(product.price)}</td>
                     <td className="px-4 py-3 text-sm text-ink">{product.stock}</td>
                     <td className="px-4 py-3 text-sm text-muted">
                       {product.isHot ? "Hot " : ""}
@@ -351,16 +352,16 @@ export const ProductManagement = () => {
               </div>
 
               <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price (VND)</p>
                 <div className="grid gap-3">
                   <input
                     type="number"
                     min={0}
-                    step="0.01"
+                    step="1000"
                     required
                     value={form.price}
                     onChange={(e) => setForm((p) => ({ ...p, price: Number(e.target.value) }))}
-                    placeholder="Price"
+                    placeholder="Price in VND"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
                 </div>

@@ -3,6 +3,7 @@ import apiClient from "@/utils/api.service";
 import { Users } from "lucide-react";
 import toast from "react-hot-toast";
 import Pagination from "@/components/common/Pagination";
+import { formatVnd } from "@/utils/currency";
 
 type BookingCustomer = {
   user: {
@@ -92,7 +93,7 @@ export const CustomerBookingsPage = () => {
                     <td className="px-4 py-3 text-sm text-muted">{item.user.email}</td>
                     <td className="px-4 py-3 text-sm text-muted">{item.user.phone || "-"}</td>
                     <td className="px-4 py-3 text-sm text-ink">{item.totalOrders}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-ink">${item.totalSpent.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-ink">{formatVnd(item.totalSpent)}</td>
                     <td className="px-4 py-3 text-sm text-muted">
                       {item.lastBookedAt ? new Date(item.lastBookedAt).toLocaleString() : "-"}
                     </td>

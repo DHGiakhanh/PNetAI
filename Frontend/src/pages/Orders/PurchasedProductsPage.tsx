@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import { formatVnd } from "@/utils/currency";
 
 type OrderItem = {
   product?: {
@@ -26,13 +27,6 @@ type PurchasedProduct = {
   image?: string;
   lastPurchasedAt: string;
 };
-
-function formatUsd(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
 
 export default function PurchasedProductsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -115,7 +109,7 @@ export default function PurchasedProductsPage() {
                 <div className="space-y-2 p-4">
                   <p className="line-clamp-2 text-sm font-semibold text-ink">{product.name}</p>
                   <p className="text-xs text-muted">Quantity {product.quantity}</p>
-                  <p className="text-sm font-semibold text-brown">{formatUsd(product.totalSpent)}</p>
+                  <p className="text-sm font-semibold text-brown">{formatVnd(product.totalSpent)}</p>
                   <p className="text-xs text-muted">
                     Last purchased: {new Date(product.lastPurchasedAt).toLocaleDateString()}
                   </p>

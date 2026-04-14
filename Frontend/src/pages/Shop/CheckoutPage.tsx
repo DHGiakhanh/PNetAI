@@ -18,6 +18,12 @@ import { toast } from "react-hot-toast";
 import { cartService, CartItem, CartProduct } from "../../services/cart.service";
 import { authService } from "../../services/auth.service";
 import { productService } from "../../services/product.service";
+import {
+  EXPRESS_SHIPPING_FEE_VND,
+  formatVnd,
+  FREE_SHIPPING_THRESHOLD_VND,
+  STANDARD_SHIPPING_FEE_VND,
+} from "@/utils/currency";
 
 // --- Types ---
 type ShippingMethod = "standard" | "express";
@@ -31,14 +37,6 @@ interface CheckoutItem {
   stock: number;
   image: string;
 }
-
-// --- Helpers ---
-const formatUsd = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-};
 
 // --- Main Component ---
 export default function CheckoutPage() {
@@ -106,7 +104,12 @@ export default function CheckoutPage() {
 
   // Calculations
   const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0), [cartItems]);
-  const shippingFee = shippingMethod === "express" ? 15 : (subtotal >= 100 ? 0 : 5);
+  const shippingFee =
+    shippingMethod === "express"
+      ? EXPRESS_SHIPPING_FEE_VND
+      : subtotal >= FREE_SHIPPING_THRESHOLD_VND
+        ? 0
+        : STANDARD_SHIPPING_FEE_VND;
   const total = subtotal + shippingFee - discount;
 
   // Actions
@@ -347,7 +350,7 @@ export default function CheckoutPage() {
                     }`}>
                       <Zap className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">$15.00</span>
+                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)}</span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Express Manifest</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">Next-day delivery with premium handling.</p>
@@ -449,9 +452,9 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-serif font-bold italic text-ink truncate mb-1">{item.name}</h4>
-                      <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{item.qty} units × {item.price}</p>
+                      <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{item.qty} units × {formatVnd(item.price)}</p>
                     </div>
-                    <span className="text-sm font-serif font-semibold text-ink italic">{formatUsd(item.price * item.qty)}</span>
+                    <span className="text-sm font-serif font-semibold text-ink italic">{formatVnd(item.price * item.qty)}</span>
                   </div>
                 ))}
               </div>
@@ -498,11 +501,11 @@ export default function CheckoutPage() {
               <div className="space-y-4 pt-10 border-t border-sand/30">
                 <div className="flex justify-between items-center text-sm">
                   <span className="font-serif italic text-muted">Subtotal curation</span>
-                  <span className="font-bold text-ink">{formatUsd(subtotal)}</span>
+                  <span className="font-bold text-ink">{formatVnd(subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="font-serif italic text-muted">Shipping cadence</span>
-                  <span className="font-bold text-ink">{formatUsd(shippingFee)}</span>
+                  <span className="font-bold text-ink">{formatVnd(shippingFee)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between items-center text-sm text-rust">
@@ -512,7 +515,7 @@ export default function CheckoutPage() {
                       animate={{ scale: [1, 1.1, 1] }}
                       className="font-bold"
                     >
-                      -{formatUsd(discount)}
+                      -{formatVnd(discount)}
                     </motion.span>
                   </div>
                 )}
@@ -523,7 +526,7 @@ export default function CheckoutPage() {
                     <p className="text-[11px] text-ink/40 italic font-serif">Includes calculated local duties</p>
                   </div>
                   <span className="text-4xl font-serif font-bold italic text-ink tracking-tighter">
-                    {formatUsd(total)}
+                    {formatVnd(total)}
                   </span>
                 </div>
               </div>

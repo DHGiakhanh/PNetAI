@@ -4,13 +4,7 @@ import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Star } from "lucide-react
 import toast from "react-hot-toast";
 import { productService, Product } from "../../services/product.service";
 import { cartService } from "../../services/cart.service";
-
-function formatUsd(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
+import { formatVnd } from "@/utils/currency";
 
 function getProductProviderName(product: Product) {
   if (typeof product.providerId === "string") return "Service Provider";
@@ -217,7 +211,7 @@ export default function ProductDetailPage() {
                 </span>
               </div>
               <span className="text-2xl font-extrabold text-ink">
-                {formatUsd(product.price)}
+                {formatVnd(product.price)}
               </span>
             </div>
 
@@ -261,7 +255,7 @@ export default function ProductDetailPage() {
                   disabled={addLoading || product.stock <= 0}
                   className="inline-flex w-full items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
                 >
-                  {addLoading ? "Adding..." : `Add to cart · ${formatUsd(product.price * qty)}`}
+                  {addLoading ? "Adding..." : `Add to cart · ${formatVnd(product.price * qty)}`}
                 </button>
                 <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
                   <ShieldCheck className="h-5 w-5 text-brown" />
@@ -352,7 +346,7 @@ export default function ProductDetailPage() {
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-extrabold text-ink">
-                    {formatUsd(p.price)}
+                    {formatVnd(p.price)}
                   </span>
                   <span className="inline-flex items-center gap-1 text-xs font-extrabold text-amber-700">
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />

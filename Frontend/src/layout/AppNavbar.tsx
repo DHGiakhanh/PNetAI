@@ -18,6 +18,7 @@ import { cartService, CartItem, CartProduct } from "../services/cart.service";
 import { productService } from "../services/product.service";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { formatVnd, FREE_SHIPPING_THRESHOLD_VND } from "@/utils/currency";
 
 type LocalUser = {
   name?: string;
@@ -39,13 +40,6 @@ type CartPreviewItem = {
 function isActive(pathname: string, target: string) {
   if (target === "/") return pathname === "/";
   return pathname.startsWith(target);
-}
-
-function formatUsd(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
 }
 
 export function AppNavbar() {
@@ -109,7 +103,7 @@ export function AppNavbar() {
           qty: item.quantity,
           stock: product?.stock ?? 0,
           price: item.price,
-          priceText: formatUsd(item.price * item.quantity),
+          priceText: formatVnd(item.price * item.quantity),
           image: product?.images?.[0] ?? "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=200&auto=format&fit=crop"
         };
       });
@@ -158,7 +152,7 @@ export function AppNavbar() {
     
     // Optimistic Update
     setCartPreviewItems(prev => prev.map(it => 
-      it.id === productId ? { ...it, qty: targetQty, priceText: formatUsd(it.price * targetQty) } : it
+      it.id === productId ? { ...it, qty: targetQty, priceText: formatVnd(it.price * targetQty) } : it
     ));
 
     try {
@@ -622,15 +616,15 @@ export function AppNavbar() {
         {/* Free Shipping Milestone (Ultra-Thin Minimalist) */}
         <div className="px-10 py-6">
           <p className="text-[11px] font-bold text-ink/70 mb-3 tracking-wide">
-            {cartTotal >= 100 
+            {cartTotal >= FREE_SHIPPING_THRESHOLD_VND
               ? "Your treasures ship free across the atelier." 
-              : `Just ${formatUsd(100 - cartTotal)} more to unlock complimentary delivery.`
+              : `Just ${formatVnd(FREE_SHIPPING_THRESHOLD_VND - cartTotal)} more to unlock complimentary delivery.`
             }
           </p>
           <div className="h-[2px] w-full bg-sand/20 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (cartTotal / 100) * 100)}%` }}
+              animate={{ width: `${Math.min(100, (cartTotal / FREE_SHIPPING_THRESHOLD_VND) * 100)}%` }}
               className="h-full bg-caramel" 
             />
           </div>
@@ -752,7 +746,7 @@ export function AppNavbar() {
               <h4 className="text-[11px] font-bold text-ink/40">Includes local courier dispatch</h4>
             </div>
             <span className="text-3xl font-serif font-bold italic text-ink tracking-tight">
-              {formatUsd(selectedTotal)}
+              {formatVnd(selectedTotal)}
             </span>
           </div>
 

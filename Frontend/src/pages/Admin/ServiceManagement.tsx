@@ -5,6 +5,7 @@ import apiClient from "@/utils/api.service";
 import Pagination from "@/components/common/Pagination";
 import { serviceService } from "@/services/service.service";
 import { useNavigate } from "react-router-dom";
+import { formatVnd } from "@/utils/currency";
 
 type Service = {
   _id: string;
@@ -289,7 +290,7 @@ export const ServiceManagement = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-ink">{service.category}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-ink">${service.basePrice.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-ink">{formatVnd(service.basePrice)}</td>
                     <td className="px-4 py-3 text-sm text-ink">{service.duration} min</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${service.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
@@ -376,16 +377,16 @@ export const ServiceManagement = () => {
               </div>
 
               <div className="rounded-2xl border border-sand/80 bg-warm/30 p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price & Duration</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Price (VND) & Duration</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input
                     type="number"
                     min={0}
-                    step="0.01"
+                    step="1000"
                     required
                     value={form.basePrice}
                     onChange={(e) => setForm((p) => ({ ...p, basePrice: Number(e.target.value) }))}
-                    placeholder="Base price"
+                    placeholder="Base price in VND"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
                   <input

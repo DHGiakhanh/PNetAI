@@ -2,13 +2,16 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const db = require('../models');
 
+const USD_TO_VND = 25000;
+const vnd = (usd) => Math.round(usd * USD_TO_VND);
+
 // Sample product data for pet store
 const products = [
   // Food & Treats
   {
     name: "Premium Organic Dog Food",
     description: "High-quality organic dog food made with real chicken and vegetables. Perfect for adult dogs of all sizes.",
-    price: 45.99,
+    price: vnd(45.99),
     category: "Food",
     images: [
       "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=400&auto=format&fit=crop",
@@ -23,7 +26,7 @@ const products = [
   {
     name: "Salmon Training Treats",
     description: "Delicious salmon-flavored training treats. Perfect for positive reinforcement training sessions.",
-    price: 12.99,
+    price: vnd(12.99),
     category: "Food",
     images: [
       "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=400&auto=format&fit=crop"
@@ -37,7 +40,7 @@ const products = [
   {
     name: "Natural Cat Food - Chicken & Rice",
     description: "Premium cat food with real chicken and rice. Specially formulated for indoor cats.",
-    price: 38.50,
+    price: vnd(38.50),
     category: "Food",
     images: [
       "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
@@ -53,7 +56,7 @@ const products = [
   {
     name: "Interactive Puzzle Toy",
     description: "Mental stimulation puzzle toy that challenges your dog's problem-solving skills. Great for reducing boredom.",
-    price: 24.99,
+    price: vnd(24.99),
     category: "Toys",
     images: [
       "https://images.unsplash.com/photo-1535294435445-d7249524ef2e?q=80&w=400&auto=format&fit=crop"
@@ -67,7 +70,7 @@ const products = [
   {
     name: "Squeaky Rubber Ball",
     description: "Durable rubber ball with squeaker inside. Perfect for fetch and interactive play.",
-    price: 8.99,
+    price: vnd(8.99),
     category: "Toys",
     images: [
       "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=400&auto=format&fit=crop"
@@ -81,7 +84,7 @@ const products = [
   {
     name: "Catnip Mouse Toy Set",
     description: "Set of 3 catnip-filled mouse toys. Drives cats crazy with excitement and provides hours of entertainment.",
-    price: 15.99,
+    price: vnd(15.99),
     category: "Toys",
     images: [
       "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?q=80&w=400&auto=format&fit=crop"
@@ -97,7 +100,7 @@ const products = [
   {
     name: "Adjustable Dog Harness",
     description: "Comfortable and secure adjustable harness. Perfect for daily walks and training. Available in multiple sizes.",
-    price: 29.99,
+    price: vnd(29.99),
     category: "Accessories",
     images: [
       "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"
@@ -111,7 +114,7 @@ const products = [
   {
     name: "Stainless Steel Food Bowl",
     description: "Durable stainless steel food bowl with non-slip base. Easy to clean and dishwasher safe.",
-    price: 18.50,
+    price: vnd(18.50),
     category: "Accessories",
     images: [
       "https://images.unsplash.com/photo-1679224106783-c21b1841412a?q=80&w=400&auto=format&fit=crop"
@@ -125,7 +128,7 @@ const products = [
   {
     name: "Cozy Pet Bed - Large",
     description: "Ultra-soft and comfortable pet bed. Machine washable with removable cover. Perfect for large dogs.",
-    price: 65.99,
+    price: vnd(65.99),
     category: "Accessories",
     images: [
       "https://images.unsplash.com/photo-1541188495357-ad2dc89487f4?q=80&w=400&auto=format&fit=crop"
@@ -139,7 +142,7 @@ const products = [
   {
     name: "LED Safety Collar",
     description: "Rechargeable LED collar for nighttime visibility. Keeps your pet safe during evening walks.",
-    price: 22.99,
+    price: vnd(22.99),
     category: "Accessories",
     images: [
       "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=400&auto=format&fit=crop"
@@ -155,7 +158,7 @@ const products = [
   {
     name: "Natural Flea & Tick Shampoo",
     description: "Gentle, natural shampoo that repels fleas and ticks. Made with essential oils and safe ingredients.",
-    price: 16.99,
+    price: vnd(16.99),
     category: "Health",
     images: [
       "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
@@ -169,7 +172,7 @@ const products = [
   {
     name: "Dental Chew Sticks",
     description: "Natural dental chews that help clean teeth and freshen breath. Vet recommended for oral health.",
-    price: 19.99,
+    price: vnd(19.99),
     category: "Health",
     images: [
       "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=400&auto=format&fit=crop"
@@ -185,7 +188,7 @@ const products = [
   {
     name: "Professional Pet Brush",
     description: "High-quality grooming brush suitable for all coat types. Reduces shedding and keeps fur healthy.",
-    price: 14.99,
+    price: vnd(14.99),
     category: "Grooming",
     images: [
       "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"
@@ -199,7 +202,7 @@ const products = [
   {
     name: "Nail Clipper Set",
     description: "Professional-grade nail clippers with safety guard. Includes file for smooth finishing.",
-    price: 11.99,
+    price: vnd(11.99),
     category: "Grooming",
     images: [
       "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?q=80&w=400&auto=format&fit=crop"
@@ -215,7 +218,7 @@ const products = [
   {
     name: "Airline Approved Pet Carrier",
     description: "TSA approved pet carrier for air travel. Comfortable and secure with mesh windows for ventilation.",
-    price: 89.99,
+    price: vnd(89.99),
     category: "Travel",
     images: [
       "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
@@ -229,7 +232,7 @@ const products = [
   {
     name: "Car Safety Harness",
     description: "Crash-tested car safety harness. Keeps your pet secure during car rides. Easy to install.",
-    price: 34.99,
+    price: vnd(34.99),
     category: "Travel",
     images: [
       "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"

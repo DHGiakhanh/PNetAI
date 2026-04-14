@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const db = require('../models');
 
+const USD_TO_VND = 25000;
+const vnd = (usd) => Math.round(usd * USD_TO_VND);
+
 // Sample service data for pet services
 const services = [
   // Grooming Services
@@ -9,7 +12,7 @@ const services = [
     title: "Full Grooming Package",
     description: "Complete grooming service including bath, haircut, nail trimming, ear cleaning, and teeth brushing. Perfect for keeping your pet looking and feeling their best.",
     category: "Grooming",
-    basePrice: 65.00,
+    basePrice: vnd(65.00),
     duration: 120, // 2 hours
     images: [
       "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop",
@@ -40,7 +43,7 @@ const services = [
     title: "Express Bath & Brush",
     description: "Quick and efficient bath and brush service for pets who need a refresh. Includes basic nail trim and ear check.",
     category: "Grooming",
-    basePrice: 35.00,
+    basePrice: vnd(35.00),
     duration: 60, // 1 hour
     images: [
       "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
@@ -69,7 +72,7 @@ const services = [
     title: "Luxury Spa Treatment",
     description: "Premium spa experience for your pet including aromatherapy bath, deep conditioning treatment, massage, and premium styling.",
     category: "Grooming",
-    basePrice: 95.00,
+    basePrice: vnd(95.00),
     duration: 180, // 3 hours
     images: [
       "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?q=80&w=400&auto=format&fit=crop"
@@ -101,7 +104,7 @@ const services = [
     title: "Comprehensive Health Checkup",
     description: "Complete veterinary examination including physical assessment, vaccinations, and health consultation. Essential for maintaining your pet's health.",
     category: "Veterinary",
-    basePrice: 85.00,
+    basePrice: vnd(85.00),
     duration: 45,
     images: [
       "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
@@ -131,7 +134,7 @@ const services = [
     title: "Emergency Vet Consultation",
     description: "Urgent veterinary care for pets in distress. Available for emergency situations and immediate health concerns.",
     category: "Veterinary",
-    basePrice: 120.00,
+    basePrice: vnd(120.00),
     duration: 30,
     images: [
       "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=400&auto=format&fit=crop"
@@ -161,7 +164,7 @@ const services = [
     title: "Dental Cleaning Service",
     description: "Professional dental cleaning and oral health care for pets. Includes scaling, polishing, and oral health assessment.",
     category: "Veterinary",
-    basePrice: 150.00,
+    basePrice: vnd(150.00),
     duration: 90,
     images: [
       "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=400&auto=format&fit=crop"
@@ -193,7 +196,7 @@ const services = [
     title: "Basic Obedience Training",
     description: "Fundamental training program covering basic commands, leash walking, and behavioral correction. Perfect for puppies and new pet owners.",
     category: "Training",
-    basePrice: 75.00,
+    basePrice: vnd(75.00),
     duration: 60,
     images: [
       "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=400&auto=format&fit=crop"
@@ -223,7 +226,7 @@ const services = [
     title: "Advanced Behavioral Training",
     description: "Specialized training for behavioral issues including aggression, anxiety, and advanced obedience. One-on-one sessions with certified trainers.",
     category: "Training",
-    basePrice: 110.00,
+    basePrice: vnd(110.00),
     duration: 90,
     images: [
       "https://images.unsplash.com/photo-1535294435445-d7249524ef2e?q=80&w=400&auto=format&fit=crop"

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarDays, Clock3, Scissors, Stethoscope } from "lucide-react";
 import { serviceService, Service } from "@/services/service.service";
 import Pagination from "@/components/common/Pagination";
+import { formatVnd } from "@/utils/currency";
 
 type ServiceCategory = "all" | "grooming" | "vet";
 
@@ -163,7 +164,7 @@ export default function ServicesPage() {
                     Working hours: {getWorkingHoursText(s)}
                   </p>
                   <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm font-extrabold text-slate-900">${s.basePrice.toFixed(2)}</span>
+                    <span className="text-sm font-extrabold text-slate-900">{formatVnd(s.basePrice)}</span>
                     <Link
                       to={`/services/${s._id}`}
                       className="inline-flex h-9 items-center gap-1.5 rounded-full bg-sky-600 px-3 text-xs font-extrabold text-white shadow-sm hover:bg-sky-700"

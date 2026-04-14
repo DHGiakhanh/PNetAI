@@ -15,6 +15,7 @@ import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
 import { cartService } from "../../services/cart.service";
 import Pagination from "@/components/common/Pagination";
+import { formatVnd } from "@/utils/currency";
 
 type CategoryItem = {
   id: string;
@@ -139,10 +140,7 @@ export default function ShopPage() {
         title: p.name,
         subtitle: p.category,
         providerName,
-        meta: new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(p.price),
+        meta: formatVnd(p.price),
         imageUrl: p.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
         href: `/products/${p._id}`,
         addLabel: `Add ${p.name} to cart`,
