@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import { formatVnd } from "@/utils/currency";
 
 type OrderItem = {
   product?: {
@@ -28,13 +29,6 @@ const statusTone: Record<Order["status"], string> = {
   delivered: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-rose-100 text-rose-700",
 };
-
-function formatUsd(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
 
 export default function MyBookingsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -69,7 +63,7 @@ export default function MyBookingsPage() {
         <div className="mt-4 rounded-2xl border border-sand bg-white/90 p-4 text-sm text-ink shadow-sm">
           <p>
             Total bookings: <span className="font-semibold">{orders.length}</span> · Total spent:{" "}
-            <span className="font-semibold text-brown">{formatUsd(totalSpent)}</span>
+            <span className="font-semibold text-brown">{formatVnd(totalSpent)}</span>
           </p>
         </div>
 
@@ -95,13 +89,13 @@ export default function MyBookingsPage() {
                     <div key={`${order._id}-${idx}`} className="flex items-center justify-between rounded-xl bg-warm/50 px-3 py-2">
                       <p className="text-sm font-medium text-ink">{item.name}</p>
                       <p className="text-xs font-semibold text-muted">
-                        Quantity {item.quantity} · {formatUsd(item.price * item.quantity)}
+                        Quantity {item.quantity} · {formatVnd(item.price * item.quantity)}
                       </p>
                     </div>
                   ))}
                 </div>
                 <p className="mt-3 text-right text-sm font-semibold text-brown">
-                  Total: {formatUsd(order.totalAmount)}
+                  Total: {formatVnd(order.totalAmount)}
                 </p>
               </article>
             ))

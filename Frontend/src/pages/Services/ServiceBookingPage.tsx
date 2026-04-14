@@ -3,13 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { CalendarDays, Clock3, MapPin, Star, Plus, ChevronLeft } from "lucide-react";
 import { serviceService, Service } from "../../services/service.service";
 import { petService, Pet } from "@/services/pet.service";
-
-function formatUsd(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
+import { formatVnd, SERVICE_BOOKING_FEE_VND } from "@/utils/currency";
 
 function getProviderName(service: Service) {
   if (service.providerName) return service.providerName;
@@ -96,7 +90,7 @@ export default function ServiceBookingPage() {
     return pets.find((p) => p._id === selectedPetId) || null;
   }, [pets, selectedPetId]);
 
-  const taxesAndFees = 15.00;
+  const taxesAndFees = SERVICE_BOOKING_FEE_VND;
   const subtotal = service?.basePrice ?? 0;
   const total = subtotal + taxesAndFees;
 
@@ -457,7 +451,7 @@ export default function ServiceBookingPage() {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-muted">Subtotal</span>
                 <span className="font-extrabold text-ink">
-                  {formatUsd(subtotal)}
+                  {formatVnd(subtotal)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -465,7 +459,7 @@ export default function ServiceBookingPage() {
                   Taxes &amp; Fees
                 </span>
                 <span className="font-extrabold text-ink">
-                  {formatUsd(taxesAndFees)}
+                  {formatVnd(taxesAndFees)}
                 </span>
               </div>
             </div>
@@ -473,7 +467,7 @@ export default function ServiceBookingPage() {
             <div className="mt-5 flex items-center justify-between">
               <span className="text-sm font-extrabold text-ink">Total</span>
               <span className="text-lg font-extrabold text-ink">
-                {formatUsd(total)}
+                {formatVnd(total)}
               </span>
             </div>
 

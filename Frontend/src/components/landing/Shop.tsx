@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { productService, Product } from "../../services/product.service";
+import { formatVnd } from "@/utils/currency";
 
 export default function Shop() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,7 +93,7 @@ export default function Shop() {
                   </div>
 
                   <div className="bg-pink-100 text-pink-600 px-4 py-2 rounded-full font-semibold">
-                    ${featuredProduct.price.toFixed(2)}
+                    {formatVnd(featuredProduct.price)}
                   </div>
                 </div>
               </Link>
@@ -131,7 +132,7 @@ export default function Shop() {
                   </h4>
 
                   <p className="text-blue-500 font-semibold text-sm mt-1">
-                    ${p.price.toFixed(2)}
+                    {formatVnd(p.price)}
                   </p>
                 </Link>
               ))
