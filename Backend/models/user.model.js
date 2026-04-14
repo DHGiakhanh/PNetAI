@@ -9,6 +9,8 @@ const userSchema = new Schema({
     phone: { type: String },
     address: { type: String },
     avatarUrl: { type: String },
+    description: { type: String },
+    googleId: { type: String },
     role: {
         type: String,
         enum: ["user", "admin", "sale", "service_provider", "shop"],

@@ -2,8 +2,12 @@ const express = require("express");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const axios = require("axios");
+const { OAuth2Client } = require('google-auth-library');
 const db = require("../models");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../config/emailService");
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 const generateOtpCode = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -202,6 +206,73 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// Google Login
+router.post('/google-login', async (req, res) => {
+    try {
+        const { accessToken } = req.body;
+        if (!accessToken) return res.status(400).json({ message: "Google Access Token is required" });
+
+        // Verify and get user info from Google
+        const googleRes = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+        const { email, name, picture, sub: googleId } = googleRes.data;
+
+        if (!email) {
+            return res.status(400).json({ message: "Could not retrieve email from Google account." });
+        }
+
+        let user = await db.User.findOne({ email });
+
+        if (!user) {
+            // Create user if not exists
+            const rawPassword = crypto.randomBytes(16).toString('hex');
+            const hashedPassword = await bcryptjs.hash(rawPassword, 10);
+            
+            user = new db.User({
+                email,
+                name,
+                avatarUrl: picture,
+                googleId,
+                isVerified: true, // Google accounts are verified
+                password: hashedPassword,
+                role: "user"
+            });
+            await user.save();
+        } else {
+            // Link googleId if not linked
+            if (!user.googleId) {
+                user.googleId = googleId;
+                if (!user.avatarUrl) user.avatarUrl = picture;
+                user.isVerified = true;
+                await user.save();
+            }
+        }
+
+        const token = jwt.sign(
+            { userId: user._id, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: "24h" }
+        );
+
+        res.status(200).json({ 
+            message: "Google login successful",
+            token,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                avatarUrl: user.avatarUrl,
+                saleCode: user.saleCode,
+                providerOnboardingStatus: getProviderOnboardingStatus(user),
+                canPublishServices: isServiceProviderRole(user.role) ? canProviderPublish(user) : undefined,
+            },
+        });
+    } catch (error) {
+        console.error("Google Login Error:", error.response?.data || error.message);
+        res.status(500).json({ message: "Google authentication failed. Please try again." });
     }
 });
 

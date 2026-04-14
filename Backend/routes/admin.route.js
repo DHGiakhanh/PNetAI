@@ -452,4 +452,50 @@ router.post('/users/:userId/assign-sale', verifyToken, isAdmin, async (req, res)
     }
 });
 
+// --- Blog Management (Admin) ---
+
+// List all pending blog posts for admin review
+router.get("/blogs/pending", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const pendingBlogs = await db.Blog.find({
+            status: "pending"
+        })
+        .populate("author", "name email avatarUrl")
+        .sort({ createdAt: -1 });
+
+        res.status(200).json({ pendingBlogs });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Review (Approve/Reject) any blog post
+router.put("/blogs/:id/review", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status, reviewNote } = req.body;
+
+        if (!["approved", "rejected"].includes(status)) {
+            return res.status(400).json({ message: "Invalid status. Use 'approved' or 'rejected'." });
+        }
+
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) {
+            return res.status(404).json({ message: "Blog post not found" });
+        }
+
+        blog.status = status;
+        blog.reviewNote = reviewNote || "";
+        blog.reviewedBy = req.userId;
+        blog.reviewedAt = new Date();
+        await blog.save();
+
+        res.status(200).json({
+            message: `Blog post ${status} successfully.`,
+            blog
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
