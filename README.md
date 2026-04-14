@@ -15,15 +15,31 @@ npm run install:all
 
 **Backend** - Create `Backend/.env`:
 ```env
+# Server Configuration
 HOSTNAME=localhost
 PORT=9999
-MONGO_URI=mongodb://localhost:27017/pnetai
-JWT_SECRET=your_secret_key
+
+# Database
+MONGO_URI=mongodb+srv://khanhdhgqe180127_db_user:AAbZWUEsrMXN6J0V@pnetai.1cqxyoo.mongodb.net/
+
+# JWT
+JWT_SECRET=your_jwt_secret_key_here
+
+# Email Configuration (Gmail example)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASSWORD=your_app_password
-EMAIL_FROM=noreply@pnetai.com
+EMAIL_USER=pnetai2026@gmail.com
+EMAIL_PASSWORD=zivm pndr pivm uuvn
+EMAIL_FROM=noreply@yourapp.com
+
+#Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=dpdkaxctz
+CLOUDINARY_API_KEY=364836787979468
+CLOUDINARY_API_SECRET=4ufK4Yr6qvtSlX8XMvz9jbP8j-w
+
+GOOGLE_CLIENT_ID=536916141054-rn2hfsdluj0gdk8ca7iplqu2pn5g4tv4.apps.googleusercontent.com
+
+# Frontend URL
 FRONTEND_URL=http://localhost:5173
 ```
 
