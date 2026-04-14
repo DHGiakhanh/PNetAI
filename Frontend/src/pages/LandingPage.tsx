@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Hero,
   ServicesStrip,
@@ -7,32 +8,25 @@ import {
   SpaBooking,
   Testimonials,
   Newsletter,
-  ProductDetail,
 } from "../components/landing";
 import Footer from "@/layout/Footer";
 
 export default function LandingPage() {
-  const [activePage, setActivePage] = useState<"home" | "product">("home");
+  const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [activePage]);
+  }, []);
 
   return (
     <div className="relative bg-gradient-to-b from-white to-warm">
-      <div className={activePage === "home" ? "block" : "hidden"}>
-        <Hero />
-        <ServicesStrip />
-        <Features />
-        <FeaturedProducts onProductClick={() => setActivePage("product")} />
-        <SpaBooking />
-        <Testimonials />
-        <Newsletter />
-      </div>
-
-      <div className={activePage === "product" ? "block" : "hidden"}>
-        <ProductDetail />
-      </div>
+      <Hero />
+      <ServicesStrip />
+      <Features />
+      <FeaturedProducts onProductClick={(productId) => navigate(`/products/${productId}`)} />
+      <SpaBooking />
+      <Testimonials />
+      <Newsletter />
       <Footer />
     </div>
   );
