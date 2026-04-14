@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { authService } from '../../services/auth.service';
 
 export const Login = () => {
@@ -12,6 +13,26 @@ export const Login = () => {
   const location = useLocation();
   const successMessage = location.state?.successMessage || '';
 
+  const handleAuthResponse = (response: any) => {
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+    
+    // Redirect based on role
+    if (response.user.role === 'admin') {
+      navigate('/admin');
+    } else if (response.user.role === 'service_provider' || response.user.role === 'shop') {
+      if (response.user.providerOnboardingStatus === "approved") {
+        navigate('/service-provider');
+      } else {
+        navigate('/service-provider/profile?section=legal-documents');
+      }
+    } else if (response.user.role === 'sale') {
+      navigate('/sale/providers');
+    } else {
+      navigate('/');
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -19,29 +40,28 @@ export const Login = () => {
 
     try {
       const response = await authService.login({ email, password });
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Redirect based on role
-      if (response.user.role === 'admin') {
-        navigate('/admin');
-      } else if (response.user.role === 'service_provider' || response.user.role === 'shop') {
-        if (response.user.providerOnboardingStatus === "approved") {
-          navigate('/service-provider');
-        } else {
-          navigate('/service-provider/profile?section=legal-documents');
-        }
-      } else if (response.user.role === 'sale') {
-        navigate('/sale/providers');
-      } else {
-        navigate('/');
-      }
+      handleAuthResponse(response);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setLoading(true);
+        const response = await authService.googleLogin(tokenResponse.access_token);
+        handleAuthResponse(response);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Google login failed.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => setError("Google interaction failed.")
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-warm via-warm to-cream flex items-center justify-center px-4">
@@ -143,7 +163,12 @@ export const Login = () => {
             <div className="flex-1 h-px bg-warm" />
           </div>
 
-          <button className="w-full border border-sand hover:border-caramel text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white">
+          <button 
+            type="button"
+            onClick={() => loginWithGoogle()}
+            disabled={loading}
+            className="w-full border border-sand hover:border-caramel text-gray-700 rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm font-medium bg-white disabled:opacity-50 transition-colors"
+          >
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path
                 d="M21.805 10.023H12v3.955h5.608c-.242 1.273-.968 2.35-2.063 3.073v2.551h3.338c1.955-1.8 3.122-4.45 3.122-7.602 0-.66-.06-1.295-.2-1.977z"

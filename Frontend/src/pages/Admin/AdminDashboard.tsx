@@ -45,7 +45,12 @@ export const AdminDashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
-          const value = loading ? "..." : Number((stats as any)?.[card.key] || 0);
+          const getStatsValue = () => {
+            if (loading || !stats) return "...";
+            if (card.key === "users") return stats.users?.total || 0;
+            return (stats as any)?.[card.key] || 0;
+          };
+          const value = getStatsValue();
           return (
             <div key={card.key} className="rounded-2xl border border-sand bg-white/90 p-5 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
