@@ -8,29 +8,31 @@ import {
   Shirt,
   Plus,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { useMemo, useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { productService, Product } from "../../services/product.service";
 import { categoryService } from "../../services/category.service";
 import { cartService } from "../../services/cart.service";
 import Pagination from "@/components/common/Pagination";
 import { formatVnd } from "@/utils/currency";
+import { MarketplaceSearchBar } from "@/components/common/MarketplaceSearchBar";
 
 type CategoryItem = {
   id: string;
   label: string;
+  apiValue?: string;
   icon: React.ComponentType<{ className?: string }>;
   tone: "warm" | "sand" | "sage" | "caramel" | "blush" | "cream";
 };
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  "🍖": Bone,
-  "🎾": ToyBrick,
-  "🎀": Shirt,
-  "💊": Stethoscope,
-  "✂️": Scissors,
-  "🧳": Cat,
+  "ðŸ–": Bone,
+  "ðŸŽ¾": ToyBrick,
+  "ðŸŽ€": Shirt,
+  "ðŸ’Š": Stethoscope,
+  "âœ‚ï¸": Scissors,
+  "ðŸ§³": Cat,
 };
 
 const toneStyles: Record<CategoryItem["tone"], { bg: string; fg: string }> = {
@@ -42,127 +44,190 @@ const toneStyles: Record<CategoryItem["tone"], { bg: string; fg: string }> = {
   cream: { bg: "bg-cream", fg: "text-muted" },
 };
 
-type ShopItem =
-  {
-    id: string;
-    title: string;
-    subtitle: string;
-    providerName: string;
-    meta: string;
-    imageUrl: string;
-    href: string;
-    addLabel: string;
-    filterKey: "food" | "toys" | "apparel" | "grooming" | "health" | "travel";
-  };
+type ShopItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  providerName: string;
+  meta: string;
+  imageUrl: string;
+  href: string;
+  addLabel: string;
+};
+
+function slugifyCategory(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function parsePage(value: string | null) {
+  const page = Number(value);
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
 
 export default function ShopPage() {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeCategory, setActiveCategory] = useState<CategoryItem["id"]>(
+    searchParams.get("category") || "all",
+  );
+  const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(parsePage(searchParams.get("page")));
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
+  const requestIdRef = useRef(0);
   const pageSize = 8;
 
   useEffect(() => {
-    fetchData();
+    const categoryParam = searchParams.get("category") || "all";
+    const queryParam = searchParams.get("q") || "";
+    const pageParam = parsePage(searchParams.get("page"));
+
+    setActiveCategory((prev) => (prev === categoryParam ? prev : categoryParam));
+    setSearchInput((prev) => (prev === queryParam ? prev : queryParam));
+    setSearchQuery((prev) => (prev === queryParam ? prev : queryParam));
+    setCurrentPage((prev) => (prev === pageParam ? prev : pageParam));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const normalized = searchInput.trim();
+      if (normalized === searchQuery) return;
+      setSearchQuery(normalized);
+      setCurrentPage(1);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [searchInput, searchQuery]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoriesData = await categoryService.getCategories();
+        const rawCategoryItems: CategoryItem[] = [
+          { id: "all", label: "All", icon: Dog, tone: "cream" },
+          ...categoriesData.map((cat, index) => ({
+            id: slugifyCategory(cat.name),
+            label: cat.name,
+            apiValue: cat.name,
+            icon: iconMap[cat.icon] || Dog,
+            tone: (["warm", "sand", "sage", "caramel", "blush", "cream"] as const)[index % 6],
+          })),
+        ];
+
+        const uniqueCategoryItems: CategoryItem[] = [];
+        const seen = new Set<string>();
+        for (const item of rawCategoryItems) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          uniqueCategoryItems.push(item);
+        }
+
+        setCategories(uniqueCategoryItems);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [productsResponse, categoriesData] = await Promise.all([
-        productService.getProducts({ limit: 50 }),
-        categoryService.getCategories()
-      ]);
-      
-      setProducts(productsResponse.products);
-      
-      // Convert backend categories to frontend format
-      const rawCategoryItems: CategoryItem[] = [
-        { id: "all", label: "All", icon: Dog, tone: "cream" },
-        ...categoriesData.map((cat, index) => {
-          const categoryId = cat.name.toLowerCase();
-          // Map category names to filter keys
-          const filterId = categoryId === "accessories" ? "apparel" : categoryId;
-          
-          return {
-            id: filterId,
-            label: cat.name,
-            icon: iconMap[cat.icon] || Dog,
-            tone: (["warm", "sand", "sage", "caramel", "blush", "cream"] as const)[index % 6]
-          };
-        }),
-      ];
-
-      const uniqueCategoryItems: CategoryItem[] = [];
-      const seen = new Set<string>();
-      for (const item of rawCategoryItems) {
-        if (seen.has(item.id)) continue;
-        seen.add(item.id);
-        uniqueCategoryItems.push(item);
-      }
-
-      setCategories(uniqueCategoryItems);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (activeCategory === "all") return;
+    if (categories.length === 0) return;
+    if (!categories.some((category) => category.id === activeCategory)) {
+      setActiveCategory("all");
+      setCurrentPage(1);
     }
-  };
+  }, [activeCategory, categories]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams();
+    if (searchQuery) nextParams.set("q", searchQuery);
+    if (activeCategory !== "all") nextParams.set("category", activeCategory);
+    if (currentPage > 1) nextParams.set("page", currentPage.toString());
+
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [activeCategory, currentPage, searchParams, searchQuery, setSearchParams]);
+
+  useEffect(() => {
+    if (activeCategory !== "all" && categories.length === 0) return;
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    const activeCategoryConfig = categories.find((category) => category.id === activeCategory);
+
+    const fetchProducts = async () => {
+      try {
+        if (hasFetchedOnce) {
+          setSearching(true);
+        } else {
+          setLoading(true);
+        }
+
+        const response = await productService.getProducts({
+          search: searchQuery || undefined,
+          category: activeCategoryConfig?.apiValue,
+          page: currentPage,
+          limit: pageSize,
+        });
+
+        if (requestId !== requestIdRef.current) return;
+
+        setProducts(response.products);
+        setTotalPages(Math.max(1, response.pagination.pages || 1));
+        setTotalItems(response.pagination.total || 0);
+      } catch (error) {
+        if (requestId !== requestIdRef.current) return;
+        console.error("Error fetching products:", error);
+        setProducts([]);
+        setTotalPages(1);
+        setTotalItems(0);
+      } finally {
+        if (requestId !== requestIdRef.current) return;
+        setLoading(false);
+        setSearching(false);
+        setHasFetchedOnce(true);
+      }
+    };
+
+    fetchProducts();
+  }, [activeCategory, categories, currentPage, pageSize, searchQuery]);
 
   const items = useMemo<ShopItem[]>(() => {
-    return products.map((p) => {
+    return products.map((product) => {
       const providerName =
-        typeof p.providerId === "string"
+        typeof product.providerId === "string"
           ? "Service Provider"
-          : p.providerId?.name || "Service Provider";
-
-      const filterKey: ShopItem["filterKey"] =
-        p.category.toLowerCase() === "food"
-          ? "food"
-          : p.category.toLowerCase() === "toys"
-            ? "toys"
-            : p.category.toLowerCase() === "accessories"
-              ? "apparel"
-              : p.category.toLowerCase() === "health"
-                ? "health"
-                : p.category.toLowerCase() === "grooming"
-                  ? "grooming"
-                  : p.category.toLowerCase() === "travel"
-                    ? "travel"
-                    : "apparel";
+          : product.providerId?.name || "Service Provider";
 
       return {
-        kind: "product",
-        id: p._id,
-        title: p.name,
-        subtitle: p.category,
+        id: product._id,
+        title: product.name,
+        subtitle: product.category,
         providerName,
-        meta: formatVnd(p.price),
-        imageUrl: p.images[0] || "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
-        href: `/products/${p._id}`,
-        addLabel: `Add ${p.name} to cart`,
-        filterKey,
+        meta: formatVnd(product.price),
+        imageUrl:
+          product.images[0] ||
+          "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
+        href: `/products/${product._id}`,
+        addLabel: `Add ${product.name} to cart`,
       };
     });
   }, [products]);
-
-  const filtered = useMemo(() => {
-    if (activeCategory === "all") return items;
-    return items.filter((i) => i.filterKey === activeCategory);
-  }, [activeCategory, items]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedItems = useMemo(
-    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filtered, currentPage]
-  );
 
   const handleAddToCart = async (productId: string) => {
     const token = localStorage.getItem("token");
@@ -185,193 +250,241 @@ export default function ShopPage() {
     }
   };
 
+  const activeCategoryLabel =
+    activeCategory === "all"
+      ? undefined
+      : categories.find((category) => category.id === activeCategory)?.label;
+  const hasActiveFilters = Boolean(searchQuery) || activeCategory !== "all";
+  const hasCatalogData = totalItems > 0;
+  const isSearchBusy = searching || searchInput.trim() !== searchQuery;
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm via-cream to-warm">
       <div className="mx-auto max-w-6xl px-5 pb-16">
-      {/* Hero */}
-      <section className="mt-4 overflow-hidden rounded-[28px] bg-warm ring-1 ring-sand">
-        <div className="grid items-center gap-6 p-6 md:grid-cols-2 md:p-10">
-          <div>
-            <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-brown ring-1 ring-sand">
-              Summer Special
-            </span>
-            <h1 className="mt-4 font-serif text-4xl font-extrabold italic leading-tight text-ink md:text-5xl">
-              Get 50% off on
-              <br />
-              Organic Treats
-            </h1>
-            <button className="mt-6 inline-flex items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brown-dark">
-              Shop Now
-            </button>
-          </div>
+        <section className="mt-4 overflow-hidden rounded-[28px] bg-warm ring-1 ring-sand">
+          <div className="grid items-center gap-6 p-6 md:grid-cols-2 md:p-10">
+            <div>
+              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-brown ring-1 ring-sand">
+                Summer Special
+              </span>
+              <h1 className="mt-4 font-serif text-4xl font-extrabold italic leading-tight text-ink md:text-5xl">
+                Get 50% off on
+                <br />
+                Organic Treats
+              </h1>
+              <button className="mt-6 inline-flex items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brown-dark">
+                Shop Now
+              </button>
+            </div>
 
-          <div className="relative">
-            <div className="aspect-[16/9] w-full overflow-hidden rounded-[22px] bg-white/60 shadow-sm ring-1 ring-sand">
-              <img
-                alt="Pets"
-                src="https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=1600&auto=format&fit=crop"
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+            <div className="relative">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-[22px] bg-white/60 shadow-sm ring-1 ring-sand">
+                <img
+                  alt="Pets"
+                  src="https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=1600&auto=format&fit=crop"
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Categories */}
-      <section className="mt-6">
-        <div className="flex flex-wrap gap-3">
-          {categories.map((c) => {
-            const Icon = c.icon;
-            const tone = toneStyles[c.tone];
-            const active = c.id === activeCategory;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setActiveCategory(c.id)}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 transition ${
-                  active
-                    ? "bg-brown text-white ring-brown"
-                    : "bg-white text-ink ring-sand hover:bg-warm"
-                }`}
-              >
-                <span
-                  className={`grid h-8 w-8 place-items-center rounded-full ${
-                    active ? "bg-white/15" : tone.bg
+        <section className="mt-6">
+          <MarketplaceSearchBar
+            mode="products"
+            value={searchInput}
+            placeholder="Search food, toys, supplements, grooming essentials..."
+            loading={isSearchBusy}
+            resultCount={totalItems}
+            activeCategoryLabel={activeCategoryLabel}
+            hasResults={hasCatalogData}
+            onChange={setSearchInput}
+            onClear={() => {
+              setSearchInput("");
+              setSearchQuery("");
+              setCurrentPage(1);
+            }}
+          />
+        </section>
+
+        <section className="mt-6">
+          <div className="flex flex-wrap gap-3">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const tone = toneStyles[category.tone];
+              const active = category.id === activeCategory;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory(category.id);
+                    setCurrentPage(1);
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 transition ${
+                    active
+                      ? "bg-brown text-white ring-brown"
+                      : "bg-white text-ink ring-sand hover:bg-warm"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${active ? "text-white" : tone.fg}`} />
-                </span>
-                {c.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      Results
-      <section className="mt-10">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-sm font-semibold text-muted">
-              {activeCategory === "all"
-                ? "Trending for Mochi"
-                : `Results in ${categories.find((c) => c.id === activeCategory)?.label ?? "Category"}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveCategory("all")}
-            className="text-sm font-semibold text-brown hover:text-brown-dark"
-          >
-            Reset
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-[4/3] bg-sand rounded-[22px] mb-4"></div>
-                <div className="h-4 bg-sand rounded mb-2"></div>
-                <div className="h-4 bg-sand rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {paginatedItems.map((p) => (
-              <article
-                key={p.id}
-                className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sand"
-              >
-                <Link to={p.href} className="block">
-                  <div className="relative aspect-[4/3] bg-warm">
-                    <img
-                      alt={p.title}
-                      src={p.imageUrl}
-                      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
-                      loading="lazy"
+                  <span
+                    className={`grid h-8 w-8 place-items-center rounded-full ${
+                      active ? "bg-white/15" : tone.bg
+                    }`}
+                  >
+                    <Icon
+                      className={`h-4 w-4 ${active ? "text-white" : tone.fg}`}
                     />
-                  </div>
-                </Link>
-                <div className="p-4">
-                  <p className="text-xs font-semibold text-muted">
-                    {p.subtitle}
-                  </p>
-                  <Link to={p.href} className="block">
-                    <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-ink hover:underline">
-                      {p.title}
-                    </h3>
-                  </Link>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
-                    by {p.providerName}
-                  </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm font-extrabold text-ink">
-                      {"meta" in p ? p.meta : ""}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCart(p.id)}
-                      disabled={addingId === p.id}
-                      className="grid h-9 w-9 place-items-center rounded-full bg-brown text-white shadow-sm hover:bg-brown-dark"
-                      aria-label={p.addLabel}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                  </span>
+                  {category.label}
+                </button>
+              );
+            })}
           </div>
-        )}
-        {!loading ? (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filtered.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-          />
-        ) : null}
-      </section>
+        </section>
 
-      {/* Spacer section to match airy layout */}
-      <section className="mt-10 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-sand md:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-          <Dog className="h-6 w-6 text-brown" />
-          <div>
-            <p className="text-sm font-extrabold text-ink">
-              Curated picks
-            </p>
-            <p className="text-xs font-semibold text-muted">
-              Based on pet needs
-            </p>
+        <section className="mt-10">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-muted">
+                {searchQuery
+                  ? `Showing matches for "${searchQuery}"`
+                  : activeCategory === "all"
+                    ? "Trending for Mochi"
+                    : `Results in ${activeCategoryLabel ?? "Category"}`}
+              </p>
+            </div>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                  setActiveCategory("all");
+                  setCurrentPage(1);
+                }}
+                className="text-sm font-semibold text-brown hover:text-brown-dark"
+              >
+                Clear search
+              </button>
+            ) : null}
           </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-          <Cat className="h-6 w-6 text-brown" />
-          <div>
-            <p className="text-sm font-extrabold text-ink">Fast delivery</p>
-            <p className="text-xs font-semibold text-muted">
-              From trusted sellers
-            </p>
+
+          {loading ? (
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="mb-4 aspect-[4/3] rounded-[22px] bg-sand" />
+                  <div className="mb-2 h-4 rounded bg-sand" />
+                  <div className="h-4 w-3/4 rounded bg-sand" />
+                </div>
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="mt-5 rounded-[26px] border border-sand bg-white/80 p-8 text-center shadow-sm">
+              <h3 className="font-serif text-2xl font-bold italic text-ink">
+                {hasActiveFilters
+                  ? "No matching products found"
+                  : "No products are available yet"}
+              </h3>
+              <p className="mt-3 text-sm font-semibold text-muted">
+                {hasActiveFilters
+                  ? "Try a broader keyword or clear the category filter to explore more items."
+                  : "The shop catalog is still being prepared. Check back once providers publish products."}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {items.map((item) => (
+                <article
+                  key={item.id}
+                  className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sand"
+                >
+                  <Link to={item.href} className="block">
+                    <div className="relative aspect-[4/3] bg-warm">
+                      <img
+                        alt={item.title}
+                        src={item.imageUrl}
+                        className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                        loading="lazy"
+                      />
+                    </div>
+                  </Link>
+                  <div className="p-4">
+                    <p className="text-xs font-semibold text-muted">
+                      {item.subtitle}
+                    </p>
+                    <Link to={item.href} className="block">
+                      <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-ink hover:underline">
+                        {item.title}
+                      </h3>
+                    </Link>
+                    <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
+                      by {item.providerName}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm font-extrabold text-ink">
+                        {item.meta}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCart(item.id)}
+                        disabled={addingId === item.id}
+                        className="grid h-9 w-9 place-items-center rounded-full bg-brown text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
+                        aria-label={item.addLabel}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {!loading && items.length > 0 ? (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          ) : null}
+        </section>
+
+        <section className="mt-10 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-sand md:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
+            <Dog className="h-6 w-6 text-brown" />
+            <div>
+              <p className="text-sm font-extrabold text-ink">Curated picks</p>
+              <p className="text-xs font-semibold text-muted">
+                Based on pet needs
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-          <Bone className="h-6 w-6 text-brown" />
-          <div>
-            <p className="text-sm font-extrabold text-ink">
-              Quality guaranteed
-            </p>
-            <p className="text-xs font-semibold text-muted">
-              Community reviewed
-            </p>
+          <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
+            <Cat className="h-6 w-6 text-brown" />
+            <div>
+              <p className="text-sm font-extrabold text-ink">Fast delivery</p>
+              <p className="text-xs font-semibold text-muted">
+                From trusted sellers
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+          <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
+            <Bone className="h-6 w-6 text-brown" />
+            <div>
+              <p className="text-sm font-extrabold text-ink">
+                Quality guaranteed
+              </p>
+              <p className="text-xs font-semibold text-muted">
+                Community reviewed
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
