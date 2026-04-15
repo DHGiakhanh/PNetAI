@@ -1,11 +1,12 @@
 import {
   Bone,
-  Cat,
+  CarTaxiFront,
   Dog,
+  HeartPulse,
+  Package2,
   Scissors,
-  Stethoscope,
   ToyBrick,
-  Shirt,
+  UtensilsCrossed,
   Plus,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -27,12 +28,13 @@ type CategoryItem = {
 };
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  "ðŸ–": Bone,
-  "ðŸŽ¾": ToyBrick,
-  "ðŸŽ€": Shirt,
-  "ðŸ’Š": Stethoscope,
-  "âœ‚ï¸": Scissors,
-  "ðŸ§³": Cat,
+  all: Dog,
+  food: UtensilsCrossed,
+  toys: ToyBrick,
+  accessories: Package2,
+  health: HeartPulse,
+  grooming: Scissors,
+  travel: CarTaxiFront,
 };
 
 const toneStyles: Record<CategoryItem["tone"], { bg: string; fg: string }> = {
@@ -115,14 +117,18 @@ export default function ShopPage() {
       try {
         const categoriesData = await categoryService.getCategories();
         const rawCategoryItems: CategoryItem[] = [
-          { id: "all", label: "All", icon: Dog, tone: "cream" },
-          ...categoriesData.map((cat, index) => ({
-            id: slugifyCategory(cat.name),
-            label: cat.name,
-            apiValue: cat.name,
-            icon: iconMap[cat.icon] || Dog,
-            tone: (["warm", "sand", "sage", "caramel", "blush", "cream"] as const)[index % 6],
-          })),
+          { id: "all", label: "All", icon: iconMap.all, tone: "cream" },
+          ...categoriesData.map((cat, index) => {
+            const categoryKey = slugifyCategory(cat.name);
+
+            return {
+              id: categoryKey,
+              label: cat.name,
+              apiValue: cat.name,
+              icon: iconMap[categoryKey] || Bone,
+              tone: (["warm", "sand", "sage", "caramel", "blush", "cream"] as const)[index % 6],
+            };
+          }),
         ];
 
         const uniqueCategoryItems: CategoryItem[] = [];
@@ -351,7 +357,7 @@ export default function ShopPage() {
                 {searchQuery
                   ? `Showing matches for "${searchQuery}"`
                   : activeCategory === "all"
-                    ? "Trending for Mochi"
+                    ? "Trending for Your Pet(s)"
                     : `Results in ${activeCategoryLabel ?? "Category"}`}
               </p>
             </div>
@@ -465,7 +471,7 @@ export default function ShopPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-            <Cat className="h-6 w-6 text-brown" />
+            <CarTaxiFront className="h-6 w-6 text-brown" />
             <div>
               <p className="text-sm font-extrabold text-ink">Fast delivery</p>
               <p className="text-xs font-semibold text-muted">
@@ -474,7 +480,7 @@ export default function ShopPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-            <Bone className="h-6 w-6 text-brown" />
+            <HeartPulse className="h-6 w-6 text-brown" />
             <div>
               <p className="text-sm font-extrabold text-ink">
                 Quality guaranteed
