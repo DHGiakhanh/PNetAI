@@ -3,6 +3,7 @@ const multer = require("multer");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 const { cloudinary } = require("../config/cloudinary");
+const { buildTextSearchQuery } = require("../utils/search");
 
 const router = express.Router();
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
@@ -43,11 +44,9 @@ router.get('/', async (req, res) => {
         
         let query = {};
         
-        if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
-            ];
+        const textSearchQuery = buildTextSearchQuery(search, ["name", "description"]);
+        if (textSearchQuery) {
+            Object.assign(query, textSearchQuery);
         }
         
         if (category) {
