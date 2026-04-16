@@ -4,6 +4,27 @@ const verifyToken = require("../middlewares/verifyToken");
 
 const router = express.Router();
 
+async function recalculateProductRating(productId) {
+    const ratings = await db.Rating.find({ product: productId });
+    const totalReviews = ratings.length;
+    const averageRating = totalReviews > 0
+        ? ratings.reduce((sum, item) => sum + item.rating, 0) / totalReviews
+        : 0;
+
+    await db.Product.findByIdAndUpdate(productId, {
+        averageRating,
+        totalReviews
+    });
+}
+
+async function hasDeliveredOrder(userId, productId) {
+    return db.Order.exists({
+        user: userId,
+        status: "delivered",
+        "items.product": productId
+    });
+}
+
 // Get ratings for a product
 router.get('/product/:productId', async (req, res) => {
     try {
@@ -17,10 +38,66 @@ router.get('/product/:productId', async (req, res) => {
     }
 });
 
+// Get current user's rating for a product
+router.get('/product/:productId/me', verifyToken, async (req, res) => {
+    try {
+        const rating = await db.Rating.findOne({
+            product: req.params.productId,
+            user: req.userId
+        }).populate('user', 'name');
+
+        res.status(200).json({ rating });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Check whether current user can review a product
+router.get('/product/:productId/eligibility', verifyToken, async (req, res) => {
+    try {
+        const [purchaseRecord, existingRating] = await Promise.all([
+            hasDeliveredOrder(req.userId, req.params.productId),
+            db.Rating.findOne({
+                product: req.params.productId,
+                user: req.userId
+            }).select('_id')
+        ]);
+
+        res.status(200).json({
+            canReview: Boolean(purchaseRecord) && !existingRating,
+            hasPurchased: Boolean(purchaseRecord),
+            hasReviewed: Boolean(existingRating),
+            ratingId: existingRating?._id || null
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Create rating (requires login)
 router.post('/', verifyToken, async (req, res) => {
     try {
         const { product, rating, comment } = req.body;
+
+        if (!product || typeof rating !== "number") {
+            return res.status(400).json({ message: "Product and rating are required" });
+        }
+
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ message: "Rating must be between 1 and 5" });
+        }
+
+        const foundProduct = await db.Product.findById(product).select('_id');
+        if (!foundProduct) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const purchaseRecord = await hasDeliveredOrder(req.userId, product);
+        if (!purchaseRecord) {
+            return res.status(403).json({
+                message: "You can only review products from delivered orders"
+            });
+        }
         
         // Check if user already rated this product
         const existingRating = await db.Rating.findOne({ 
@@ -36,21 +113,15 @@ router.post('/', verifyToken, async (req, res) => {
             product,
             user: req.userId,
             rating,
-            comment
+            comment: typeof comment === "string" ? comment.trim() : ""
         });
         
         await newRating.save();
+        await recalculateProductRating(product);
         
-        // Update product average rating
-        const ratings = await db.Rating.find({ product });
-        const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
-        
-        await db.Product.findByIdAndUpdate(product, {
-            averageRating: avgRating,
-            totalReviews: ratings.length
-        });
-        
-        res.status(201).json({ message: "Rating created successfully", rating: newRating });
+        const populatedRating = await db.Rating.findById(newRating._id).populate('user', 'name');
+
+        res.status(201).json({ message: "Rating created successfully", rating: populatedRating });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -69,19 +140,24 @@ router.put('/:id', verifyToken, async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
         
-        rating.rating = req.body.rating || rating.rating;
-        rating.comment = req.body.comment || rating.comment;
+        if (typeof req.body.rating === "number") {
+            if (req.body.rating < 1 || req.body.rating > 5) {
+                return res.status(400).json({ message: "Rating must be between 1 and 5" });
+            }
+            rating.rating = req.body.rating;
+        }
+
+        if (typeof req.body.comment === "string") {
+            rating.comment = req.body.comment.trim();
+        }
+
+        rating.updatedAt = Date.now();
         await rating.save();
+        await recalculateProductRating(rating.product);
         
-        // Update product average rating
-        const ratings = await db.Rating.find({ product: rating.product });
-        const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
-        
-        await db.Product.findByIdAndUpdate(rating.product, {
-            averageRating: avgRating
-        });
-        
-        res.status(200).json({ message: "Rating updated successfully", rating });
+        const populatedRating = await db.Rating.findById(rating._id).populate('user', 'name');
+
+        res.status(200).json({ message: "Rating updated successfully", rating: populatedRating });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -102,17 +178,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
         
         const productId = rating.product;
         await db.Rating.findByIdAndDelete(req.params.id);
-        
-        // Update product average rating
-        const ratings = await db.Rating.find({ product: productId });
-        const avgRating = ratings.length > 0 
-            ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
-            : 0;
-        
-        await db.Product.findByIdAndUpdate(productId, {
-            averageRating: avgRating,
-            totalReviews: ratings.length
-        });
+        await recalculateProductRating(productId);
         
         res.status(200).json({ message: "Rating deleted successfully" });
     } catch (error) {
