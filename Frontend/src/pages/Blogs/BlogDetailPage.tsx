@@ -10,7 +10,9 @@ import {
   Heart,
   Send,
   Loader2,
-  BookOpen
+  BookOpen,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -35,6 +37,9 @@ type BlogComment = {
   user: CommentUser;
   text: string;
   createdAt: string;
+  likes: string[];
+  dislikes: string[];
+  replies?: BlogComment[];
 };
 
 type Blog = {
@@ -45,10 +50,132 @@ type Blog = {
   image?: string;
   author: Author;
   likes: string[];
+  dislikes: string[];
   comments: BlogComment[];
   createdAt: string;
   views: number;
 };
+
+type CommentItemProps = {
+  comment: BlogComment;
+  onLike: (commentId: string) => void;
+  onDislike: (commentId: string) => void;
+  onReply: (commentId: string | null) => void;
+  replyingTo: string | null;
+  replyText: string;
+  setReplyText: (text: string) => void;
+  onReplySubmit: (e: React.FormEvent) => void;
+  currentUser: any;
+  isLoggedIn: boolean;
+  isReply?: boolean;
+};
+
+function CommentItem({ 
+  comment, 
+  onLike, 
+  onDislike, 
+  onReply, 
+  replyingTo, 
+  replyText, 
+  setReplyText, 
+  onReplySubmit,
+  currentUser,
+  isLoggedIn,
+  isReply = false
+}: CommentItemProps) {
+  const isLiked = comment.likes.includes(currentUser._id);
+  const isDisliked = comment.dislikes.includes(currentUser._id);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-6 group">
+        <div className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand">
+          {comment.user.avatarUrl ? <img src={comment.user.avatarUrl} className="w-full h-full object-cover" /> : comment.user.name[0].toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-bold text-ink text-sm">{comment.user.name}</span>
+            <span className="text-[10px] text-muted/40 font-bold uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
+          </div>
+          <p className="text-lg text-muted/70 leading-relaxed font-medium italic whitespace-pre-wrap">{comment.text}</p>
+          
+          <div className="flex items-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => onLike(comment._id)}
+                disabled={!isLoggedIn}
+                className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  isLiked ? 'text-rust' : 'text-muted hover:text-rust'
+                }`}
+              >
+                <ThumbsUp className="w-3 h-3" />
+                {comment.likes.length}
+              </button>
+              <button 
+                onClick={() => onDislike(comment._id)}
+                disabled={!isLoggedIn}
+                className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  isDisliked ? 'text-gray-600' : 'text-muted hover:text-gray-600'
+                }`}
+              >
+                <ThumbsDown className="w-3 h-3" />
+                {comment.dislikes.length}
+              </button>
+            </div>
+            <button 
+              onClick={() => onReply(replyingTo === comment._id ? null : comment._id)}
+              className="text-[10px] font-bold text-muted hover:text-caramel uppercase tracking-widest transition-colors"
+              style={{ display: isReply ? 'none' : 'inline' }}
+            >
+              Reply
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {replyingTo === comment._id && isLoggedIn && (
+        <form onSubmit={onReplySubmit} className="ml-20 flex gap-4 items-start">
+          <div className="w-10 h-10 rounded-xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 border border-sand">
+            {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} className="w-full h-full object-cover rounded-xl" /> : currentUser.name?.[0].toUpperCase()}
+          </div>
+          <div className="flex-1 relative">
+            <textarea 
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply..."
+              className="w-full bg-white border-2 border-sand/30 p-4 pr-16 rounded-2xl focus:border-caramel/50 outline-none transition-all min-h-[80px] text-muted font-medium italic shadow-inner"
+            />
+            <button 
+              type="submit"
+              className="absolute bottom-3 right-3 bg-ink hover:bg-caramel text-white p-2 rounded-full shadow-lg transition-all active:scale-95"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
+      )}
+
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="ml-20 space-y-6 border-l-2 border-sand/30 pl-6">
+          {comment.replies.map(reply => (
+            <CommentItem 
+              key={reply._id}
+              comment={reply}
+              onLike={onLike}
+              onDislike={onDislike}
+              onReply={() => {}} // No reply for replies
+              replyingTo={null}
+              replyText=""
+              setReplyText={() => {}}
+              onReplySubmit={() => {}}
+              currentUser={currentUser}
+              isLoggedIn={isLoggedIn}              isReply={true}            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BlogDetailPage() {
   const { blogId } = useParams();
@@ -69,6 +196,8 @@ export default function BlogDetailPage() {
   });
 
   const [commentText, setCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   const fetchBlog = async () => {
     try {
@@ -117,6 +246,18 @@ export default function BlogDetailPage() {
     }
   });
 
+  const toggleDislike = () => handleInteraction(async () => {
+    try {
+      const res = await apiClient.post(`/blogs/${blogId}/dislike`);
+      setBlog(prev => prev ? { ...prev, dislikes: res.data.dislikes } : null);
+      
+      const isNowDisliked = res.data.dislikes.includes(currentUser._id);
+      if (isNowDisliked) toast.success("Feedback noted!");
+    } catch (error) {
+      toast.error("Could not update feedback.");
+    }
+  });
+
   const toggleBookmark = () => handleInteraction(() => {
     toast.success("Feature coming soon: Saved to your archives");
   });
@@ -140,6 +281,41 @@ export default function BlogDetailPage() {
     });
   };
 
+  const toggleCommentLike = (commentId: string) => handleInteraction(async () => {
+    try {
+      const res = await apiClient.post(`/blogs/${blogId}/comments/${commentId}/like`);
+      setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+    } catch (error) {
+      toast.error("Could not update reaction.");
+    }
+  });
+
+  const toggleCommentDislike = (commentId: string) => handleInteraction(async () => {
+    try {
+      const res = await apiClient.post(`/blogs/${blogId}/comments/${commentId}/dislike`);
+      setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+    } catch (error) {
+      toast.error("Could not update reaction.");
+    }
+  });
+
+  const handleReplySubmit = async (commentId: string, e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+
+    handleInteraction(async () => {
+      try {
+        const res = await apiClient.post(`/blogs/${blogId}/comments/${commentId}/reply`, { text: replyText });
+        setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+        setReplyText("");
+        setReplyingTo(null);
+        toast.success("Reply added!");
+      } catch (error) {
+        toast.error("Reply failed.");
+      }
+    });
+  };
+
   if (loading || !blog) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FCF9F5]">
        <Loader2 className="w-12 h-12 animate-spin text-caramel" />
@@ -147,6 +323,7 @@ export default function BlogDetailPage() {
   );
 
   const isLiked = blog.likes.includes(currentUser._id);
+  const isDisliked = blog.dislikes.includes(currentUser._id);
 
   return (
     <div className="min-h-screen bg-[#FCF9F5] pb-24">
@@ -216,6 +393,19 @@ export default function BlogDetailPage() {
                   <Heart className={`w-6 h-6 ${isLiked ? "fill-white" : ""}`} />
                 </button>
                 <span className="text-[11px] font-bold text-ink/40 uppercase tracking-[0.2em]">{blog.likes.length}</span>
+              </div>
+
+              <div className="flex flex-col items-center gap-3">
+                <button 
+                  disabled={loading}
+                  onClick={toggleDislike}
+                  className={`w-14 h-14 rounded-full border-2 grid place-items-center transition-all shadow-xl active:scale-90 ${
+                    isDisliked ? "bg-gray-600 border-gray-600 text-white shadow-gray-600/20" : "bg-white border-sand/40 text-muted hover:text-gray-600 hover:border-gray-600"
+                  }`}
+                >
+                  <ThumbsDown className={`w-6 h-6 ${isDisliked ? "fill-white" : ""}`} />
+                </button>
+                <span className="text-[11px] font-bold text-ink/40 uppercase tracking-[0.2em]">{blog.dislikes.length}</span>
               </div>
 
               <button 
@@ -292,22 +482,19 @@ export default function BlogDetailPage() {
 
                 <div className="space-y-12">
                   {blog.comments.map(comment => (
-                    <div key={comment._id} className="flex gap-6 group">
-                      <div className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand">
-                         {comment.user.avatarUrl ? <img src={comment.user.avatarUrl} className="w-full h-full object-cover" /> : comment.user.name[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold text-ink text-sm">{comment.user.name}</span>
-                          <span className="text-[10px] text-muted/40 font-bold uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-lg text-muted/70 leading-relaxed font-medium italic whitespace-pre-wrap">{comment.text}</p>
-                        <div className="flex gap-6 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="text-[10px] font-bold text-muted hover:text-caramel uppercase tracking-widest transition-colors">Reply</button>
-                          <button className="text-[10px] font-bold text-muted hover:text-rust uppercase tracking-widest transition-colors">Flag</button>
-                        </div>
-                      </div>
-                    </div>
+                    <CommentItem 
+                      key={comment._id} 
+                      comment={comment} 
+                      onLike={toggleCommentLike}
+                      onDislike={toggleCommentDislike}
+                      onReply={setReplyingTo}
+                      replyingTo={replyingTo}
+                      replyText={replyText}
+                      setReplyText={setReplyText}
+                      onReplySubmit={(e) => handleReplySubmit(comment._id, e)}
+                      currentUser={currentUser}
+                      isLoggedIn={isLoggedIn}
+                    />
                   ))}
                 </div>
               </div>

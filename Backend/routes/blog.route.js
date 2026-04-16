@@ -79,7 +79,13 @@ router.get('/:id', async (req, res) => {
     try {
         const blog = await db.Blog.findById(req.params.id)
             .populate('author', 'name email avatarUrl address phone description')
-            .populate('comments.user', 'name avatarUrl');
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'name avatarUrl' },
+                    { path: 'replies', populate: { path: 'user', select: 'name avatarUrl' } }
+                ]
+            });
         
         if (!blog) return res.status(404).json({ message: "Blog not found" });
         
@@ -115,6 +121,26 @@ router.post('/:id/like', verifyToken, async (req, res) => {
     }
 });
 
+// Dislike/Undislike blog post
+router.post('/:id/dislike', verifyToken, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const dislikeIndex = blog.dislikes.indexOf(req.userId);
+        if (dislikeIndex === -1) {
+            blog.dislikes.push(req.userId);
+        } else {
+            blog.dislikes.splice(dislikeIndex, 1);
+        }
+
+        await blog.save();
+        res.status(200).json({ dislikes: blog.dislikes });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Comment on blog post
 router.post('/:id/comment', verifyToken, async (req, res) => {
     try {
@@ -127,16 +153,136 @@ router.post('/:id/comment', verifyToken, async (req, res) => {
         const newComment = {
             user: req.userId,
             text,
-            createdAt: new Date()
+            createdAt: new Date(),
+            likes: [],
+            dislikes: [],
+            replies: []
         };
 
         blog.comments.push(newComment);
         await blog.save();
 
-        // Populate the last comment to return it
+        // Populate the comments to return it
         const updatedBlog = await db.Blog.findById(req.params.id)
-            .populate('comments.user', 'name avatarUrl');
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'name avatarUrl' },
+                    { path: 'replies', populate: { path: 'user', select: 'name avatarUrl' } }
+                ]
+            });
         
+        res.status(201).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Like/Unlike comment
+router.post('/:id/comments/:commentId/like', verifyToken, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        const likeIndex = comment.likes.indexOf(req.userId);
+        if (likeIndex === -1) {
+            comment.likes.push(req.userId);
+            // Remove from dislikes if present
+            const dislikeIndex = comment.dislikes.indexOf(req.userId);
+            if (dislikeIndex !== -1) comment.dislikes.splice(dislikeIndex, 1);
+        } else {
+            comment.likes.splice(likeIndex, 1);
+        }
+
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'name avatarUrl' },
+                    { path: 'replies', populate: { path: 'user', select: 'name avatarUrl' } }
+                ]
+            });
+
+        res.status(200).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Dislike/Undislike comment
+router.post('/:id/comments/:commentId/dislike', verifyToken, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        const dislikeIndex = comment.dislikes.indexOf(req.userId);
+        if (dislikeIndex === -1) {
+            comment.dislikes.push(req.userId);
+            // Remove from likes if present
+            const likeIndex = comment.likes.indexOf(req.userId);
+            if (likeIndex !== -1) comment.likes.splice(likeIndex, 1);
+        } else {
+            comment.dislikes.splice(dislikeIndex, 1);
+        }
+
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'name avatarUrl' },
+                    { path: 'replies', populate: { path: 'user', select: 'name avatarUrl' } }
+                ]
+            });
+
+        res.status(200).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Reply to comment
+router.post('/:id/comments/:commentId/reply', verifyToken, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ message: "Reply text is required" });
+
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        const newReply = {
+            user: req.userId,
+            text,
+            createdAt: new Date(),
+            likes: [],
+            dislikes: [],
+            replies: []
+        };
+
+        comment.replies.push(newReply);
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user', select: 'name avatarUrl' },
+                    { path: 'replies', populate: { path: 'user', select: 'name avatarUrl' } }
+                ]
+            });
+
         res.status(201).json({ comments: updatedBlog.comments });
     } catch (error) {
         res.status(500).json({ message: error.message });
