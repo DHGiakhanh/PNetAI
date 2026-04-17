@@ -10,11 +10,17 @@ import {
   Heart,
   Send,
   Loader2,
-  BookOpen
+  BookOpen,
+  Image as ImageIcon,
+  X,
+  MessageSquare,
+  Trash2,
+  ThumbsUp
 } from "lucide-react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import apiClient from "@/utils/api.service";
+import { authService } from "@/services/auth.service";
 
 type Author = {
   _id: string;
@@ -30,10 +36,21 @@ type CommentUser = {
   avatarUrl?: string;
 };
 
+type BlogReply = {
+  _id: string;
+  user: CommentUser;
+  text: string;
+  image?: string;
+  createdAt: string;
+};
+
 type BlogComment = {
   _id: string;
   user: CommentUser;
   text: string;
+  image?: string;
+  likes: string[];
+  replies: BlogReply[];
   createdAt: string;
 };
 
@@ -59,6 +76,7 @@ export default function BlogDetailPage() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = currentUser._id || currentUser.id || "";
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   
   const { scrollYProgress } = useScroll();
@@ -69,6 +87,11 @@ export default function BlogDetailPage() {
   });
 
   const [commentText, setCommentText] = useState("");
+  const [commentImage, setCommentImage] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyImage, setReplyImage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchBlog = async () => {
     try {
@@ -110,7 +133,7 @@ export default function BlogDetailPage() {
       const res = await apiClient.post(`/blogs/${blogId}/like`);
       setBlog(prev => prev ? { ...prev, likes: res.data.likes } : null);
       
-      const isNowLiked = res.data.likes.includes(currentUser._id);
+      const isNowLiked = res.data.likes.includes(currentUserId);
       if (isNowLiked) toast.success("Article appreciated!");
     } catch (error) {
       toast.error("Could not update appreciation.");
@@ -121,6 +144,25 @@ export default function BlogDetailPage() {
     toast.success("Feature coming soon: Saved to your archives");
   });
 
+  const handleImageUpload = async (file: File, type: 'comment' | 'reply') => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Portrait too heavy. Limit is 5MB.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const { url } = await authService.generalUpload(file);
+      if (type === 'comment') setCommentImage(url);
+      else setReplyImage(url);
+      toast.success("Portrait captured.");
+    } catch {
+      toast.error("Failed to secure image.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -128,9 +170,13 @@ export default function BlogDetailPage() {
     handleInteraction(async () => {
       try {
         setCommentLoading(true);
-        const res = await apiClient.post(`/blogs/${blogId}/comment`, { text: commentText });
+        const res = await apiClient.post(`/blogs/${blogId}/comment`, { 
+          text: commentText,
+          image: commentImage 
+        });
         setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
         setCommentText("");
+        setCommentImage("");
         toast.success("Perspective shared!");
       } catch (error) {
         toast.error("Communication failure.");
@@ -140,13 +186,56 @@ export default function BlogDetailPage() {
     });
   };
 
+  const handleReplySubmit = async (commentId: string) => {
+    if (!replyText.trim()) return;
+
+    handleInteraction(async () => {
+      try {
+        setCommentLoading(true);
+        const res = await apiClient.post(`/blogs/${blogId}/comment/${commentId}/reply`, { 
+          text: replyText,
+          image: replyImage
+        });
+        setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+        setReplyText("");
+        setReplyImage("");
+        setReplyingTo(null);
+        toast.success("Perspective responded!");
+      } catch (error) {
+        toast.error("Communication failure.");
+      } finally {
+        setCommentLoading(false);
+      }
+    });
+  };
+
+  const handleCommentLike = (commentId: string) => handleInteraction(async () => {
+    try {
+      const res = await apiClient.post(`/blogs/${blogId}/comment/${commentId}/like`);
+      setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+    } catch (error) {
+      toast.error("Could not update appreciation.");
+    }
+  });
+
+  const handleCommentDelete = (commentId: string) => handleInteraction(async () => {
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      const res = await apiClient.delete(`/blogs/${blogId}/comment/${commentId}`);
+      setBlog(prev => prev ? { ...prev, comments: res.data.comments } : null);
+      toast.success("Comment removed.");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Could not delete comment.");
+    }
+  });
+
   if (loading || !blog) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FCF9F5]">
        <Loader2 className="w-12 h-12 animate-spin text-caramel" />
     </div>
   );
 
-  const isLiked = blog.likes.includes(currentUser._id);
+  const isLiked = blog.likes.includes(currentUserId);
 
   return (
     <div className="min-h-screen bg-[#FCF9F5] pb-24">
@@ -249,7 +338,8 @@ export default function BlogDetailPage() {
                 [&_.pull-quote]:font-serif [&_.pull-quote]:italic [&_.pull-quote]:text-4xl 
                 [&_.pull-quote]:text-center [&_.pull-quote]:text-ink [&_.pull-quote]:bg-warm/5
                 [&_.context-cta]:bg-ink [&_.context-cta]:p-12 [&_.context-cta]:rounded-[3rem] 
-                [&_.context-cta]:text-white [&_.context-cta]:my-20 [&_.context-cta]:shadow-2xl shadow-ink/20"
+                [&_.context-cta]:text-white [&_.context-cta]:my-20 [&_.context-cta]:shadow-2xl shadow-ink/20
+                [&_img]:max-w-full [&_img]:rounded-3xl [&_img]:my-12 [&_img]:shadow-xl"
               dangerouslySetInnerHTML={{ __html: blog.content }}
             />
 
@@ -272,13 +362,42 @@ export default function BlogDetailPage() {
                         placeholder="Share your perspective..."
                         className="w-full bg-white border-2 border-sand/30 p-6 pr-20 rounded-[2rem] focus:border-caramel/50 outline-none transition-all min-h-[140px] text-muted font-medium italic shadow-inner"
                       />
-                      <button 
-                        type="submit"
-                        disabled={commentLoading}
-                        className="absolute bottom-6 right-6 bg-ink hover:bg-caramel text-white p-3.5 rounded-full shadow-2xl transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {commentLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                      </button>
+                      
+                      {/* Image Preview */}
+                      {commentImage && (
+                        <div className="mt-4 relative inline-block">
+                          <img src={commentImage} className="max-h-40 rounded-xl border border-sand shadow-sm" />
+                          <button 
+                            type="button" 
+                            onClick={() => setCommentImage("")}
+                            className="absolute -top-2 -right-2 bg-rust text-white p-1 rounded-full shadow-lg"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="absolute bottom-6 right-6 flex items-center gap-3">
+                        <label className="p-3.5 rounded-full border border-sand bg-white text-muted hover:text-caramel hover:border-caramel transition-all cursor-pointer">
+                          {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(file, 'comment');
+                            }} 
+                          />
+                        </label>
+                        <button 
+                          type="submit"
+                          disabled={commentLoading || isUploading}
+                          className="bg-ink hover:bg-caramel text-white p-3.5 rounded-full shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {commentLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        </button>
+                      </div>
                     </div>
                   </form>
                 ) : (
@@ -292,21 +411,116 @@ export default function BlogDetailPage() {
 
                 <div className="space-y-12">
                   {blog.comments.map(comment => (
-                    <div key={comment._id} className="flex gap-6 group">
-                      <div className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand">
-                         {comment.user.avatarUrl ? <img src={comment.user.avatarUrl} className="w-full h-full object-cover" /> : comment.user.name[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold text-ink text-sm">{comment.user.name}</span>
-                          <span className="text-[10px] text-muted/40 font-bold uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                    <div key={comment._id} className="space-y-6">
+                      <div className="flex gap-6 group">
+                        <div className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand">
+                           {comment.user.avatarUrl ? <img src={comment.user.avatarUrl} className="w-full h-full object-cover" /> : comment.user.name[0].toUpperCase()}
                         </div>
-                        <p className="text-lg text-muted/70 leading-relaxed font-medium italic whitespace-pre-wrap">{comment.text}</p>
-                        <div className="flex gap-6 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="text-[10px] font-bold text-muted hover:text-caramel uppercase tracking-widest transition-colors">Reply</button>
-                          <button className="text-[10px] font-bold text-muted hover:text-rust uppercase tracking-widest transition-colors">Flag</button>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-bold text-ink text-sm">{comment.user.name}</span>
+                            <span className="text-[10px] text-muted/40 font-bold uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-lg text-muted/70 leading-relaxed font-medium italic whitespace-pre-wrap">{comment.text}</p>
+                          
+                          {comment.image && (
+                            <img src={comment.image} className="mt-4 max-w-md rounded-2xl border border-sand shadow-md" alt="Comment attachment" />
+                          )}
+
+                          <div className="flex gap-6 mt-4 items-center">
+                            <button 
+                              onClick={() => handleCommentLike(comment._id)}
+                              className={`text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${
+                                comment.likes?.includes(currentUserId) 
+                                  ? "text-caramel" 
+                                  : "text-muted hover:text-caramel"
+                              }`}
+                            >
+                              <ThumbsUp className={`w-3.5 h-3.5 ${comment.likes?.includes(currentUserId) ? "fill-caramel" : ""}`} />
+                              {comment.likes?.length > 0 && <span>{comment.likes.length}</span>}
+                              Like
+                            </button>
+                            <button 
+                              onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}
+                              className="text-[10px] font-bold text-muted hover:text-caramel uppercase tracking-widest transition-colors flex items-center gap-2"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Reply
+                              {comment.replies?.length > 0 && <span className="text-caramel">({comment.replies.length})</span>}
+                            </button>
+                            {(comment.user._id === currentUserId || currentUser.role === 'admin') && (
+                              <button 
+                                onClick={() => handleCommentDelete(comment._id)}
+                                className="text-[10px] font-bold text-muted hover:text-rust uppercase tracking-widest transition-colors flex items-center gap-2"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Reply Input Form */}
+                          {replyingTo === comment._id && (
+                             <div className="mt-6 flex gap-4 items-start animate-in fade-in slide-in-from-top-4 duration-300">
+                               <div className="w-10 h-10 rounded-xl bg-warm flex items-center justify-center text-[10px] font-bold flex-shrink-0 border border-sand">
+                                  {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} className="w-full h-full object-cover rounded-xl" /> : currentUser.name?.[0].toUpperCase()}
+                               </div>
+                               <div className="flex-1 relative">
+                                  <textarea 
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    placeholder={`Reply to ${comment.user.name}...`}
+                                    className="w-full bg-white border-2 border-sand/30 p-4 pr-16 rounded-2xl focus:border-caramel/50 outline-none transition-all min-h-[100px] text-sm font-medium italic"
+                                  />
+                                  
+                                  {replyImage && (
+                                    <div className="mt-2 relative inline-block">
+                                      <img src={replyImage} className="max-h-24 rounded-lg border border-sand" />
+                                      <button onClick={() => setReplyImage("")} className="absolute -top-2 -right-2 bg-rust text-white p-0.5 rounded-full shadow-lg"> <X className="w-3 h-3" /> </button>
+                                    </div>
+                                  )}
+
+                                  <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                                     <label className="p-2 rounded-full border border-sand bg-white text-muted hover:text-caramel cursor-pointer">
+                                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], 'reply')} />
+                                     </label>
+                                     <button 
+                                       onClick={() => handleReplySubmit(comment._id)}
+                                       disabled={commentLoading || isUploading || !replyText.trim()}
+                                       className="bg-ink hover:bg-caramel text-white p-2.5 rounded-full shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                     >
+                                        <Send className="w-4 h-4" />
+                                     </button>
+                                  </div>
+                               </div>
+                             </div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Render Replies */}
+                      {comment.replies && comment.replies.length > 0 && (
+                        <div className="ml-20 space-y-8 border-l-2 border-sand/30 pl-8">
+                           {comment.replies.map(reply => (
+                             <div key={reply._id} className="flex gap-4 group/reply">
+                                <div className="w-10 h-10 rounded-xl bg-warm flex items-center justify-center text-[10px] font-bold flex-shrink-0 border border-sand overflow-hidden">
+                                   {reply.user.avatarUrl ? <img src={reply.user.avatarUrl} className="w-full h-full object-cover" /> : reply.user.name[0].toUpperCase()}
+                                </div>
+                                <div className="flex-1">
+                                   <div className="flex items-center justify-between mb-2">
+                                      <span className="font-bold text-ink text-xs">{reply.user.name}</span>
+                                      <span className="text-[8px] text-muted/40 font-bold uppercase tracking-widest">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                                   </div>
+                                   <p className="text-base text-muted/70 leading-relaxed font-medium italic">{reply.text}</p>
+                                   {reply.image && (
+                                      <img src={reply.image} className="mt-3 max-w-sm rounded-xl border border-sand shadow-sm" alt="Reply attachment" />
+                                   )}
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

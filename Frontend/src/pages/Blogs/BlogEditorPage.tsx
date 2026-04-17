@@ -14,7 +14,9 @@ import apiClient from "@/utils/api.service";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import { useMemo, useRef, useCallback } from "react";
 
 const CATEGORIES = [
   "Nutrition & Health",
@@ -44,10 +46,56 @@ export default function BlogEditorPage() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
-  const [cropper, setCropper] = useState<{ image: string; open: boolean }>({
-    image: "",
-    open: false,
-  });
+  const quillRef = useRef<ReactQuill>(null);
+
+  const imageHandler = useCallback(() => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error("Image too heavy. Limit is 5MB.");
+          return;
+        }
+        try {
+          toast.loading("Uploading image...", { id: 'upload' });
+          const { url } = await authService.generalUpload(file);
+          const quill = quillRef.current?.getEditor();
+          const range = quill?.getSelection();
+          if (quill && range) {
+            quill.insertEmbed(range.index, 'image', url);
+          }
+          toast.success("Image inserted", { id: 'upload' });
+        } catch (error) {
+          toast.error("Upload failed", { id: 'upload' });
+        }
+      }
+    };
+  }, []);
+
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link', 'image', 'blockquote'],
+        ['clean']
+      ],
+      handlers: {
+        image: imageHandler
+      }
+    },
+  }), [imageHandler]);
+
+  const formats = [
+    'header', 'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet', 'link', 'image', 'blockquote'
+  ];
 
   useEffect(() => {
     if (isEdit && id) {
@@ -94,10 +142,7 @@ export default function BlogEditorPage() {
     try {
       setCropper(p => ({ ...p, open: false }));
       setImgUploading(true);
-      
-      const file = new File([blob], "blog.jpg", { type: "image/jpeg" });
-      const { url } = await authService.uploadImage(file); 
-      
+      const { url } = await authService.generalUpload(file);
       setFormData(prev => ({ ...prev, image: url }));
       toast.success("Portrait captured successfully.");
     } catch {
@@ -261,18 +306,37 @@ export default function BlogEditorPage() {
         />
 
         {/* Content Editor */}
-        <div className="relative">
-           <div className="absolute -left-16 top-2 hidden lg:flex flex-col gap-4 text-muted/20">
-              <Plus className="w-6 h-6 hover:text-caramel transition-colors cursor-pointer" />
-              <ImageIcon className="w-6 h-6 hover:text-caramel transition-colors cursor-pointer" />
-           </div>
-           <textarea 
-              placeholder="Begin your storytelling here..."
+        <div className="relative mb-20 bg-white rounded-3xl overflow-hidden shadow-sm border border-sand/30">
+           <ReactQuill 
+              ref={quillRef}
+              theme="snow"
               value={formData.content}
-              onChange={(e) => setFormData(p => ({ ...p, content: e.target.value }))}
-              className="w-full min-h-[500px] bg-transparent text-xl font-medium text-ink/80 placeholder:text-muted/10 outline-none resize-none leading-relaxed prose-lg italic font-serif"
+              onChange={(val) => setFormData(p => ({ ...p, content: val }))}
+              modules={modules}
+              formats={formats}
+              placeholder="Begin your storytelling here..."
+              className="blog-editor-quill"
             />
         </div>
+        
+        <style>{`
+          .blog-editor-quill .ql-editor {
+            min-height: 500px;
+            font-size: 1.25rem;
+            line-height: 1.6;
+            font-family: serif;
+            font-style: italic;
+            color: #2C2418;
+          }
+          .blog-editor-quill .ql-toolbar {
+             border: none !important;
+             border-bottom: 1px solid #EAE1D3 !important;
+             padding: 1rem !important;
+          }
+          .blog-editor-quill .ql-container {
+             border: none !important;
+          }
+        `}</style>
       </main>
 
       {/* Full Preview Modal */}
@@ -295,9 +359,10 @@ export default function BlogEditorPage() {
                 {formData.image && (
                   <img src={formData.image} className="w-full rounded-[4rem] mb-20 shadow-2xl" alt="Cover" />
                 )}
-                <div className="whitespace-pre-wrap text-2xl text-ink/70 leading-relaxed font-medium">
-                  {formData.content || "Silence is the only thing found in this draft..."}
-                </div>
+                <div 
+                  className="prose-lg text-2xl text-ink/70 leading-relaxed font-medium"
+                  dangerouslySetInnerHTML={{ __html: formData.content || "Silence is the only thing found in this draft..." }}
+                />
               </article>
            </motion.div>
          )}

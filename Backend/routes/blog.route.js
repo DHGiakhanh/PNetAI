@@ -79,7 +79,8 @@ router.get('/:id', async (req, res) => {
     try {
         const blog = await db.Blog.findById(req.params.id)
             .populate('author', 'name email avatarUrl address phone description')
-            .populate('comments.user', 'name avatarUrl');
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl');
         
         if (!blog) return res.status(404).json({ message: "Blog not found" });
         
@@ -118,7 +119,7 @@ router.post('/:id/like', verifyToken, async (req, res) => {
 // Comment on blog post
 router.post('/:id/comment', verifyToken, async (req, res) => {
     try {
-        const { text } = req.body;
+        const { text, image } = req.body;
         if (!text) return res.status(400).json({ message: "Comment text is required" });
 
         const blog = await db.Blog.findById(req.params.id);
@@ -127,17 +128,105 @@ router.post('/:id/comment', verifyToken, async (req, res) => {
         const newComment = {
             user: req.userId,
             text,
+            image,
             createdAt: new Date()
         };
 
         blog.comments.push(newComment);
         await blog.save();
 
-        // Populate the last comment to return it
         const updatedBlog = await db.Blog.findById(req.params.id)
-            .populate('comments.user', 'name avatarUrl');
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl');
         
         res.status(201).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Reply to a comment
+router.post('/:id/comment/:commentId/reply', verifyToken, async (req, res) => {
+    try {
+        const { text, image } = req.body;
+        if (!text) return res.status(400).json({ message: "Reply text is required" });
+
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        const newReply = {
+            user: req.userId,
+            text,
+            image,
+            createdAt: new Date()
+        };
+
+        comment.replies.push(newReply);
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl');
+        
+        res.status(201).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Like/Unlike a comment
+router.post('/:id/comment/:commentId/like', verifyToken, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        const likeIndex = comment.likes.indexOf(req.userId);
+        if (likeIndex === -1) {
+            comment.likes.push(req.userId);
+        } else {
+            comment.likes.splice(likeIndex, 1);
+        }
+
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl');
+
+        res.status(200).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Delete a comment (author of comment or admin)
+router.delete('/:id/comment/:commentId', verifyToken, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        const comment = blog.comments.id(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+        // Only the comment author or admin can delete
+        if (req.role !== 'admin' && comment.user.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied. Not the comment author." });
+        }
+
+        blog.comments.pull(req.params.commentId);
+        await blog.save();
+
+        const updatedBlog = await db.Blog.findById(req.params.id)
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl');
+
+        res.status(200).json({ comments: updatedBlog.comments });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

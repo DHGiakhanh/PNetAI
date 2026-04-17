@@ -145,7 +145,7 @@ export const authService = {
     return response.data;
   },
 
-  uploadImage: async (file: File): Promise<{ url: string; publicId?: string }> => {
+  generalUpload: async (file: File): Promise<{ url: string; publicId?: string }> => {
     const formData = new FormData();
     formData.append("image", file);
     const response = await apiClient.post('/user/upload', formData);
