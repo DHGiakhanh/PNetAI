@@ -121,7 +121,7 @@ export default function BlogEditorPage() {
     }
   }, [id, isEdit, navigate]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -130,7 +130,17 @@ export default function BlogEditorPage() {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropper({ image: reader.result as string, open: true });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCropComplete = async (blob: Blob) => {
     try {
+      setCropper(p => ({ ...p, open: false }));
       setImgUploading(true);
       const { url } = await authService.generalUpload(file);
       setFormData(prev => ({ ...prev, image: url }));
@@ -246,7 +256,7 @@ export default function BlogEditorPage() {
                       <p className="text-base font-serif font-bold italic text-ink mb-1">Add a Cover Portrait</p>
                       <p className="text-xs font-medium text-muted/40">Highly recommended to catch the eye of the community.</p>
                    </div>
-                   <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                   <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                 </div>
              </label>
            ) : (
@@ -255,7 +265,7 @@ export default function BlogEditorPage() {
                 <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                    <label className="px-6 py-3 bg-white rounded-full text-sm font-bold text-ink hover:bg-warm transition-all cursor-pointer shadow-xl">
                       Change Portrait
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
                    </label>
                    <button onClick={() => setFormData(p => ({ ...p, image: "" }))} className="px-6 py-3 bg-rose-600 rounded-full text-sm font-bold text-white hover:bg-rose-700 transition-all shadow-xl shadow-rose-200">
                       Remove
@@ -268,6 +278,17 @@ export default function BlogEditorPage() {
                 )}
              </div>
            )}
+
+           <AnimatePresence>
+              {cropper.open && (
+                  <ImageCropperModal 
+                    image={cropper.image}
+                    aspect={21/9}
+                    onClose={() => setCropper(p => ({ ...p, open: false }))}
+                    onCropComplete={handleCropComplete}
+                  />
+              )}
+           </AnimatePresence>
         </div>
 
         {/* Title Input */}

@@ -132,7 +132,81 @@ const sendPasswordResetEmail = async (email, token) => {
     }
 };
 
+// Send booking confirmation email
+const sendBookingConfirmationEmail = async (email, bookingData) => {
+    const { serviceTitle, petName, date, time, totalAmount } = bookingData;
+    
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: email,
+        subject: 'Booking Confirmed!',
+        html: `
+            <div style="font-family: 'Serif', 'Georgia', serif; padding: 20px; color: #1a1a1a;">
+                <h1 style="border-bottom: 2px solid #e2d1c3; padding-bottom: 10px;">Booking Confirmed! 🐾</h1>
+                <p>Hello,</p>
+                <p>Your booking for <strong>${serviceTitle}</strong> has been successfully confirmed.</p>
+                
+                <div style="background-color: #fcf9f6; padding: 20px; border-radius: 12px; border: 1px solid #e2d1c3; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Appointment Details</h3>
+                    <p><strong>Pet:</strong> ${petName}</p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Time:</strong> ${time}</p>
+                    <p><strong>Total Amount:</strong> $${totalAmount}</p>
+                </div>
+                
+                <p>We look forward to seeing you and your furry friend!</p>
+                <p style="font-size: 0.8em; color: #666;">If you need to change your appointment, please contact us at least 24 hours in advance.</p>
+                <p>Best regards,<br>The PNetAI Team</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ Booking confirmation email sent to:', email);
+    } catch (error) {
+        console.error('❌ Error sending booking confirmation email:', error.message);
+    }
+};
+
+// Send appointment reminder email
+const sendAppointmentReminderEmail = async (email, reminderData) => {
+    const { serviceTitle, petName, date, time } = reminderData;
+    
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: email,
+        subject: 'Upcoming Appointment Reminder',
+        html: `
+            <div style="font-family: 'Serif', 'Georgia', serif; padding: 20px; color: #1a1a1a;">
+                <h1 style="border-bottom: 2px solid #e2d1c3; padding-bottom: 10px;">Appointment Reminder 🗓️</h1>
+                <p>Hi there,</p>
+                <p>This is a friendly reminder of your upcoming appointment for <strong>${petName}</strong>.</p>
+                
+                <div style="background-color: #fcf9f6; padding: 20px; border-radius: 12px; border: 1px solid #e2d1c3; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Appointment Details</h3>
+                    <p><strong>Service:</strong> ${serviceTitle}</p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Time:</strong> ${time}</p>
+                </div>
+                
+                <p>See you soon!</p>
+                <p>Best regards,<br>The PNetAI Team</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ Appointment reminder email sent to:', email);
+    } catch (error) {
+        console.error('❌ Error sending appointment reminder email:', error.message);
+    }
+};
+
 module.exports = {
     sendVerificationEmail,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    sendBookingConfirmationEmail,
+    sendAppointmentReminderEmail
 };

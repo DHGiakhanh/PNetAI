@@ -19,12 +19,17 @@ import MyBlogsPage from "@/pages/Blogs/MyBlogsPage";
 import BlogEditorPage from "@/pages/Blogs/BlogEditorPage";
 
 import { AdminDashboard } from "@/pages/Admin/AdminDashboard";
-import { UserManagement } from "@/pages/Admin/UserManagement";
-import { ProductManagement } from "@/pages/Admin/ProductManagement";
-import { ServiceManagement } from "@/pages/Admin/ServiceManagement";
-import { ServiceProviderOverview } from "@/pages/Admin/ServiceProviderOverview";
-import { CustomerBookingsPage } from "@/pages/Admin/CustomerBookingsPage";
-import ServiceProviderProfilePage from "@/pages/ServiceProvider/ServiceProviderProfilePage";
+import SalesManagementPage from "@/pages/Admin/Users/SalesManagementPage";
+import ProvidersManagementPage from "@/pages/Admin/Users/ProvidersManagementPage";
+import OwnersManagementPage from "@/pages/Admin/Users/OwnersManagementPage";
+import FinanceTransactionsPage from "@/pages/Admin/Finance/FinanceTransactionsPage";
+
+import { ProductCatalog as ProductManagement } from "@/pages/ServiceProvider/Atelier/ProductCatalog";
+
+import { ServiceProviderOverview } from "@/pages/ServiceProvider/Atelier/Overview";
+import { CustomerDirectory as CustomerBookingsPage } from "@/pages/ServiceProvider/Atelier/CustomerDirectory";
+import { AtelierProfile as ServiceProviderProfilePage } from "@/pages/ServiceProvider/Atelier/AtelierProfile";
+import { Subscription as SubscriptionPage } from "@/pages/ServiceProvider/Atelier/Subscription";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -53,8 +58,15 @@ export default function AppRoutes() {
       <Route path="admin" element={<AdminLayout />}>
         <Route element={<AdminRoute />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
+          <Route path="users/sales" element={<SalesManagementPage />} />
+          <Route path="users/providers" element={<ProvidersManagementPage />} />
+          <Route path="users/owners" element={<OwnersManagementPage />} />
+          <Route path="finance/transactions" element={<FinanceTransactionsPage />} />
+          <Route path="finance/payouts" element={<div className="p-20 text-center text-xs font-bold uppercase tracking-widest text-muted">Payout / Ledger Ledger Module Coming Soon</div>} />
           <Route path="blogs/approvals" element={<AdminBlogApprovalsPage />} />
+          
+          {/* Legacy or fallback */}
+          <Route path="users" element={<Navigate to="/admin/users/owners" replace />} />
         </Route>
       </Route>
 
@@ -63,9 +75,9 @@ export default function AppRoutes() {
         <Route path="service-provider" element={<ServiceProviderLayout />}>
           <Route index element={<ServiceProviderOverview />} />
           <Route path="products" element={<ProductManagement />} />
-          <Route path="services" element={<ServiceManagement />} />
-          <Route path="bookings" element={<CustomerBookingsPage />} />
+          <Route path="customers" element={<CustomerBookingsPage />} />
           <Route path="profile" element={<ServiceProviderProfilePage />} />
+          <Route path="subscription" element={<SubscriptionPage />} />
         </Route>
       </Route>
 

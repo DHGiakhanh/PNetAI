@@ -1,99 +1,260 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Package, Shapes, ShoppingBag, Users } from "lucide-react";
+import { 
+  ShoppingBag, 
+  Users, 
+  BookOpen, 
+  ShieldCheck, 
+  ArrowUpRight, 
+  Loader2,
+  TrendingUp,
+  Clock,
+  DollarSign
+} from "lucide-react";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts';
 import apiClient from "@/utils/api.service";
+import { motion } from "framer-motion";
 
-type Statistics = {
-  users: { total: number; verified: number; unverified: number };
-  sales: number;
-  admins: number;
-  orders: number;
-  products: number;
-  blogs: number;
+import { json2csv } from 'json-2-csv';
+import { toast } from "react-hot-toast";
+
+type DashboardStats = {
+  kpis: {
+    ordersToday: number;
+    gmv: number;
+    pendingPosts: number;
+    pendingLegal: number;
+  };
+  charts: {
+    userGrowth: any[];
+    revenueTrend: any[];
+  };
+  recentLogs: any[];
 };
 
-const cards = [
-  { key: "users", label: "Users", icon: Users },
-  { key: "orders", label: "Orders", icon: ShoppingBag },
-  { key: "products", label: "Products", icon: Package },
-  { key: "sales", label: "Sale Team", icon: Users },
-] as const;
-
 export const AdminDashboard = () => {
-  const [stats, setStats] = useState<Statistics | null>(null);
+  const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStatistics = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await apiClient.get("/admin/statistics");
-        setStats(response.data);
+        setLoading(true);
+        const res = await apiClient.get("/admin/statistics/dashboard");
+        setData(res.data);
+      } catch (err) {
+        console.error("Dashboard data fetch failed", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchStatistics();
+    fetchDashboardData();
   }, []);
 
+  const handleExport = async () => {
+    if (!data) return;
+    try {
+      const exportData = [
+        { Metric: "Total GMV", Value: data.kpis.gmv },
+        { Metric: "Orders Today", Value: data.kpis.ordersToday },
+        { Metric: "Pending Blog Posts", Value: data.kpis.pendingPosts },
+        { Metric: "Pending Legal Reviews", Value: data.kpis.pendingLegal },
+      ];
+      
+      const csv = json2csv(exportData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `PNetAI_Report_${new Date().toLocaleDateString()}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Report downloaded successfully");
+    } catch (err) {
+      toast.error("Failed to generate report");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-[80vh] flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-caramel animate-spin mb-4" />
+        <p className="text-xs font-bold text-muted uppercase tracking-[0.2em] animate-pulse">Consulting Atelier Analytics</p>
+      </div>
+    );
+  }
+
+  const kpis = [
+    { 
+      label: "GMV (Gross Merchandise Value)", 
+      value: `$${(data?.kpis.gmv || 0).toLocaleString()}`, 
+      icon: DollarSign, 
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      trend: "+12.5%",
+      isUp: true
+    },
+    { 
+      label: "Successful Orders (Today)", 
+      value: data?.kpis.ordersToday || 0, 
+      icon: ShoppingBag, 
+      color: "text-caramel",
+      bg: "bg-caramel/5",
+      trend: "+4.2%",
+      isUp: true
+    },
+    { 
+      label: "Pending Blog Reviews", 
+      value: data?.kpis.pendingPosts || 0, 
+      icon: BookOpen, 
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      trend: "Critical",
+      isUp: false
+    },
+    { 
+      label: "Legal Approval Queue", 
+      value: data?.kpis.pendingLegal || 0, 
+      icon: ShieldCheck, 
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+      trend: "Action Required",
+      isUp: false
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-warm via-cream to-warm p-6">
-      <div className="mb-6">
-        <h1 className="font-serif text-4xl font-bold italic text-ink">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">Overview of users, orders, products and catalog setup.</p>
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-10"
+    >
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-serif font-bold italic text-ink mb-2">Editor's Dashboard</h1>
+          <p className="text-muted text-sm font-medium">Real-time health metrics of the PNetAI ecosystem.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="px-5 py-2.5 bg-white border border-sand rounded-2xl shadow-sm flex items-center gap-3">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-ink uppercase tracking-widest">Live System Status</span>
+          </div>
+          <button 
+            onClick={handleExport}
+            className="px-6 py-2.5 bg-ink text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-caramel transition-all"
+          >
+            Export Report
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          const getStatsValue = () => {
-            if (loading || !stats) return "...";
-            if (card.key === "users") return stats.users?.total || 0;
-            return (stats as any)?.[card.key] || 0;
-          };
-          const value = getStatsValue();
-          return (
-            <div key={card.key} className="rounded-2xl border border-sand bg-white/90 p-5 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-muted">{card.label}</p>
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-warm ring-1 ring-sand">
-                  <Icon className="h-4 w-4 text-brown" />
-                </span>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpis.map((kpi, idx) => (
+          <div key={idx} className="bg-white rounded-[2.5rem] border border-sand/50 p-8 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className={`w-12 h-12 rounded-2xl ${kpi.bg} flex items-center justify-center`}>
+                <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
               </div>
-              <p className="text-3xl font-bold text-ink">{value}</p>
+              <div className={`flex items-center gap-1 text-xs font-bold ${kpi.isUp ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {kpi.trend}
+                {kpi.isUp ? <ArrowUpRight className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+              </div>
             </div>
-          );
-        })}
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted mb-1">{kpi.label}</p>
+            <h3 className="text-3xl font-serif font-bold text-ink">{kpi.value}</h3>
+          </div>
+        ))}
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Link
-          to="/admin/users"
-          className="rounded-2xl border border-sand bg-white/90 p-5 shadow-sm transition hover:bg-warm/50"
-        >
-          <Users className="mb-3 h-5 w-5 text-brown" />
-          <p className="text-lg font-semibold text-ink">User Management</p>
-          <p className="mt-1 text-sm text-muted">Manage admins, sales and customers.</p>
-        </Link>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         {/* Monthly Revenue Area Chart */}
+         <div className="bg-white rounded-[3rem] border border-sand/50 p-10 shadow-sm">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h3 className="text-xl font-serif font-bold italic text-ink">Revenue Performance</h3>
+                <p className="text-xs font-medium text-muted">Monthly financial distribution across all modules.</p>
+              </div>
+              <TrendingUp className="w-6 h-6 text-caramel" />
+            </div>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data?.charts.revenueTrend || []}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5E3C" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#8B5E3C" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4D5BC" />
+                  <XAxis 
+                    dataKey="_id.month" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#808080' }}
+                    tickFormatter={(m) => `Month ${m}`}
+                  />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: '#808080' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                    itemStyle={{ color: '#8B5E3C' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#8B5E3C" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+         </div>
 
-        <Link
-          to="/admin/products"
-          className="rounded-2xl border border-sand bg-white/90 p-5 shadow-sm transition hover:bg-warm/50"
-        >
-          <Package className="mb-3 h-5 w-5 text-brown" />
-          <p className="text-lg font-semibold text-ink">Product Management</p>
-          <p className="mt-1 text-sm text-muted">Create, update and remove products.</p>
-        </Link>
-
-        <Link
-          to="/admin/categories"
-          className="rounded-2xl border border-sand bg-white/90 p-5 shadow-sm transition hover:bg-warm/50"
-        >
-          <Shapes className="mb-3 h-5 w-5 text-brown" />
-          <p className="text-lg font-semibold text-ink">Category Management</p>
-          <p className="mt-1 text-sm text-muted">Maintain store category structure.</p>
-        </Link>
+         {/* User Growth Bar Chart */}
+         <div className="bg-white rounded-[3rem] border border-sand/50 p-10 shadow-sm">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h3 className="text-xl font-serif font-bold italic text-ink">User Acquisition</h3>
+                <p className="text-xs font-medium text-muted">New Pet Owner registrations on a monthly basis.</p>
+              </div>
+              <Users className="w-6 h-6 text-ink" />
+            </div>
+            <div className="h-[300px] w-full">
+               <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data?.charts.userGrowth || []}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4D5BC" />
+                    <XAxis 
+                      dataKey="_id.month" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fontWeight: 700, fill: '#808080' }}
+                      tickFormatter={(m) => `Month ${m}`}
+                    />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: '#808080' }} />
+                    <Tooltip 
+                      cursor={{ fill: '#FBF9F6' }}
+                      contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+                    />
+                    <Bar dataKey="count" radius={[10, 10, 0, 0]}>
+                      {(data?.charts.userGrowth || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#1C1917' : '#8B5E3C'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+               </ResponsiveContainer>
+            </div>
+         </div>
       </div>
-    </div>
+
+    </motion.div>
   );
 };
-

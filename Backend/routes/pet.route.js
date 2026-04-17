@@ -156,4 +156,18 @@ router.delete("/:id", verifyToken, async (req, res) => {
     }
 });
 
+// Get pets for a specific user (Admin, Sale, or Provider only)
+router.get("/user/:userId", verifyToken, async (req, res) => {
+    try {
+        if (req.role === 'user' && req.userId !== req.params.userId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+        
+        const pets = await db.Pet.find({ user: req.params.userId }).sort({ createdAt: -1 });
+        res.status(200).json({ pets });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

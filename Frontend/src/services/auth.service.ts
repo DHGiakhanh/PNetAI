@@ -38,11 +38,19 @@ export interface UserProfile {
     clinicLicenseNumber?: string;
     clinicLicenseUrl?: string;
     businessLicenseUrl?: string;
+    doctorLicenseUrl?: string;
     submissionNote?: string;
     submittedAt?: string;
     reviewedAt?: string;
     reviewNote?: string;
   };
+  subscriptionPlan?: "free" | "silver" | "gold";
+  subscriptionExpiresAt?: string;
+  articleCredits?: number;
+  description?: string;
+  clinicImages?: string[];
+  operatingHours?: { start: string; end: string };
+  doctors?: string[];
   createdAt: string;
 }
 
@@ -114,11 +122,18 @@ export const authService = {
       providerOnboardingStatus: user.providerOnboardingStatus,
       canPublishServices: user.canPublishServices,
       legalDocuments: user.legalDocuments ?? undefined,
+      subscriptionPlan: user.subscriptionPlan,
+      subscriptionExpiresAt: user.subscriptionExpiresAt,
+      articleCredits: user.articleCredits,
+      description: user.description,
+      clinicImages: user.clinicImages,
+      operatingHours: user.operatingHours,
+      doctors: user.doctors,
       createdAt: user.createdAt ?? "",
     };
   },
 
-  updateProfile: async (data: Partial<Pick<UserProfile, 'name' | 'phone' | 'address' | 'avatarUrl'>>) => {
+  updateProfile: async (data: Partial<UserProfile>) => {
     const response = await apiClient.put('/user/profile', data);
     return response.data?.user;
   },

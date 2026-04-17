@@ -68,4 +68,9 @@ export const petService = {
   deletePet: async (id: string): Promise<void> => {
     await apiClient.delete(`/pets/${id}`);
   },
+
+  getUserPets: async (userId: string): Promise<Pet[]> => {
+    const response = await apiClient.get(`/pets/user/${userId}`);
+    return response.data?.pets ?? [];
+  },
 };

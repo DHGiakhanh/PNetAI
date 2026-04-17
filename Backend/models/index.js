@@ -9,6 +9,9 @@ const Carousel = require("./carousel.model");
 const Category = require("./category.model");
 const Service = require("./service.model");
 const Pet = require("./pet.model");
+const Transaction = require("./transaction.model");
+const Payout = require("./payout.model");
+const Booking = require("./booking.model");
 
 const db = {}
 
@@ -23,6 +26,9 @@ db.Carousel = Carousel;
 db.Category = Category;
 db.Service = Service;
 db.Pet = Pet;
+db.Transaction = Transaction;
+db.Payout = Payout;
+db.Booking = Booking;
 
 
 module.exports = db;

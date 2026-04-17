@@ -1,102 +1,144 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import apiClient from "@/utils/api.service";
 import { formatVnd } from "@/utils/currency";
+import { bookingService } from "@/services/booking.service";
+import { Calendar, Clock, MapPin, Dog } from "lucide-react";
 
-type OrderItem = {
-  product?: {
-    _id?: string;
-    images?: string[];
-  } | string;
-  name: string;
-  quantity: number;
-  price: number;
-};
-
-type Order = {
+type Booking = {
   _id: string;
-  items: OrderItem[];
+  service: {
+    title: string;
+    description: string;
+    images?: string[];
+    location?: { city: string };
+  };
+  pet: {
+    name: string;
+    avatarUrl?: string;
+    species: string;
+    breed?: string;
+  };
+  bookingDate: string;
+  bookingTime: string;
   totalAmount: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  createdAt: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
   paymentMethod?: string;
 };
 
-const statusTone: Record<Order["status"], string> = {
+const statusTone: Record<Booking["status"], string> = {
   pending: "bg-amber-100 text-amber-700",
-  processing: "bg-sky-100 text-sky-700",
-  shipped: "bg-indigo-100 text-indigo-700",
-  delivered: "bg-emerald-100 text-emerald-700",
+  confirmed: "bg-sky-100 text-sky-700",
+  completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-rose-100 text-rose-700",
 };
 
 export default function MyBookingsPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchBookings = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get("/orders/history");
-        setOrders(response.data?.orders || []);
+        const data = await bookingService.getMyBookings();
+        setBookings(data || []);
       } catch (error: any) {
         toast.error(error?.response?.data?.message || "Could not load bookings.");
       } finally {
         setLoading(false);
       }
     };
-    fetchOrders();
+    fetchBookings();
   }, []);
 
   const totalSpent = useMemo(
-    () => orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0),
-    [orders]
+    () => bookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0),
+    [bookings]
   );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm to-cream px-4 pb-16 pt-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <h1 className="font-serif text-4xl font-bold italic text-ink">My Booking</h1>
-        <p className="mt-2 text-sm text-muted">Track your order history and current booking status.</p>
+        <h1 className="font-serif text-4xl font-bold italic text-ink">My Appointments</h1>
+        <p className="mt-2 text-sm text-muted">Track your service bookings and appointment status.</p>
 
         <div className="mt-4 rounded-2xl border border-sand bg-white/90 p-4 text-sm text-ink shadow-sm">
           <p>
-            Total bookings: <span className="font-semibold">{orders.length}</span> · Total spent:{" "}
+            Total bookings: <span className="font-semibold">{bookings.length}</span> · Total spent:{" "}
             <span className="font-semibold text-brown">{formatVnd(totalSpent)}</span>
           </p>
         </div>
 
-        <section className="mt-5 space-y-4">
+        <section className="mt-8 space-y-6">
           {loading ? (
-            <p className="rounded-2xl border border-sand bg-white/90 p-4 text-sm text-muted">Loading bookings...</p>
-          ) : orders.length === 0 ? (
-            <p className="rounded-2xl border border-sand bg-white/90 p-4 text-sm text-muted">No bookings yet.</p>
+            <div className="py-20 text-center">
+              <div className="w-10 h-10 border-4 border-caramel border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted">Synching Appointments...</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="py-20 text-center bg-white/50 rounded-[2rem] border border-dashed border-sand">
+              <p className="text-xs font-bold text-muted uppercase tracking-widest">No appointments found.</p>
+            </div>
           ) : (
-            orders.map((order) => (
-              <article key={order._id} className="rounded-2xl border border-sand bg-white/90 p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-ink">Order #{order._id.slice(-8).toUpperCase()}</p>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone[order.status]}`}>
-                    {order.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-muted">
-                  {new Date(order.createdAt).toLocaleString()} · {order.paymentMethod || "COD"}
-                </p>
-                <div className="mt-3 space-y-2">
-                  {order.items.map((item, idx) => (
-                    <div key={`${order._id}-${idx}`} className="flex items-center justify-between rounded-xl bg-warm/50 px-3 py-2">
-                      <p className="text-sm font-medium text-ink">{item.name}</p>
-                      <p className="text-xs font-semibold text-muted">
-                        Quantity {item.quantity} · {formatVnd(item.price * item.quantity)}
+            bookings.map((booking) => (
+              <article key={booking._id} className="rounded-2xl border border-sand bg-white/90 overflow-hidden shadow-sm flex flex-col sm:flex-row">
+                {booking.service.images && booking.service.images.length > 0 && (
+                  <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20">
+                    <img
+                      src={booking.service.images[0]}
+                      alt={booking.service.title}
+                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-serif font-bold italic text-ink">{booking.service.title}</h3>
+                        <span className={`rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${statusTone[booking.status]}`}>
+                          {booking.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted">
+                         <span className="flex items-center gap-1.5">
+                           <Calendar className="w-3" />
+                           {new Date(booking.bookingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                         </span>
+                         <span className="flex items-center gap-1.5">
+                           <Clock className="w-3" />
+                           {booking.bookingTime}
+                         </span>
+                         {booking.service.location?.city && (
+                           <span className="flex items-center gap-1.5">
+                             <MapPin className="w-3" />
+                             {booking.service.location.city}
+                           </span>
+                         )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-ink">{formatVnd(booking.totalAmount)}</p>
+                      <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">
+                        ID: {booking._id.slice(-8).toUpperCase()}
                       </p>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 bg-warm/30 rounded-2xl border border-sand/30">
+                     <div className="w-10 h-10 rounded-xl bg-white border border-sand flex items-center justify-center overflow-hidden">
+                        {booking.pet.avatarUrl ? (
+                          <img src={booking.pet.avatarUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <Dog className="w-5 h-5 text-muted" />
+                        )}
+                     </div>
+                     <div>
+                        <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
+                        <p className="text-[10px] font-medium text-muted">{booking.pet.breed || booking.pet.species}</p>
+                     </div>
+                  </div>
                 </div>
-                <p className="mt-3 text-right text-sm font-semibold text-brown">
-                  Total: {formatVnd(order.totalAmount)}
-                </p>
               </article>
             ))
           )}
