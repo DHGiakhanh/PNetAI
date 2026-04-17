@@ -130,6 +130,13 @@ export const authService = {
     return response.data;
   },
 
+  generalUpload: async (file: File): Promise<{ url: string; publicId?: string }> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await apiClient.post('/user/upload', formData);
+    return response.data;
+  },
+
   changePassword: async (data: { currentPassword: string; newPassword: string }) => {
     const response = await apiClient.post('/user/change-password', data);
     return response.data;
