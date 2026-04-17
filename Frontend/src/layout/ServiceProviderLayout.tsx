@@ -1,5 +1,16 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Boxes, LayoutDashboard, LogOut, Scissors, UserCircle2, Users } from "lucide-react";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  Boxes, 
+  Users, 
+  ShieldCheck, 
+  Crown, 
+  LogOut,
+  ChevronRight,
+  Bell,
+  Search,
+  Sparkles
+} from "lucide-react";
 
 const resolveProviderStatus = (value?: string) => {
   if (
@@ -10,11 +21,12 @@ const resolveProviderStatus = (value?: string) => {
   ) {
     return value;
   }
-  return "pending_sale_approval";
+  return "pending_legal_submission";
 };
 
 export default function ServiceProviderLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const onboardingStatus = resolveProviderStatus(user?.providerOnboardingStatus);
   const isApproved = onboardingStatus === "approved";
@@ -25,107 +37,122 @@ export default function ServiceProviderLayout() {
     navigate("/login");
   };
 
+  const navItems = [
+    { to: "/service-provider", label: "Overview", icon: LayoutDashboard, protected: true },
+    { to: "/service-provider/products", label: "Product Catalog", icon: Boxes, protected: true },
+    { to: "/service-provider/customers", label: "Client Directory", icon: Users, protected: true },
+    { to: "/service-provider/profile", label: "Atelier Profile", icon: ShieldCheck, protected: false },
+    { to: "/service-provider/subscription", label: "Subscription", icon: Crown, protected: false },
+  ];
+
+  const currentPath = navItems.find(item => item.to === location.pathname)?.label || "Atelier Panel";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-warm via-cream to-warm">
-      <aside className="fixed inset-y-0 left-0 z-40 w-72 border-r border-sand bg-white/90 backdrop-blur-xl">
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center gap-2 border-b border-sand px-5">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-brown text-sm font-bold text-white">
-              SP
+    <div className="min-h-screen bg-[#FBF9F2] text-ink selection:bg-caramel/20 selection:text-caramel">
+      {/* Premium Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-sand shadow-[20px_0_60px_-15px_rgba(0,0,0,0.03)] hidden lg:block">
+        <div className="flex flex-col h-full">
+          {/* Brand Identity */}
+          <div className="p-8 pb-4">
+            <div className="flex items-center gap-4 mb-10">
+              <div className="h-12 w-12 rounded-[1.25rem] bg-ink flex items-center justify-center shadow-xl shadow-ink/20">
+                 <Sparkles className="w-6 h-6 text-caramel" />
+              </div>
+              <div>
+                 <h1 className="text-xl font-serif font-bold italic tracking-tight">Atelier Studio</h1>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted leading-none mt-1">Provider Console</p>
+              </div>
             </div>
-            <h1 className="text-base font-bold text-ink">Service Provider Panel</h1>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-3">
-            {isApproved ? (
-              <>
+          {/* Navigation Registry */}
+          <nav className="flex-1 px-6 space-y-1.5 overflow-y-auto custom-scrollbar">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isLocked = item.protected && !isApproved;
+              
+              if (isLocked) return (
+                <div key={item.to} className="flex items-center gap-4 px-5 py-4 rounded-2xl text-muted/30 cursor-not-allowed border border-transparent">
+                  <Icon className="w-5 h-5" />
+                  <span className="text-sm font-bold">{item.label}</span>
+                </div>
+              );
+
+              return (
                 <NavLink
-                  to="/service-provider"
-                  end
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === "/service-provider"}
                   className={({ isActive }) =>
-                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
+                    `group flex items-center justify-between px-5 py-4 rounded-2xl text-sm font-bold transition-all duration-300 border ${
+                      isActive 
+                        ? "bg-ink text-white border-ink shadow-2xl shadow-ink/10" 
+                        : "text-muted hover:text-ink hover:bg-warm border-transparent"
                     }`
                   }
                 >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Overview
+                  <div className="flex items-center gap-4">
+                    <Icon className="w-5 h-5 transition-transform group-hover:scale-110" />
+                    <span>{item.label}</span>
+                  </div>
+                  <ChevronRight className={`w-4 h-4 transition-all opacity-0 group-hover:opacity-100 group-hover:translate-x-1`} />
                 </NavLink>
-                <NavLink
-                  to="/service-provider/products"
-                  className={({ isActive }) =>
-                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                    }`
-                  }
-                >
-                  <Boxes className="h-5 w-5" />
-                  Products
-                </NavLink>
-                <NavLink
-                  to="/service-provider/services"
-                  className={({ isActive }) =>
-                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                    }`
-                  }
-                >
-                  <Scissors className="h-5 w-5" />
-                  Services
-                </NavLink>
-                <NavLink
-                  to="/service-provider/bookings"
-                  className={({ isActive }) =>
-                    `mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                    }`
-                  }
-                >
-                  <Users className="h-5 w-5" />
-                  Customers Booking
-                </NavLink>
-              </>
-            ) : (
-              <p className="mb-2 rounded-xl border border-sand bg-warm/60 px-4 py-3 text-xs text-muted">
-                Account chưa hoạt động. Vui lòng cập nhật hồ sơ và nộp giấy tờ để Sale duyệt.
-              </p>
+              );
+            })}
+
+            {!isApproved && (
+              <div className="mt-8 p-6 rounded-[2rem] bg-rose-50 border border-rose-100">
+                <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-2">Certification Required</p>
+                <p className="text-xs font-medium text-rose-800 leading-relaxed">
+                  Please update your legal documents in <span className="font-bold underline">Atelier Profile</span> to unlock all modules.
+                </p>
+              </div>
             )}
-            <NavLink
-              to="/service-provider/profile"
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isActive ? "bg-brown text-white" : "text-ink hover:bg-warm"
-                }`
-              }
-            >
-              <UserCircle2 className="h-5 w-5" />
-              My Profile
-            </NavLink>
           </nav>
 
-          <div className="border-t border-sand p-4">
-            <p className="text-sm font-semibold text-ink">{user?.name || "Service Provider"}</p>
-            <p className="mb-3 text-xs text-muted">Service Provider</p>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brown px-3 py-2 text-white hover:bg-brown-dark"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="text-sm font-semibold">Logout</span>
-            </button>
+          {/* User Status Bar */}
+          <div className="p-6">
+            <div className="p-6 bg-[#FBF9F2] border border-sand rounded-[2.5rem]">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-10 w-10 rounded-xl bg-white border border-sand flex items-center justify-center font-bold text-ink">
+                  {user?.name?.[0] || 'S'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-ink truncate">{user?.name || "Practitioner"}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted">{user?.role?.replace('_', ' ')}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-3 py-3 rounded-full bg-white border border-sand text-[10px] font-black uppercase tracking-widest text-ink hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
-      <main className="ml-72 min-h-screen">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-sand bg-white/85 px-6 backdrop-blur-xl">
-          <h2 className="text-lg font-semibold text-ink">Service Provider Workspace</h2>
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Catalog & Booking Management
-          </span>
+      {/* Main Studio View */}
+      <main className="lg:ml-80 min-h-screen flex flex-col">
+        <header className="sticky top-0 z-40 bg-white/60 backdrop-blur-xl border-b border-sand px-8 h-20 flex items-center justify-between">
+           <div className="flex items-center gap-4">
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-ink">{currentPath}</h2>
+           </div>
+           
+           <div className="flex items-center gap-6">
+              <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-warm/50 rounded-full border border-sand/30">
+                 <Search className="w-4 h-4 text-muted/40" />
+                 <input type="text" placeholder="Global search..." className="bg-transparent text-xs font-bold outline-none placeholder:text-muted/30 w-40" />
+              </div>
+              <div className="h-10 w-10 rounded-full bg-white border border-sand flex items-center justify-center text-ink relative cursor-pointer hover:bg-warm transition">
+                 <Bell className="w-5 h-5" />
+                 <div className="absolute top-2 right-2 w-2 h-2 bg-caramel rounded-full border border-white" />
+              </div>
+           </div>
         </header>
-        <div className="p-6">
+
+        <div className="px-8 py-10 flex-1">
           <Outlet />
         </div>
       </main>

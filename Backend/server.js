@@ -8,6 +8,7 @@ require("dotenv").config();
 const connectDb = require ("./config/db");
 const db = require("./models");
 const ApiRouter = require("./routes/api.route");
+const { initReminderCron } = require("./scripts/reminderService");
 
 const app = express();
 
@@ -50,4 +51,6 @@ app.listen(PORT, HOSTNAME, () => {
     console.log(`Server running at: http://${HOSTNAME}:${PORT}`);
     //Connect database 
     connectDb();
+    // Initialize notification cron jobs
+    initReminderCron();
 });

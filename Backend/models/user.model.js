@@ -42,6 +42,13 @@ const userSchema = new Schema({
         reviewedAt: { type: Date },
         reviewNote: { type: String },
     },
+    subscriptionPlan: {
+        type: String,
+        enum: ["free", "silver", "gold"],
+        default: "free"
+    },
+    subscriptionExpiresAt: { type: Date },
+    articleCredits: { type: Number, default: 5 },
     createdAt: { type: Date, default: Date.now },
 });
 

@@ -9,11 +9,9 @@ import {
   Mail,
   Phone,
   MapPin,
-  Zap,
   ArrowRight,
   Save,
   X,
-  History,
   Lock,
   User,
   Heart
@@ -25,10 +23,7 @@ import { VNAddressPicker } from "../../components/profile/VNAddressPicker";
 import { toast } from "react-hot-toast";
 import { Pet, petService } from "@/services/pet.service";
 
-const RECENT_ACTIVITIES = [
-  { id: 1, type: "Booking", title: "Full Spa Treatment", date: "2 days ago", icon: <Zap className="w-4 h-4" /> },
-  { id: 2, type: "Purchase", title: "Premium Organic Kibble", date: "5 days ago", icon: <History className="w-4 h-4" /> },
-];
+
 
 
 
@@ -366,29 +361,7 @@ export default function UserProfile() {
               </div>
             </div>
 
-            {/* Recent Activity Card */}
-            <div className="bg-white border border-sand rounded-[3rem] p-10 shadow-sm relative overflow-hidden">
-              <h3 className="text-xl font-serif font-bold italic text-ink mb-8 flex items-center gap-3">
-                <Zap className="text-caramel w-5 h-5" /> Recent Activity
-              </h3>
-              <div className="space-y-6">
-                {RECENT_ACTIVITIES.map(act => (
-                  <div key={act.id} className="group flex items-start gap-5 p-6 bg-[#FBF9F2] rounded-[1.5rem] border border-transparent hover:border-sand/50 transition-all cursor-default">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-caramel shadow-sm group-hover:scale-110 transition-transform">
-                      {act.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1 italic opacity-60">{act.type}</p>
-                      <p className="text-sm font-bold text-ink truncate mb-1">{act.title}</p>
-                      <p className="text-[11px] text-muted font-medium">{act.date}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="w-full mt-8 py-2 text-[11px] font-bold text-muted uppercase tracking-[0.2em] hover:text-caramel transition-colors flex items-center justify-center gap-2">
-                View Full Timeline <Plus className="w-3 h-3" />
-              </button>
-            </div>
+
 
             {/* Danger Security Zone */}
             <div className="p-8 border-2 border-dashed border-sand/40 rounded-[3rem] bg-rust/[0.01]">
