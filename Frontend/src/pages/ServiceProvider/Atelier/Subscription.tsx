@@ -19,12 +19,16 @@ import { authService, UserProfile } from "@/services/auth.service";
 import apiClient from "@/utils/api.service";
 import toast from "react-hot-toast";
 
+const formatVND = (amount: number) => {
+  return amount.toLocaleString('vi-VN') + 'đ';
+};
+
 const PLANS = [
   {
     id: 'free',
     name: 'Essence',
     type: 'Free',
-    price: '0',
+    price: 0,
     credits: '5 Articles/mo',
     features: ['Basic Profile', 'Service Registration', 'Community Access', 'Community Posts'],
     color: 'bg-warm text-muted',
@@ -35,7 +39,7 @@ const PLANS = [
     id: 'silver',
     name: 'Artisan',
     type: 'Silver',
-    price: '29',
+    price: 725000,
     credits: '25 Articles/mo',
     features: ['Silver Profile Badge', 'Priority Service Listing', 'Basic Analytics', 'Advanced Scheduling', 'Zalo Reminders'],
     color: 'bg-slate-50 text-slate-800',
@@ -47,7 +51,7 @@ const PLANS = [
     id: 'gold',
     name: 'Maestro',
     type: 'Gold',
-    price: '99',
+    price: 2475000,
     credits: 'Unlimited',
     features: ['Gold Profile Badge', 'Top-of-Search Placement', 'Full Strategic Insights', 'Custom Domain Support', '24/7 Priority Support', 'Dedicated Account Manager'],
     color: 'bg-amber-50 text-amber-800',
@@ -179,8 +183,8 @@ export const Subscription = () => {
 
                 <div className="mb-10">
                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-serif font-bold italic text-ink">${plan.price}</span>
-                      <span className="text-[11px] font-bold text-muted uppercase tracking-widest">/ Month</span>
+                      <span className="text-4xl font-serif font-bold italic text-ink">{formatVND(plan.price)}</span>
+                      <span className="text-[11px] font-bold text-muted uppercase tracking-widest">/ Tháng</span>
                    </div>
                    <p className="text-[11px] font-bold text-caramel mt-2">{plan.credits}</p>
                 </div>
@@ -264,16 +268,16 @@ export const Subscription = () => {
                <div className="bg-warm/30 rounded-3xl p-8 mb-10 space-y-6">
                   <div className="flex justify-between items-center text-sm font-medium">
                      <span className="text-muted">{selectedPlan?.name} Subscription</span>
-                     <span className="text-ink font-bold">${selectedPlan?.price}.00</span>
+                     <span className="text-ink font-bold">{formatVND(selectedPlan?.price || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm font-medium">
-                     <span className="text-muted">Processing Fee (PayOS)</span>
-                     <span className="text-emerald-600 font-bold">Free</span>
+                     <span className="text-muted">Phí xử lý (PayOS)</span>
+                     <span className="text-emerald-600 font-bold">Miễn phí</span>
                   </div>
                   <div className="h-px bg-sand/50" />
                   <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">Total Due</span>
-                     <span className="text-2xl font-serif font-bold italic text-ink">${selectedPlan?.price}.00</span>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">Tổng cộng</span>
+                     <span className="text-2xl font-serif font-bold italic text-ink">{formatVND(selectedPlan?.price || 0)}</span>
                   </div>
                </div>
 
