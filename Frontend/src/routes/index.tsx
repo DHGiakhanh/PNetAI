@@ -54,6 +54,8 @@ import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
 import PurchasedProductsPage from "@/pages/Orders/PurchasedProductsPage";
 import CheckoutPage from "@/pages/Shop/CheckoutPage";
+import CheckoutSuccessPage from "@/pages/Shop/CheckoutSuccessPage";
+import CheckoutCancelPage from "@/pages/Shop/CheckoutCancelPage";
 
 export default function AppRoutes() {
   return (
@@ -132,6 +134,8 @@ export default function AppRoutes() {
       {/* Checkout */}
       <Route element={<ProtectedRoute />}>
         <Route path="checkout" element={<CheckoutPage />} />
+        <Route path="checkout/success" element={<CheckoutSuccessPage />} />
+        <Route path="checkout/cancel" element={<CheckoutCancelPage />} />
       </Route>
 
       {/* Services booking */}

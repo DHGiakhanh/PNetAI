@@ -18,6 +18,7 @@ import { toast } from "react-hot-toast";
 import { cartService, CartItem, CartProduct } from "../../services/cart.service";
 import { authService } from "../../services/auth.service";
 import { productService } from "../../services/product.service";
+import apiClient from "@/utils/api.service";
 import {
   EXPRESS_SHIPPING_FEE_VND,
   formatVnd,
@@ -153,14 +154,36 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 2. Process Order (Backend Transaction occurs here in a real app)
+    // 2. Process Order via backend
     try {
-      // simulate server latency
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setStep("success");
-      window.scrollTo(0, 0);
-    } catch (err) {
-      toast.error("An unexpected error occurred. Please try again.");
+      const shippingAddress = {
+        name: userData?.name || "Customer",
+        phone: userData?.phone || "0000000000",
+        address: userData?.address || "Vietnam",
+      };
+
+      if (paymentMethod === "qr") {
+        // PayOS payment flow
+        const { data } = await apiClient.post("/orders/checkout/payos", {
+          shippingAddress,
+          description: `DH PNETAI`,
+        });
+        if (data?.payment?.checkoutUrl) {
+          window.location.href = data.payment.checkoutUrl;
+        } else {
+          toast.error("Không thể tạo link thanh toán.");
+        }
+      } else {
+        // COD payment flow
+        await apiClient.post("/orders/checkout", {
+          shippingAddress,
+          paymentMethod: "COD",
+        });
+        setStep("success");
+        window.scrollTo(0, 0);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
       setProcessing(false);
     }
