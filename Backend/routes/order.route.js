@@ -7,6 +7,7 @@ const {
     cancelPaymentLink,
     verifyWebhookSignature,
 } = require("../utils/payos");
+const { removeMissingProductsFromCart } = require("../utils/cart");
 
 const router = express.Router();
 
@@ -115,7 +116,8 @@ const clearCart = async (cart) => {
 };
 
 const ensureCartAndStock = async (userId) => {
-    const cart = await db.Cart.findOne({ user: userId }).populate("items.product");
+    let cart = await db.Cart.findOne({ user: userId }).populate("items.product");
+    cart = await removeMissingProductsFromCart(cart);
 
     if (!cart || cart.items.length === 0) {
         return { error: "Cart is empty" };

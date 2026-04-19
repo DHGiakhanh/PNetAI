@@ -1,6 +1,10 @@
 const express = require("express");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
+const {
+    recalculateCartTotal,
+    removeMissingProductsFromCart,
+} = require("../utils/cart");
 
 const router = express.Router();
 
@@ -14,6 +18,8 @@ router.get('/', verifyToken, async (req, res) => {
             cart = new db.Cart({ user: req.userId, items: [] });
             await cart.save();
         }
+
+        cart = await removeMissingProductsFromCart(cart);
         
         res.status(200).json({ cart });
     } catch (error) {
@@ -56,15 +62,13 @@ router.post('/add', verifyToken, async (req, res) => {
         }
         
         // Calculate total
-        cart.totalAmount = cart.items.reduce(
-            (sum, item) => sum + (item.price * item.quantity), 
-            0
-        );
+        recalculateCartTotal(cart);
         
         cart.updatedAt = Date.now();
         await cart.save();
         
         await cart.populate('items.product');
+        cart = await removeMissingProductsFromCart(cart);
         
         res.status(200).json({ message: "Item added to cart", cart });
     } catch (error) {
@@ -77,7 +81,7 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
     try {
         const { quantity } = req.body;
         
-        const cart = await db.Cart.findOne({ user: req.userId });
+        let cart = await db.Cart.findOne({ user: req.userId });
         
         if (!cart) {
             return res.status(404).json({ message: "Cart not found" });
@@ -92,6 +96,10 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
         }
         
         const product = await db.Product.findById(req.params.productId);
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
         if (product.stock < quantity) {
             return res.status(400).json({ message: "Insufficient stock" });
         }
@@ -99,15 +107,13 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
         item.quantity = quantity;
         
         // Calculate total
-        cart.totalAmount = cart.items.reduce(
-            (sum, item) => sum + (item.price * item.quantity), 
-            0
-        );
+        recalculateCartTotal(cart);
         
         cart.updatedAt = Date.now();
         await cart.save();
         
         await cart.populate('items.product');
+        cart = await removeMissingProductsFromCart(cart);
         
         res.status(200).json({ message: "Cart updated", cart });
     } catch (error) {
@@ -118,7 +124,7 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
 // Remove item from cart
 router.delete('/remove/:productId', verifyToken, async (req, res) => {
     try {
-        const cart = await db.Cart.findOne({ user: req.userId });
+        let cart = await db.Cart.findOne({ user: req.userId });
         
         if (!cart) {
             return res.status(404).json({ message: "Cart not found" });
@@ -129,15 +135,13 @@ router.delete('/remove/:productId', verifyToken, async (req, res) => {
         );
         
         // Calculate total
-        cart.totalAmount = cart.items.reduce(
-            (sum, item) => sum + (item.price * item.quantity), 
-            0
-        );
+        recalculateCartTotal(cart);
         
         cart.updatedAt = Date.now();
         await cart.save();
         
         await cart.populate('items.product');
+        cart = await removeMissingProductsFromCart(cart);
         
         res.status(200).json({ message: "Item removed from cart", cart });
     } catch (error) {
