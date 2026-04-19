@@ -13,7 +13,7 @@ import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
-const CATEGORIES = ["Nutrition", "Gear", "Wellness", "Toys", "Beds"];
+const CATEGORIES = ["Food", "Accessories", "Health", "Toys", "Grooming", "Travel"];
 
 export const ProductCatalog = () => {
   const [products, setProducts] = useState<Product[]>([]);
