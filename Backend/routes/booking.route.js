@@ -2,8 +2,34 @@ const express = require("express");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 const { sendBookingConfirmationEmail } = require("../config/emailService");
+const { createPaymentLink } = require("../utils/payos");
 
 const router = express.Router();
+
+const generateOrderCode = () => {
+    const random = Math.floor(Math.random() * 900) + 100;
+    return Number(`${Date.now()}${random}`);
+};
+
+const generateUniqueOrderCode = async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const orderCode = generateOrderCode();
+        const existingTx = await db.Transaction.exists({ payosOrderCode: String(orderCode) });
+        if (!existingTx) {
+            return orderCode;
+        }
+    }
+    throw new Error("Cannot generate unique PayOS orderCode");
+};
+
+const ensureValidUrl = (url) => {
+    try {
+        new URL(url);
+        return true;
+    } catch (error) {
+        return false;
+    }
+};
 
 // Create a new service booking
 router.post("/confirm", verifyToken, async (req, res) => {
@@ -53,6 +79,114 @@ router.post("/confirm", verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Booking Error:", error);
         res.status(500).json({ message: "An error occurred during booking." });
+    }
+});
+
+// Create booking with PayOS payment
+router.post("/confirm/payos", verifyToken, async (req, res) => {
+    try {
+        const { serviceId, petId, bookingDate, bookingTime, totalAmount, note, returnUrl, cancelUrl } = req.body;
+
+        if (!serviceId || !petId || !bookingDate || !bookingTime || !totalAmount) {
+            return res.status(400).json({ message: "Missing required booking details." });
+        }
+
+        const service = await db.Service.findById(serviceId).populate('providerId', 'name email');
+        if (!service) return res.status(404).json({ message: "Service not found." });
+
+        const pet = await db.Pet.findById(petId);
+        if (!pet) return res.status(404).json({ message: "Pet profile not found." });
+
+        const user = await db.User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: "User not found." });
+
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const finalReturnUrl = returnUrl || `${frontendUrl}/services/${serviceId}/booking/success`;
+        const finalCancelUrl = cancelUrl || `${frontendUrl}/services/${serviceId}/booking/cancel`;
+
+        if (!ensureValidUrl(finalReturnUrl) || !ensureValidUrl(finalCancelUrl)) {
+            return res.status(400).json({ message: "Invalid returnUrl or cancelUrl" });
+        }
+
+        const amount = Math.round(totalAmount);
+        if (!Number.isInteger(amount) || amount <= 0) {
+            return res.status(400).json({ message: "Invalid booking amount for PayOS" });
+        }
+
+        // Create booking in pending state
+        const newBooking = new db.Booking({
+            user: req.userId,
+            service: serviceId,
+            pet: petId,
+            bookingDate: new Date(bookingDate),
+            bookingTime,
+            totalAmount: amount,
+            paymentMethod: "PayOS",
+            status: "pending"
+        });
+        await newBooking.save();
+
+        // Create PayOS payment link
+        const orderCode = await generateUniqueOrderCode();
+        const payload = {
+            orderCode,
+            amount,
+            description: `BK ${orderCode}`.slice(0, 25),
+            cancelUrl: finalCancelUrl,
+            returnUrl: finalReturnUrl,
+            items: [
+                {
+                    name: service.title.slice(0, 100),
+                    quantity: 1,
+                    price: amount,
+                }
+            ],
+            buyerName: user.name || "Customer",
+            buyerPhone: user.phone || "0000000000",
+            buyerAddress: user.address || "Vietnam",
+        };
+
+        const payOSResponse = await createPaymentLink(payload);
+        if (payOSResponse?.code !== "00" || !payOSResponse?.data) {
+            // Cleanup booking if PayOS fails
+            await db.Booking.findByIdAndDelete(newBooking._id);
+            return res.status(502).json({
+                message: "Cannot create payment link from PayOS",
+                payos: payOSResponse,
+            });
+        }
+
+        // Create transaction record
+        const transaction = new db.Transaction({
+            user: req.userId,
+            type: "service_booking",
+            provider: service.providerId._id || service.providerId,
+            amount: amount,
+            status: "pending",
+            paymentMethod: "PayOS",
+            payosOrderCode: String(orderCode),
+            referenceId: newBooking._id,
+            note: note || "",
+        });
+        await transaction.save();
+
+        res.status(201).json({
+            message: "PayOS payment link created for booking",
+            booking: newBooking,
+            payment: {
+                orderCode,
+                paymentLinkId: payOSResponse.data.paymentLinkId,
+                checkoutUrl: payOSResponse.data.checkoutUrl,
+                qrCode: payOSResponse.data.qrCode,
+                status: payOSResponse.data.status,
+            },
+        });
+    } catch (error) {
+        console.error("Booking PayOS Error:", error);
+        res.status(500).json({
+            message: "Cannot create PayOS payment link for booking",
+            error: error.response?.data || error.message,
+        });
     }
 });
 

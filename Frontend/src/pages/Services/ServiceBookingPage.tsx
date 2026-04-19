@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { 
   MapPin, 
   ChevronRight, 
@@ -43,7 +43,7 @@ const afternoonTimes = [
 
 export default function ServiceBookingPage() {
   const { serviceId } = useParams();
-  const navigate = useNavigate();
+
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"info" | "wizard">("info");
@@ -86,8 +86,11 @@ export default function ServiceBookingPage() {
     }
   };
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handleConfirm = async () => {
     if (!service || !selectedPetId || !selectedTime) return;
+    setIsProcessing(true);
     try {
       const payload = {
         serviceId: service._id,
@@ -95,14 +98,18 @@ export default function ServiceBookingPage() {
         bookingDate: format(selectedDate, 'yyyy-MM-dd'),
         bookingTime: selectedTime,
         totalAmount: service.basePrice,
-        paymentMethod: "COD",
         note: description
       };
-      await bookingService.confirmBooking(payload);
-      toast.success("Booking confirmed successfully!");
-      setTimeout(() => navigate("/my-bookings"), 1500);
-    } catch (err) {
-      toast.error("Internal transaction failure.");
+      const result = await bookingService.confirmBookingPayOS(payload);
+      if (result?.payment?.checkoutUrl) {
+        window.location.href = result.payment.checkoutUrl;
+      } else {
+        toast.error("Failed to generate payment link.");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Internal transaction failure.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -375,9 +382,9 @@ export default function ServiceBookingPage() {
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                    </button>
                  ) : (
-                   <button onClick={handleConfirm} disabled={!isLoggedIn || !selectedPetId} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
-                      Confirm Booking
-                      <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                   <button onClick={handleConfirm} disabled={!isLoggedIn || !selectedPetId || isProcessing} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
+                      {isProcessing ? "Processing..." : "Thanh toán PayOS"}
+                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />}
                    </button>
                  )}
               </div>

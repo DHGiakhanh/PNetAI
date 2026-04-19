@@ -350,7 +350,7 @@ router.post("/payos/webhook", async (req, res) => {
             (success === true && data.code === "00" ? "PAID" : "CANCELLED");
 
         if (!order) {
-            // Check if it's a subscription transaction
+            // Check if it's a subscription or booking transaction
             const transaction = await db.Transaction.findOne({ payosOrderCode: String(orderCode) });
             if (transaction) {
                 if (inferredStatus === "PAID") {
@@ -375,8 +375,28 @@ router.post("/payos/webhook", async (req, res) => {
                             await user.save();
                         }
                     }
+
+                    // Confirm booking on successful payment
+                    if (transaction.type === "service_booking" && transaction.referenceId) {
+                        const booking = await db.Booking.findById(transaction.referenceId);
+                        if (booking && booking.status === "pending") {
+                            booking.status = "confirmed";
+                            booking.updatedAt = Date.now();
+                            await booking.save();
+                        }
+                    }
                 } else if (["CANCELLED", "EXPIRED", "FAILED"].includes(inferredStatus)) {
                     transaction.status = "failed";
+
+                    // Cancel pending booking on payment failure
+                    if (transaction.type === "service_booking" && transaction.referenceId) {
+                        const booking = await db.Booking.findById(transaction.referenceId);
+                        if (booking && booking.status === "pending") {
+                            booking.status = "cancelled";
+                            booking.updatedAt = Date.now();
+                            await booking.save();
+                        }
+                    }
                 }
 
                 transaction.updatedAt = Date.now();

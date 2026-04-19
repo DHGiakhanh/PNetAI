@@ -14,6 +14,11 @@ export const bookingService = {
     const response = await apiClient.post('/bookings/confirm', data);
     return response.data;
   },
+
+  confirmBookingPayOS: async (data: BookingData) => {
+    const response = await apiClient.post('/bookings/confirm/payos', data);
+    return response.data;
+  },
   
   getMyBookings: async () => {
     const response = await apiClient.get('/bookings/my');
