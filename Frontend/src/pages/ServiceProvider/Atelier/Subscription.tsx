@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { authService, UserProfile } from "@/services/auth.service";
+import apiClient from "@/utils/api.service";
+import toast from "react-hot-toast";
 
 const PLANS = [
   {
@@ -59,6 +61,7 @@ export const Subscription = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCheckout, setShowCheckout] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
     const fetchUser = async () => {
@@ -82,6 +85,25 @@ export const Subscription = () => {
        <Loader2 className="w-10 h-10 animate-spin text-caramel" />
     </div>
   );
+
+  const handlePayOSCheckout = async () => {
+    if (!showCheckout) return;
+    setIsProcessing(true);
+    try {
+      const { data } = await apiClient.post("/subscriptions/checkout/payos", {
+        planId: showCheckout
+      });
+      if (data?.payment?.checkoutUrl) {
+         window.location.href = data.payment.checkoutUrl;
+      } else {
+         toast.error("Failed to generate payment link.");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Payment initiation failed.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-12 pb-20">
@@ -257,9 +279,13 @@ export const Subscription = () => {
 
                <div className="space-y-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted text-center mb-6">Settlement Method</p>
-                  <button className="w-full py-5 rounded-2xl border-2 border-caramel bg-caramel/5 flex items-center justify-between px-8 group">
+                  <button 
+                     disabled={isProcessing}
+                     onClick={handlePayOSCheckout} 
+                     className="w-full py-5 rounded-2xl border-2 border-caramel bg-caramel/5 flex items-center justify-between px-8 group disabled:opacity-50"
+                  >
                      <div className="flex items-center gap-4 text-left">
-                        <QrCode className="w-6 h-6 text-caramel" />
+                        {isProcessing ? <Loader2 className="w-6 h-6 text-caramel animate-spin" /> : <QrCode className="w-6 h-6 text-caramel" />}
                         <div>
                            <p className="text-sm font-bold text-ink">PayOS Smart QR</p>
                            <p className="text-[10px] font-medium text-muted">Instant Vietnamese Bank Transfer</p>

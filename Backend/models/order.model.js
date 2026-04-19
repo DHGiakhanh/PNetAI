@@ -17,12 +17,31 @@ const orderSchema = new Schema({
         phone: { type: String, required: true },
         address: { type: String, required: true }
     },
-    status: { 
-        type: String, 
-        enum: ["pending", "processing", "shipped", "delivered", "cancelled"], 
-        default: "pending" 
+    status: {
+        type: String,
+        enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        default: "pending"
     },
-    paymentMethod: { type: String, default: "COD" },
+    paymentMethod: {
+        type: String,
+        enum: ["COD", "PAYOS"],
+        default: "COD"
+    },
+    paymentStatus: {
+        type: String,
+        enum: ["unpaid", "pending", "paid", "failed", "cancelled", "refunded"],
+        default: "unpaid"
+    },
+    paidAt: { type: Date },
+    inventoryReserved: { type: Boolean, default: false },
+    payos: {
+        orderCode: { type: Number, index: true, unique: true, sparse: true },
+        paymentLinkId: { type: String },
+        checkoutUrl: { type: String },
+        qrCode: { type: String },
+        status: { type: String },
+        lastWebhookData: { type: Schema.Types.Mixed }
+    },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

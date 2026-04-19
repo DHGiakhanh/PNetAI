@@ -13,7 +13,7 @@ const adminRoutes = require("./admin.route");
 const petRoutes = require("./pet.route");
 const saleRoutes = require("./sale.route");
 const bookingRoutes = require("./booking.route");
-
+const subscriptionRoutes = require("./subscription.route");
 const ApiRouter = express.Router();
 
 // Auth routes
@@ -57,5 +57,8 @@ ApiRouter.use('/sale', saleRoutes);
 
 // Booking routes
 ApiRouter.use('/bookings', bookingRoutes);
+
+// Subscription routes
+ApiRouter.use('/subscriptions', subscriptionRoutes);
 
 module.exports = ApiRouter;

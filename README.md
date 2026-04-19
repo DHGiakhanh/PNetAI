@@ -27,6 +27,10 @@ JWT_SECRET=your_jwt_secret_key_here
 
 # Frontend URL
 FRONTEND_URL=http://localhost:5173
+PAYOS_CLIENT_ID=your_payos_client_id
+PAYOS_API_KEY=your_payos_api_key
+PAYOS_CHECKSUM_KEY=your_payos_checksum_key
+PAYOS_BASE_URL=https://api-merchant.payos.vn
 ```
 
 **Frontend** - Create `Frontend/.env`:
