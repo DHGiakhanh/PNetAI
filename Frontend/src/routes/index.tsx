@@ -25,6 +25,7 @@ import OwnersManagementPage from "@/pages/Admin/Users/OwnersManagementPage";
 import FinanceTransactionsPage from "@/pages/Admin/Finance/FinanceTransactionsPage";
 
 import { ProductCatalog as ProductManagement } from "@/pages/ServiceProvider/Atelier/ProductCatalog";
+import { ClinicServices as ServiceManagement } from "@/pages/ServiceProvider/Atelier/ClinicServices";
 
 import { ServiceProviderOverview } from "@/pages/ServiceProvider/Atelier/Overview";
 import { CustomerDirectory as CustomerBookingsPage } from "@/pages/ServiceProvider/Atelier/CustomerDirectory";
@@ -81,6 +82,7 @@ export default function AppRoutes() {
         <Route path="service-provider" element={<ServiceProviderLayout />}>
           <Route index element={<ServiceProviderOverview />} />
           <Route path="products" element={<ProductManagement />} />
+          <Route path="services" element={<ServiceManagement />} />
           <Route path="customers" element={<CustomerBookingsPage />} />
           <Route path="profile" element={<ServiceProviderProfilePage />} />
           <Route path="subscription" element={<SubscriptionPage />} />

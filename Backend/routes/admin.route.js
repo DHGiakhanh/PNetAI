@@ -223,20 +223,7 @@ router.put('/users/:id', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-// Delete User
-router.delete('/users/:id', verifyToken, isAdmin, async (req, res) => {
-    try {
-        const user = await db.User.findById(req.params.id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
 
-        await db.User.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
 
 // Get user by ID
 router.get('/users/:id', verifyToken, isAdmin, async (req, res) => {
@@ -356,7 +343,7 @@ router.put('/users/:id', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
-// Delete user
+// Delete User
 router.delete('/users/:id', verifyToken, isAdmin, async (req, res) => {
     try {
         const user = await db.User.findById(req.params.id);
@@ -377,10 +364,22 @@ router.delete('/users/:id', verifyToken, isAdmin, async (req, res) => {
                 { $unset: { managedBy: "", saleCode: "" } }
             );
         }
+
+        // If deleting a service provider or shop, clean up their assets
+        if (user.role === 'service_provider' || user.role === 'shop') {
+            // Delete associated services
+            await db.Service.deleteMany({ providerId: user._id });
+            // Delete associated products
+            await db.Product.deleteMany({ providerId: user._id });
+            
+            // Note: We might want to keep Transactions/Orders for financial history
+            // but we could mark them as "archived_provider" if needed.
+            // For now, we just delete the primary assets.
+        }
         
         await db.User.findByIdAndDelete(req.params.id);
         
-        res.status(200).json({ message: "User deleted successfully" });
+        res.status(200).json({ message: "User and associated assets deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

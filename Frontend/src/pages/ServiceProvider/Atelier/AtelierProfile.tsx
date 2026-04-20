@@ -32,6 +32,8 @@ export const AtelierProfile = () => {
     doctors: ["", ""], // Allow up to 2 doctors
     doctorLicenseUrl: "",
     businessLicenseUrl: "",
+    clinicLicenseUrl: "",
+    clinicLicenseNumber: "",
   });
 
   const [cropper, setCropper] = useState<{ image: string; open: boolean }>({
@@ -56,6 +58,8 @@ export const AtelierProfile = () => {
           doctors: data.doctors || ["", ""],
           doctorLicenseUrl: data.legalDocuments?.doctorLicenseUrl || "",
           businessLicenseUrl: data.legalDocuments?.businessLicenseUrl || "",
+          clinicLicenseUrl: data.legalDocuments?.clinicLicenseUrl || "",
+          clinicLicenseNumber: data.legalDocuments?.clinicLicenseNumber || "",
         });
       } catch (err) {
         toast.error("Atelier credentials could not be retrieved.");
@@ -80,8 +84,13 @@ export const AtelierProfile = () => {
         doctors: formData.doctors.filter(d => d.trim() !== ""),
         legalDocuments: {
             clinicName: formData.clinicName,
+            clinicLicenseNumber: formData.clinicLicenseNumber,
             doctorLicenseUrl: formData.doctorLicenseUrl,
-            businessLicenseUrl: formData.businessLicenseUrl
+            businessLicenseUrl: formData.businessLicenseUrl,
+            clinicLicenseUrl: formData.clinicLicenseUrl,
+            submittedAt: (formData.clinicLicenseNumber && formData.clinicLicenseUrl && formData.businessLicenseUrl) 
+                ? new Date().toISOString() 
+                : (typeof user?.legalDocuments?.submittedAt === 'string' ? user.legalDocuments.submittedAt : undefined)
         }
       });
       toast.success("Facility profile successfully synchronized.");
@@ -92,7 +101,7 @@ export const AtelierProfile = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'gallery' | 'license') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'gallery' | 'doctor_license' | 'business_license' | 'clinic_license') => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -100,8 +109,12 @@ export const AtelierProfile = () => {
       const { url } = await authService.uploadImage(file);
       if (type === 'gallery') {
         setFormData(prev => ({ ...prev, clinicImages: [...prev.clinicImages, url] }));
-      } else {
+      } else if (type === 'doctor_license') {
         setFormData(prev => ({ ...prev, doctorLicenseUrl: url }));
+      } else if (type === 'business_license') {
+        setFormData(prev => ({ ...prev, businessLicenseUrl: url }));
+      } else if (type === 'clinic_license') {
+        setFormData(prev => ({ ...prev, clinicLicenseUrl: url }));
       }
       toast.success("Media captured successfully.", { id: 'upload' });
     } catch {
@@ -198,13 +211,23 @@ export const AtelierProfile = () => {
                </div>
 
                <div className="grid gap-10">
-                  <div className="grid sm:grid-cols-2 gap-10">
+                  <div className="grid sm:grid-cols-3 gap-10">
                      <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 pl-1">Official Name</label>
                         <input 
                           type="text" 
                           value={formData.clinicName} 
                           onChange={e => setFormData(p => ({ ...p, clinicName: e.target.value }))}
+                          className="w-full bg-gray-50/50 border border-gray-100 px-8 py-5 rounded-[2rem] outline-none font-bold text-lg text-gray-900 focus:border-blue-300 transition-all shadow-inner" 
+                        />
+                     </div>
+                     <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 pl-1">License Number</label>
+                        <input 
+                          type="text" 
+                          value={formData.clinicLicenseNumber}
+                          onChange={e => setFormData(p => ({ ...p, clinicLicenseNumber: e.target.value }))}
+                          placeholder="E.g. 123/CL-GP"
                           className="w-full bg-gray-50/50 border border-gray-100 px-8 py-5 rounded-[2rem] outline-none font-bold text-lg text-gray-900 focus:border-blue-300 transition-all shadow-inner" 
                         />
                      </div>
@@ -339,7 +362,7 @@ export const AtelierProfile = () => {
             </div>
 
             {/* Doctor's Credentials */}
-            <div className="bg-white rounded-[3rem] border border-gray-100 p-10 shadow-sm overflow-hidden relative pb-14">
+            <div className="bg-white rounded-[3rem] border border-gray-100 p-10 shadow-sm overflow-hidden relative">
                <div className="flex items-center justify-between mb-8">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Practitioner Licensing</h4>
                   <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
@@ -365,7 +388,71 @@ export const AtelierProfile = () => {
                     </div>
                     <p className="text-sm font-black text-gray-900 mb-2">Doctor's License</p>
                     <p className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-tighter leading-relaxed">Required for regulated <br/>medical services</p>
-                    <input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'license')} />
+                    <input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'doctor_license')} />
+                 </label>
+               )}
+            </div>
+
+            {/* Clinic License */}
+            <div className="bg-white rounded-[3rem] border border-gray-100 p-10 shadow-sm overflow-hidden relative">
+               <div className="flex items-center justify-between mb-8">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Clinic Operations License</h4>
+                  <div className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+               </div>
+
+               {formData.clinicLicenseUrl ? (
+                 <div className="relative group aspect-[3/4] rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-2xl">
+                    <img src={formData.clinicLicenseUrl} className="w-full h-full object-cover" alt="Clinic License" />
+                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center p-8 backdrop-blur-sm">
+                       <button 
+                         onClick={() => setFormData(p => ({ ...p, clinicLicenseUrl: "" }))}
+                         className="p-4 bg-white/10 hover:bg-red-600 text-white rounded-full transition-all hover:scale-110 active:scale-90 border border-white/20"
+                       >
+                          <X className="w-6 h-6" />
+                       </button>
+                       <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-white/60">Discard Clinic License</p>
+                    </div>
+                 </div>
+               ) : (
+                 <label className="flex flex-col items-center justify-center aspect-[3/4] rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-white hover:border-blue-300 transition-all cursor-pointer group shadow-inner p-8">
+                    <div className="h-16 w-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gray-300 group-hover:text-emerald-600 transition-all mb-6">
+                       <Building2 className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm font-black text-gray-900 mb-2">Clinic License</p>
+                    <p className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-tighter leading-relaxed">Official medical <br/>facility license</p>
+                    <input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'clinic_license')} />
+                 </label>
+               )}
+            </div>
+
+            {/* Business License */}
+            <div className="bg-white rounded-[3rem] border border-gray-100 p-10 shadow-sm overflow-hidden relative">
+               <div className="flex items-center justify-between mb-8">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Business Certification</h4>
+                  <div className="h-2 w-2 rounded-full bg-amber-600 animate-pulse" />
+               </div>
+
+               {formData.businessLicenseUrl ? (
+                 <div className="relative group aspect-[3/4] rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-2xl">
+                    <img src={formData.businessLicenseUrl} className="w-full h-full object-cover" alt="Business License" />
+                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center p-8 backdrop-blur-sm">
+                       <button 
+                         onClick={() => setFormData(p => ({ ...p, businessLicenseUrl: "" }))}
+                         className="p-4 bg-white/10 hover:bg-red-600 text-white rounded-full transition-all hover:scale-110 active:scale-90 border border-white/20"
+                       >
+                          <X className="w-6 h-6" />
+                       </button>
+                       <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-white/60">Discard Business License</p>
+                    </div>
+                 </div>
+               ) : (
+                 <label className="flex flex-col items-center justify-center aspect-[3/4] rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-white hover:border-blue-300 transition-all cursor-pointer group shadow-inner p-8">
+                    <div className="h-16 w-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gray-300 group-hover:text-amber-600 transition-all mb-6">
+                       <ShieldCheck className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm font-black text-gray-900 mb-2">Business License</p>
+                    <p className="text-[10px] font-bold text-gray-400 text-center uppercase tracking-tighter leading-relaxed">Official business <br/>registration document</p>
+                    <input type="file" className="hidden" onChange={(e) => handleImageUpload(e, 'business_license')} />
                  </label>
                )}
             </div>

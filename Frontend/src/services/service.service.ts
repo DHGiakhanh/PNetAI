@@ -19,6 +19,7 @@ export interface Service {
     name: string;
     email: string;
     phone?: string;
+    operatingHours?: { start: string; end: string };
   } | string;
   location: {
     address: string;
@@ -57,6 +58,7 @@ export interface ServiceFilters {
   sort?: 'price-asc' | 'price-desc' | 'newest' | 'popular' | 'rating';
   page?: number;
   limit?: number;
+  providerId?: string;
 }
 
 export const serviceService = {

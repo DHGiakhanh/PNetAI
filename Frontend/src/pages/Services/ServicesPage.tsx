@@ -58,10 +58,13 @@ export default function ServicesPage() {
       }
     });
 
-    return Array.from(providerMap.values()).filter(f =>
-      f.title.toLowerCase().includes(search.toLowerCase()) || 
-      (f.location?.address || "").toLowerCase().includes(search.toLowerCase())
-    );
+    return Array.from(providerMap.values()).filter(f => {
+      const s = search.toLowerCase();
+      return (f.providerName?.toLowerCase() || "").includes(s) ||
+             f.title.toLowerCase().includes(s) || 
+             (f.location?.address || "").toLowerCase().includes(s) ||
+             f.category.toLowerCase().includes(s);
+    });
   }, [activeTab, services, search]);
 
   return (
@@ -145,14 +148,19 @@ export default function ServicesPage() {
                         <div className="absolute inset-0 bg-ink/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                      </div>
 
-                     <div className="flex-1 min-w-0">
-                        <h3 className="text-2xl font-serif font-bold italic text-ink group-hover:text-caramel transition-colors mb-2">
-                           {facility.title}
-                         </h3>
-                        <p className="text-[14px] font-medium text-muted/60 leading-relaxed max-w-lg">
-                           {facility.location?.address || "Location registration in progress..."}
-                        </p>
-                     </div>
+                      <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-2xl font-serif font-bold italic text-ink group-hover:text-caramel transition-colors">
+                               {facility.providerName || facility.title}
+                            </h3>
+                            <span className="px-3 py-1 bg-warm rounded-lg text-[9px] font-black uppercase tracking-widest text-caramel border border-caramel/10">
+                               {facility.category}
+                            </span>
+                         </div>
+                         <p className="text-[14px] font-medium text-muted/60 leading-relaxed max-w-lg">
+                            {facility.location?.address || "Location registration in progress..."}
+                         </p>
+                      </div>
 
                      <div className="h-12 w-12 rounded-full border border-sand bg-white text-muted/30 flex items-center justify-center group-hover:bg-caramel group-hover:text-white group-hover:border-caramel group-hover:shadow-lg group-hover:shadow-caramel/20 transition-all self-center">
                         <ChevronRight className="w-6 h-6" />

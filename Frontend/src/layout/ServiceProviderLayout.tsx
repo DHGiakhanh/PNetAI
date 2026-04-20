@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -8,9 +9,12 @@ import {
   LogOut,
   ChevronRight,
   Bell,
-  Search,
-  Sparkles
+  Sparkles,
+  Stethoscope,
+  Clock
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { bookingService } from "@/services/booking.service";
 
 const resolveProviderStatus = (value?: string) => {
   if (
@@ -31,6 +35,26 @@ export default function ServiceProviderLayout() {
   const onboardingStatus = resolveProviderStatus(user?.providerOnboardingStatus);
   const isApproved = onboardingStatus === "approved";
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isApproved) {
+      bookingService.getProviderBookings()
+        .then((data: any[]) => {
+           const transformed = data.map((b: any) => ({
+             id: b._id,
+             title: "New Service Booking",
+             message: `${b.user?.name || 'A client'} reserved ${b.service?.title || 'a service'} at ${b.bookingTime}`,
+             time: b.createdAt,
+             unread: b.status === 'pending'
+           }));
+           setNotifications(transformed);
+        })
+        .catch(console.error);
+    }
+  }, [isApproved]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -40,6 +64,7 @@ export default function ServiceProviderLayout() {
   const navItems = [
     { to: "/service-provider", label: "Overview", icon: LayoutDashboard, protected: true },
     { to: "/service-provider/products", label: "Product Catalog", icon: Boxes, protected: true },
+    { to: "/service-provider/services", label: "Clinic Services", icon: Stethoscope, protected: true },
     { to: "/service-provider/customers", label: "Client Directory", icon: Users, protected: true },
     { to: "/service-provider/profile", label: "Atelier Profile", icon: ShieldCheck, protected: false },
     { to: "/service-provider/subscription", label: "Subscription", icon: Crown, protected: false },
@@ -139,15 +164,69 @@ export default function ServiceProviderLayout() {
            <div className="flex items-center gap-4">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-ink">{currentPath}</h2>
            </div>
+
+           <div className="hidden xl:flex items-center gap-8 px-8 py-2 bg-warm/30 rounded-full border border-sand/30 shadow-inner">
+              <div className="flex items-center gap-3">
+                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                 <span className="text-[10px] font-black uppercase tracking-widest text-ink/60">Clinic Live</span>
+              </div>
+              <div className="h-4 w-px bg-sand/50" />
+              <div className="flex items-center gap-3">
+                 <Clock className="w-3.5 h-3.5 text-caramel/60" />
+                 <span className="text-[10px] font-black uppercase tracking-widest text-ink/60">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="h-4 w-px bg-sand/50" />
+              <div className="flex items-center gap-3">
+                 <ShieldCheck className="w-3.5 h-3.5 text-caramel/60" />
+                 <span className="text-[10px] font-black uppercase tracking-widest text-ink/60">Registry Secure</span>
+              </div>
+           </div>
            
            <div className="flex items-center gap-6">
-              <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-warm/50 rounded-full border border-sand/30">
-                 <Search className="w-4 h-4 text-muted/40" />
-                 <input type="text" placeholder="Global search..." className="bg-transparent text-xs font-bold outline-none placeholder:text-muted/30 w-40" />
-              </div>
-              <div className="h-10 w-10 rounded-full bg-white border border-sand flex items-center justify-center text-ink relative cursor-pointer hover:bg-warm transition">
-                 <Bell className="w-5 h-5" />
-                 <div className="absolute top-2 right-2 w-2 h-2 bg-caramel rounded-full border border-white" />
+              <div className="relative">
+                 <button 
+                   onClick={() => setShowNotifications(!showNotifications)}
+                   className="h-10 w-10 rounded-full bg-white border border-sand flex items-center justify-center text-ink relative hover:bg-warm transition"
+                 >
+                    <Bell className="w-5 h-5" />
+                    {notifications.some((n: any) => n.unread) && (
+                      <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-caramel rounded-full border border-white" />
+                    )}
+                 </button>
+                 
+                 <AnimatePresence>
+                   {showNotifications && (
+                     <motion.div 
+                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                       animate={{ opacity: 1, y: 0, scale: 1 }}
+                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                       className="absolute top-full right-0 mt-4 w-80 bg-white rounded-[2rem] border border-sand shadow-2xl overflow-hidden z-50 p-2"
+                     >
+                        <div className="p-4 border-b border-sand/50">
+                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-ink">Recent Alerts</p>
+                        </div>
+                        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                           {notifications.length === 0 ? (
+                             <div className="p-10 text-center">
+                                <p className="text-xs font-medium text-muted">Quiet for now...</p>
+                             </div>
+                           ) : (
+                             notifications.map((notif: any) => (
+                               <div key={notif.id} className="p-4 hover:bg-warm rounded-2xl transition-colors cursor-pointer group">
+                                  <div className="flex justify-between items-start mb-1">
+                                     <p className="text-[11px] font-black uppercase tracking-widest text-caramel">{notif.title}</p>
+                                     {notif.unread && <div className="h-1.5 w-1.5 rounded-full bg-caramel" />}
+                                  </div>
+                                  <p className="text-xs font-medium text-ink leading-relaxed mb-1">{notif.message}</p>
+                                  <p className="text-[9px] font-bold text-muted/40">{new Date(notif.time).toLocaleString()}</p>
+                               </div>
+                             ))
+                           )}
+                        </div>
+                        <button className="w-full py-4 text-[9px] font-black uppercase tracking-widest text-muted hover:text-ink transition">Clear History</button>
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
               </div>
            </div>
         </header>

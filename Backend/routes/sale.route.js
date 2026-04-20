@@ -90,23 +90,24 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
         let message = "";
         let approvalStage = "";
 
+        // Check if we can perform legal approval (even if technically in submission stage)
+        const legal = provider.legalDocuments || {};
+        const hasRequiredLegalInfo =
+            typeof legal.clinicName === "string" && legal.clinicName.trim() &&
+            typeof legal.clinicLicenseNumber === "string" && legal.clinicLicenseNumber.trim() &&
+            (
+                (typeof legal.clinicLicenseUrl === "string" && legal.clinicLicenseUrl.trim()) ||
+                (typeof legal.businessLicenseUrl === "string" && legal.businessLicenseUrl.trim())
+            );
+
         if (!provider.isVerified) {
             provider.isVerified = true;
             provider.providerOnboardingStatus = "pending_legal_submission";
             message = "Initial account approval completed. Provider can login and submit legal documents.";
             approvalStage = "initial_account";
-        } else if (currentStatus === "pending_legal_approval") {
+        } else if (currentStatus === "pending_legal_approval" || (currentStatus === "pending_legal_submission" && hasRequiredLegalInfo)) {
             const hasPhone = typeof provider.phone === "string" && provider.phone.trim();
             const hasAddress = typeof provider.address === "string" && provider.address.trim();
-            const legal = provider.legalDocuments || {};
-            const hasRequiredLegalInfo =
-                typeof legal.clinicName === "string" &&
-                legal.clinicName.trim() &&
-                typeof legal.clinicLicenseNumber === "string" &&
-                legal.clinicLicenseNumber.trim() &&
-                typeof legal.clinicLicenseUrl === "string" &&
-                legal.clinicLicenseUrl.trim() &&
-                legal.submittedAt;
 
             if (!hasPhone || !hasAddress) {
                 return res.status(400).json({
@@ -116,7 +117,7 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
 
             if (!hasRequiredLegalInfo) {
                 return res.status(400).json({
-                    message: "Provider legal documents are incomplete. Cannot approve yet.",
+                    message: "Provider legal documents are incomplete. Make sure Clinic Name, License No, and at least one License file are present.",
                 });
             }
 
@@ -125,6 +126,8 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
                 provider.legalDocuments = {};
             }
             provider.legalDocuments.reviewedAt = new Date();
+            provider.legalDocuments.submittedAt = provider.legalDocuments.submittedAt || new Date(); 
+            
             if (typeof req.body?.reviewNote === "string") {
                 provider.legalDocuments.reviewNote = req.body.reviewNote.trim();
             }

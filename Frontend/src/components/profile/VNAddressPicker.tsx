@@ -47,40 +47,68 @@ export const VNAddressPicker: React.FC<VNAddressPickerProps> = ({ initialValue, 
   useEffect(() => {
     const sync = async () => {
       if (!initialValue || provinces.length === 0) return;
-      const parts = initialValue.split(', ').map(p => p.trim());
       
-      let st = '', wN = '', dN = '', pN = '';
-      if (parts.length >= 4) {
-        [st, wN, dN, pN] = [parts[0], parts[parts.length-3], parts[parts.length-2], parts[parts.length-1]];
-      } else if (parts.length === 3) {
-        [wN, dN, pN] = parts;
-      } else if (parts.length === 2) {
-        [dN, pN] = parts;
-      } else {
-        st = initialValue;
-      }
+      const parts = initialValue.split(', ').map(p => p.trim());
 
-      if (parts.length >= 4 || street === '') setStreet(st);
 
-      const foundP = provinces.find(p => pN.includes(p.value) || p.value.includes(pN));
-      if (foundP && (!selectedP || foundP.code !== selectedP.code)) {
-        setSelectedP(foundP);
-        try {
-          const dRes = await axios.get(`${VN_BASE_URL}/p/${foundP.code}?depth=2`);
-          const dList = dRes.data.districts.map((d: any) => ({ value: d.name, label: d.name, code: d.code }));
-          setDistricts(dList);
-          
-          const foundD = dList.find((d: any) => dN.includes(d.value) || d.value.includes(dN));
-          if (foundD) {
-            setSelectedD(foundD);
-            const wRes = await axios.get(`${VN_BASE_URL}/d/${foundD.code}?depth=2`);
-            const wList = wRes.data.wards.map((w: any) => ({ value: w.name, label: w.name, code: w.code }));
-            setWards(wList);
-            const foundW = wList.find((w: any) => wN.includes(w.value) || w.value.includes(wN));
-            if (foundW) setSelectedW(foundW);
-          }
-        } catch (e) { console.error(e); }
-      }
+      // Smart Parsing: Detect components based on typical suffixes or position
+      // Vietnamese addresses are usually: [Street], [Ward], [District], [Province]
+      // Or: [Province], [District], [Ward], [Street] (less common but possible)
+      
+      const findGeoPart = async (pArr: string[]) => {
+         let p = '', d = '', w = '', sArr = [...pArr];
+
+         // 1. Find Province (usually at the end or start)
+         const pIdx = sArr.findIndex(item => 
+            provinces.some(prov => item.includes(prov.value) || prov.value.includes(item))
+         );
+         if (pIdx !== -1) {
+            p = sArr[pIdx];
+            sArr.splice(pIdx, 1);
+         }
+
+         // 2. We need the province code to find districts
+         const foundProv = provinces.find(prov => p && (p.includes(prov.value) || prov.value.includes(p)));
+         if (foundProv) {
+            setSelectedP(foundProv);
+            try {
+               const dRes = await axios.get(`${VN_BASE_URL}/p/${foundProv.code}?depth=2`);
+               const dList = dRes.data.districts.map((item: any) => ({ value: item.name, label: item.name, code: item.code }));
+               setDistricts(dList);
+
+               // Find District
+               const dIdx = sArr.findIndex(item => 
+                  dList.some((dist: any) => item.includes(dist.value) || dist.value.includes(item))
+               );
+               if (dIdx !== -1) {
+                  d = sArr[dIdx];
+                  sArr.splice(dIdx, 1);
+                  const foundDist = dList.find((dist: any) => d.includes(dist.value) || dist.value.includes(d));
+                  if (foundDist) {
+                     setSelectedD(foundDist);
+                     const wRes = await axios.get(`${VN_BASE_URL}/d/${foundDist.code}?depth=2`);
+                     const wList = wRes.data.wards.map((item: any) => ({ value: item.name, label: item.name, code: item.code }));
+                     setWards(wList);
+
+                     // Find Ward
+                     const wIdx = sArr.findIndex(item => 
+                        wList.some((ward: any) => item.includes(ward.value) || ward.value.includes(item))
+                     );
+                     if (wIdx !== -1) {
+                        w = sArr[wIdx];
+                        sArr.splice(wIdx, 1);
+                        const foundWard = wList.find((ward: any) => w.includes(ward.value) || ward.value.includes(w));
+                        if (foundWard) setSelectedW(foundWard);
+                     }
+                  }
+               }
+            } catch (e) { console.error(e); }
+         }
+         return sArr.join(', ');
+      };
+
+      const remainingStreet = await findGeoPart(parts);
+      setStreet(remainingStreet);
     };
     sync();
   }, [initialValue, provinces]);

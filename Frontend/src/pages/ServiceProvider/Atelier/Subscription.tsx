@@ -6,9 +6,7 @@ import {
   CheckCircle2, 
   ArrowRight, 
   CreditCard, 
-  Smartphone,
   QrCode,
-  ShieldCheck,
   ChevronRight,
   TrendingUp,
   X,
@@ -16,12 +14,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { authService, UserProfile } from "@/services/auth.service";
+import { formatVnd } from "@/utils/currency";
 import apiClient from "@/utils/api.service";
-import toast from "react-hot-toast";
-
-const formatVND = (amount: number) => {
-  return amount.toLocaleString('vi-VN') + 'đ';
-};
+import { toast } from "react-hot-toast";
 
 const PLANS = [
   {
@@ -39,7 +34,7 @@ const PLANS = [
     id: 'silver',
     name: 'Artisan',
     type: 'Silver',
-    price: 725000,
+    price: 750000,
     credits: '25 Articles/mo',
     features: ['Silver Profile Badge', 'Priority Service Listing', 'Basic Analytics', 'Advanced Scheduling', 'Zalo Reminders'],
     color: 'bg-slate-50 text-slate-800',
@@ -51,7 +46,7 @@ const PLANS = [
     id: 'gold',
     name: 'Maestro',
     type: 'Gold',
-    price: 2475000,
+    price: 2500000,
     credits: 'Unlimited',
     features: ['Gold Profile Badge', 'Top-of-Search Placement', 'Full Strategic Insights', 'Custom Domain Support', '24/7 Priority Support', 'Dedicated Account Manager'],
     color: 'bg-amber-50 text-amber-800',
@@ -183,8 +178,8 @@ export const Subscription = () => {
 
                 <div className="mb-10">
                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-serif font-bold italic text-ink">{formatVND(plan.price)}</span>
-                      <span className="text-[11px] font-bold text-muted uppercase tracking-widest">/ Tháng</span>
+                      <span className="text-4xl font-serif font-bold italic text-ink">{formatVnd(plan.price)}</span>
+                      {plan.price > 0 && <span className="text-[11px] font-bold text-muted uppercase tracking-widest">/ Month</span>}
                    </div>
                    <p className="text-[11px] font-bold text-caramel mt-2">{plan.credits}</p>
                 </div>
@@ -213,35 +208,7 @@ export const Subscription = () => {
          })}
       </div>
 
-      {/* Payment Information Section */}
-      <section className="bg-white rounded-[3rem] border border-sand p-10 flex flex-col md:flex-row items-center gap-12">
-         <div className="flex-1">
-            <h4 className="text-xl font-serif font-bold italic text-ink mb-6 flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-caramel" /> Secure Settlements
-            </h4>
-            <p className="text-[13px] font-medium text-muted leading-relaxed max-w-lg mb-8">
-              Subscriptions are processed through PayOS, supporting all major Vietnamese banks and QR payment methods. Your account is upgraded instantly upon successful transaction.
-            </p>
-            <div className="flex flex-wrap gap-8 opacity-40 grayscale group-hover:grayscale-0 transition-all">
-               <img src="https://payos.vn/style/images/logo.png" className="h-6 object-contain" alt="PayOS" />
-               <div className="h-6 w-px bg-sand" />
-               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink">
-                  <CreditCard className="w-4 h-4" /> Bank Transfer
-               </div>
-               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink">
-                  <Smartphone className="w-4 h-4" /> E-Wallet
-               </div>
-            </div>
-         </div>
-         <div className="bg-ink p-1 rounded-[2.5rem] shadow-2xl">
-            <div className="bg-white p-8 rounded-[2rem] flex flex-col items-center gap-4">
-               <div className="bg-[#FBF9F2] p-4 rounded-2xl ring-1 ring-sand/30">
-                  <QrCode className="w-32 h-32 text-ink" />
-               </div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-muted text-center tracking-[0.3em]">Scan to Verify Package</p>
-            </div>
-         </div>
-      </section>
+
 
       {/* Checkout Modal (Simulated PayOS integration) */}
       <AnimatePresence>
@@ -250,34 +217,39 @@ export const Subscription = () => {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowCheckout(null)}
-              className="absolute inset-0 bg-ink/70 backdrop-blur-xl"
+              className="absolute inset-0 bg-ink/70 backdrop-blur-md"
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 60 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 60 }}
-              className="relative w-full max-w-md bg-white rounded-[3.5rem] p-12 shadow-2xl"
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[4rem] p-12 shadow-2xl overflow-hidden border border-sand/50"
             >
-               <button onClick={() => setShowCheckout(null)} className="absolute top-8 right-8 p-2 hover:bg-warm rounded-full transition"><X className="w-5 h-5" /></button>
+               <button onClick={() => setShowCheckout(null)} className="absolute top-10 right-10 p-3 hover:bg-rose-50 text-muted hover:text-rose-600 rounded-full transition-all group/close">
+                  <X className="w-5 h-5 group-hover/close:rotate-90 transition-transform" />
+               </button>
                
-               <div className="text-center mb-10">
-                  <h2 className="text-3xl font-serif font-bold italic text-ink mb-2">Checkout</h2>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted">Securing your {selectedPlan?.name} Upgrade</p>
+               <div className="flex flex-col items-center text-center mb-12">
+                  <div className="h-16 w-16 rounded-[1.5rem] bg-caramel/10 flex items-center justify-center text-caramel mb-6">
+                     <CreditCard className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-3xl font-serif font-bold italic text-ink mb-2">Authorize Registry Upgrade</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted/60 italic">Securing {selectedPlan?.name} protocol for your atelier</p>
                </div>
 
-               <div className="bg-warm/30 rounded-3xl p-8 mb-10 space-y-6">
-                  <div className="flex justify-between items-center text-sm font-medium">
-                     <span className="text-muted">{selectedPlan?.name} Subscription</span>
-                     <span className="text-ink font-bold">{formatVND(selectedPlan?.price || 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm font-medium">
-                     <span className="text-muted">Phí xử lý (PayOS)</span>
-                     <span className="text-emerald-600 font-bold">Miễn phí</span>
-                  </div>
-                  <div className="h-px bg-sand/50" />
+               <div className="bg-warm/30 rounded-[2.5rem] p-10 mb-10 space-y-6 border border-sand/20 shadow-inner">
                   <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-black uppercase tracking-widest text-muted">Tổng cộng</span>
-                     <span className="text-2xl font-serif font-bold italic text-ink">{formatVND(selectedPlan?.price || 0)}</span>
+                     <p className="text-[11px] font-black uppercase tracking-widest text-muted">{selectedPlan?.name} Tier Licensing</p>
+                     <p className="text-lg font-bold text-ink italic">{formatVnd(selectedPlan?.price || 0)}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <p className="text-[11px] font-black uppercase tracking-widest text-muted">Processing Protocol</p>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Encrypted / Free</p>
+                  </div>
+                  <div className="h-px bg-sand/30" />
+                  <div className="flex justify-between items-center">
+                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-ink">Total Valuation</span>
+                     <span className="text-3xl font-serif font-bold italic text-caramel">{formatVnd(selectedPlan?.price || 0)}</span>
                   </div>
                </div>
 

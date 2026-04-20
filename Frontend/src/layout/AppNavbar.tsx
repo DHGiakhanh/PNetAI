@@ -95,10 +95,13 @@ export function AppNavbar() {
       setCartCount(items.reduce((sum, item) => sum + item.quantity, 0));
       setCartTotal(cart?.totalAmount ?? 0);
 
-      const preview = items.map((item) => {
+      const preview = items.map((item: any, index: number) => {
         const product = item.product as CartProduct;
+        // Strong ID resolution: Item subdocument ID > Product ID > Product String > Index Fallback
+        const itemId = item._id || (typeof item.product === 'string' ? item.product : (product?._id)) || `key-${index}`;
+        
         return {
-          id: product?._id ?? "",
+          id: itemId,
           name: product?.name ?? "Unknown Treasure",
           qty: item.quantity,
           stock: product?.stock ?? 0,

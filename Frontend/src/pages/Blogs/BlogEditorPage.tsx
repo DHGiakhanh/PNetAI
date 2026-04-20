@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
-  Plus, 
   ArrowLeft, 
   Image as ImageIcon, 
   CheckCircle2, 
@@ -14,9 +13,11 @@ import apiClient from "@/utils/api.service";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+// @ts-ignore
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useMemo, useRef, useCallback } from "react";
+import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
 const CATEGORIES = [
   "Nutrition & Health",
@@ -43,7 +44,8 @@ export default function BlogEditorPage() {
     image: "",
     status: "draft" as "draft" | "pending"
   });
-
+  
+  const [cropper, setCropper] = useState({ open: false, image: "" });
   const [previewOpen, setPreviewOpen] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
   const quillRef = useRef<ReactQuill>(null);
@@ -142,7 +144,8 @@ export default function BlogEditorPage() {
     try {
       setCropper(p => ({ ...p, open: false }));
       setImgUploading(true);
-      const { url } = await authService.generalUpload(file);
+      const fileForUpload = new File([blob], "crop.jpg", { type: "image/jpeg" });
+      const { url } = await authService.generalUpload(fileForUpload);
       setFormData(prev => ({ ...prev, image: url }));
       toast.success("Portrait captured successfully.");
     } catch {
@@ -307,11 +310,12 @@ export default function BlogEditorPage() {
 
         {/* Content Editor */}
         <div className="relative mb-20 bg-white rounded-3xl overflow-hidden shadow-sm border border-sand/30">
+           {/* @ts-ignore */}
            <ReactQuill 
               ref={quillRef}
               theme="snow"
               value={formData.content}
-              onChange={(val) => setFormData(p => ({ ...p, content: val }))}
+              onChange={(val: string) => setFormData(p => ({ ...p, content: val }))}
               modules={modules}
               formats={formats}
               placeholder="Begin your storytelling here..."

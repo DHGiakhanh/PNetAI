@@ -33,13 +33,30 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type BookingStep = 1 | 2 | 3 | 4;
 
-const morningTimes = ["08:00 - 08:05", "08:05 - 08:10", "08:10 - 08:15", "08:15 - 08:20", "08:20 - 08:25"];
-const afternoonTimes = [
-  "13:00 - 13:05", "13:05 - 13:10", "13:10 - 13:15", "13:15 - 13:20", "13:20 - 13:25",
-  "13:25 - 13:30", "13:30 - 13:35", "13:35 - 13:40", "13:40 - 13:45", "13:45 - 13:50",
-  "13:50 - 13:55", "13:55 - 14:00", "14:00 - 14:05", "14:05 - 14:10", "14:10 - 14:15",
-  "14:15 - 14:20", "14:20 - 14:25", "14:25 - 14:30", "14:30 - 14:35", "14:35 - 14:40"
-];
+const generateTimeSlots = (startStr: string, endStr: string, interval: number = 30) => {
+  const slots: string[] = [];
+  try {
+    const [startH, startM] = startStr.split(':').map(Number);
+    const [endH, endM] = endStr.split(':').map(Number);
+    
+    let current = new Date();
+    current.setHours(startH, startM, 0, 0);
+    
+    const end = new Date();
+    end.setHours(endH, endM, 0, 0);
+
+    while (current < end) {
+      const startTime = current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      current.setMinutes(current.getMinutes() + interval);
+      if (current > end) break;
+      const endTime = current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      slots.push(`${startTime} - ${endTime}`);
+    }
+  } catch (e) {
+    console.error("Slot generation error", e);
+  }
+  return slots;
+};
 
 export default function ServiceBookingPage() {
   const { serviceId } = useParams();
@@ -59,6 +76,7 @@ export default function ServiceBookingPage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const [providerServices, setProviderServices] = useState<Service[]>([]);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
 
   useEffect(() => {
@@ -79,6 +97,12 @@ export default function ServiceBookingPage() {
       const data = await serviceService.getServiceById(id);
       setService(data);
       if (data.features?.length) setSelectedSpecialty(data.features[0]);
+      
+      const pId = typeof data.providerId === 'object' ? data.providerId?._id : data.providerId;
+      if (pId) {
+        const pResponse = await serviceService.getServices({ providerId: pId });
+        setProviderServices(pResponse.services);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -222,7 +246,7 @@ export default function ServiceBookingPage() {
               </button>
               <div className="flex flex-col">
                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-caramel leading-none mb-2">Protocol Discovery</p>
-                 <h2 className="text-xl font-serif font-bold italic tracking-tight">{service.title}</h2>
+                 <h2 className="text-xl font-serif font-bold italic tracking-tight">{service.providerName || service.title}</h2>
               </div>
            </div>
         </header>
@@ -249,18 +273,26 @@ export default function ServiceBookingPage() {
               <div className="p-5 min-h-[320px]">
                  {step === 1 && (
                     <div className="space-y-6">
-                       <h3 className="text-xl font-serif font-bold italic text-ink">Identify specialty area...</h3>
+                       <h3 className="text-xl font-serif font-bold italic text-ink">Identify specialized protocol...</h3>
                        <div className="grid sm:grid-cols-2 gap-3">
-                          {service.features.map(f => (
-                            <button key={f} onClick={() => { setSelectedSpecialty(f); setStep(2); }} className={`group p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden ${selectedSpecialty === f ? "border-caramel bg-warm/50" : "border-sand/30 bg-white hover:border-caramel/20"}`}>
+                          {providerServices.map(s => (
+                            <button 
+                              key={s._id} 
+                              onClick={() => { 
+                                setService(s);
+                                setSelectedSpecialty(s.title); 
+                                setStep(2); 
+                              }} 
+                              className={`group p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden ${selectedSpecialty === s.title ? "border-caramel bg-warm/50" : "border-sand/30 bg-white hover:border-caramel/20"}`}
+                            >
                                <div className="relative z-10">
                                   <div className="flex justify-between items-center mb-1">
-                                     <p className="text-base font-bold text-ink">{f}</p>
-                                     <ChevronRight className={`w-4 h-4 transition-all ${selectedSpecialty === f ? "text-caramel translate-x-0" : "text-sand/30 -translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
+                                     <p className="text-base font-bold text-ink">{s.title}</p>
+                                     <ChevronRight className={`w-4 h-4 transition-all ${selectedSpecialty === s.title ? "text-caramel translate-x-0" : "text-sand/30 -translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
                                   </div>
-                                  <p className="text-[11px] font-black uppercase tracking-widest text-caramel">{formatVnd(service.basePrice)}</p>
+                                  <p className="text-[11px] font-black uppercase tracking-widest text-caramel">{formatVnd(s.basePrice)}</p>
                                </div>
-                               {selectedSpecialty === f && <div className="absolute top-0 right-0 w-24 h-24 bg-caramel/5 rounded-full blur-2xl opacity-50" />}
+                               {selectedSpecialty === s.title && <div className="absolute top-0 right-0 w-24 h-24 bg-caramel/5 rounded-full blur-2xl opacity-50" />}
                             </button>
                           ))}
                        </div>
@@ -303,27 +335,48 @@ export default function ServiceBookingPage() {
                  {step === 3 && (
                     <div className="space-y-6">
                        <h3 className="text-xl font-serif font-bold italic text-ink">Authorized session time...</h3>
-                       <div className="space-y-4">
-                          <div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/20 mb-2 flex items-center gap-2 italic">Morning sessions</p>
-                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                {morningTimes.map(t => (
-                                   <button key={t} onClick={() => setSelectedTime(t)} className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-md scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
-                                      {t}
-                                   </button>
-                                ))}
-                             </div>
-                          </div>
-                          <div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/20 mb-2 flex items-center gap-2 italic">Afternoon sessions</p>
-                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                {afternoonTimes.map(t => (
-                                   <button key={t} onClick={() => setSelectedTime(t)} className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-md scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
-                                      {t}
-                                   </button>
-                                ))}
-                             </div>
-                          </div>
+                       <div className="space-y-8">
+                          {(() => {
+                             const provider = typeof service.providerId === 'object' ? service.providerId : null;
+                             const hours = provider?.operatingHours || { start: "08:00", end: "18:00" };
+                             const allSlots = generateTimeSlots(hours.start, hours.end, 30);
+                             
+                             const morning = allSlots.filter(s => parseInt(s.split(':')[0]) < 12);
+                             const afternoon = allSlots.filter(s => parseInt(s.split(':')[0]) >= 12);
+
+                             return (
+                               <>
+                                 {morning.length > 0 && (
+                                   <div>
+                                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/20 mb-4 flex items-center gap-2 italic">
+                                         <span className="w-8 h-px bg-sand/30" /> Morning sessions
+                                      </p>
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                         {morning.map(t => (
+                                            <button key={t} onClick={() => setSelectedTime(t)} className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-xl scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
+                                               {t}
+                                            </button>
+                                         ))}
+                                      </div>
+                                   </div>
+                                 )}
+                                 {afternoon.length > 0 && (
+                                   <div>
+                                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/20 mb-4 flex items-center gap-2 italic">
+                                         <span className="w-8 h-px bg-sand/30" /> Afternoon sessions
+                                      </p>
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                         {afternoon.map(t => (
+                                            <button key={t} onClick={() => setSelectedTime(t)} className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-xl scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
+                                               {t}
+                                            </button>
+                                         ))}
+                                      </div>
+                                   </div>
+                                 )}
+                               </>
+                             );
+                          })()}
                        </div>
                     </div>
                  )}

@@ -37,11 +37,14 @@ const userSchema = new Schema({
         clinicLicenseNumber: { type: String },
         clinicLicenseUrl: { type: String },
         businessLicenseUrl: { type: String },
+        doctorLicenseUrl: { type: String },
         submissionNote: { type: String },
         submittedAt: { type: Date },
         reviewedAt: { type: Date },
         reviewNote: { type: String },
     },
+    clinicImages: [{ type: String }],
+    doctors: [{ type: String }],
     subscriptionPlan: {
         type: String,
         enum: ["free", "silver", "gold"],
@@ -49,6 +52,11 @@ const userSchema = new Schema({
     },
     subscriptionExpiresAt: { type: Date },
     articleCredits: { type: Number, default: 5 },
+    operatingHours: {
+        start: { type: String, default: "08:00" },
+        end: { type: String, default: "18:00" },
+    },
+    bookingCapacity: { type: Number, default: 4 },
     createdAt: { type: Date, default: Date.now },
 });
 

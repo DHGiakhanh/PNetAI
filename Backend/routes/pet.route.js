@@ -4,13 +4,34 @@ const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 const { cloudinary } = require("../config/cloudinary");
 
+// Add a generic Multer error handler for better diagnostics
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ message: "File is too heavy. Maximum size allowed is 5MB." });
+        }
+        return res.status(400).json({ message: `Upload protocol error: ${err.message}` });
+    }
+    next(err);
+};
+
 const router = express.Router();
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-router.post("/upload-avatar", verifyToken, upload.single("image"), async (req, res) => {
+router.post("/upload-avatar", verifyToken, (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: "Portrait file too heavy. 5MB limit." });
+            return res.status(400).json({ message: err.message });
+        } else if (err) {
+            return res.status(500).json({ message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: "Image file is required" });

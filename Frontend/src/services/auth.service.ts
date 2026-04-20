@@ -50,6 +50,7 @@ export interface UserProfile {
   description?: string;
   clinicImages?: string[];
   operatingHours?: { start: string; end: string };
+  bookingCapacity?: number;
   doctors?: string[];
   createdAt: string;
 }
@@ -171,6 +172,13 @@ export const authService = {
     formData.append("fileType", fileType);
 
     const response = await apiClient.post("/user/provider/upload-legal-file", formData);
+    return response.data;
+  },
+
+  uploadImage: async (file: File): Promise<{ url: string; publicId?: string }> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await apiClient.post('/user/upload', formData);
     return response.data;
   },
 };

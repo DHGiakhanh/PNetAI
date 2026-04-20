@@ -20,7 +20,8 @@ import {
   ExternalLink,
   Phone,
   Mail,
-  DollarSign
+  DollarSign,
+  Trash2
 } from "lucide-react";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
@@ -102,6 +103,22 @@ export default function ProvidersManagementPage() {
       }
     } catch (err) {
       toast.error("Moderation failure.");
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you absolutely certain you wish to terminate the partnership with "${name}"? This action will permanently purge all associated services and products from the ecosystem.`)) return;
+    
+    try {
+      await apiClient.delete(`/admin/users/${id}`);
+      setData(prev => prev.filter(u => u._id !== id));
+      toast.success(`${name} and all associated assets have been purged.`);
+      if (selectedProvider?._id === id) {
+        setIsDossierOpen(false);
+        setSelectedProvider(null);
+      }
+    } catch (err) {
+      toast.error("Operation failed. Partner integrity maintained.");
     }
   };
 
@@ -246,10 +263,18 @@ export default function ProvidersManagementPage() {
                             <BarChart3 className="w-4 h-4" />
                          </button>
                          <button 
-                           onClick={() => toggleLock(provider._id, provider.isVerified)}
-                           className={`p-2.5 rounded-xl border transition-all shadow-sm ${provider.isVerified ? 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100' : 'bg-emerald-50 border-emerald-100 text-emerald-500 hover:bg-emerald-100'}`}
+                            onClick={(e) => { e.stopPropagation(); toggleLock(provider._id, provider.isVerified); }}
+                            className={`p-2.5 rounded-xl border transition-all shadow-sm ${provider.isVerified ? 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100' : 'bg-emerald-50 border-emerald-100 text-emerald-500 hover:bg-emerald-100'}`}
+                            title={provider.isVerified ? "Deactivate" : "Activate"}
                          >
                             {provider.isVerified ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                         </button>
+                         <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(provider._id, provider.name); }}
+                            className="p-2.5 rounded-xl bg-white border border-sand text-muted hover:text-rose-600 transition-all shadow-sm" 
+                            title="Purge Partner"
+                         >
+                            <Trash2 className="w-4 h-4" />
                          </button>
                       </div>
                     </td>
@@ -443,15 +468,23 @@ export default function ProvidersManagementPage() {
                          </div>
                       </div>
 
-                      <div className="p-6 bg-ink rounded-3xl text-white">
-                         <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-4">Moderation Zone</p>
-                         <button 
-                           onClick={() => toggleLock(selectedProvider._id, selectedProvider.isVerified)}
-                           className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${selectedProvider.isVerified ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
-                         >
-                            {selectedProvider.isVerified ? "Deactivate Account" : "Re-activate Partner"}
-                         </button>
-                      </div>
+                       <div className="p-6 bg-ink rounded-3xl text-white space-y-4">
+                          <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Moderation Zone</p>
+                          <div className="flex gap-4">
+                             <button 
+                               onClick={() => toggleLock(selectedProvider._id, selectedProvider.isVerified)}
+                               className={`flex-1 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${selectedProvider.isVerified ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                             >
+                                {selectedProvider.isVerified ? "Suspend Access" : "Restore Access"}
+                             </button>
+                             <button 
+                               onClick={() => handleDelete(selectedProvider._id, selectedProvider.name)}
+                               className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                             >
+                                <Trash2 className="w-3.5 h-3.5" /> Purge
+                             </button>
+                          </div>
+                       </div>
                    </div>
                 </div>
              </motion.div>

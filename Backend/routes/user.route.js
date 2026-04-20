@@ -19,6 +19,7 @@ const allowedDocumentMimeTypes = new Set([
     "image/jpg",
     "image/png",
     "image/webp",
+    "application/pdf"
 ]);
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -29,6 +30,7 @@ const fileExtensionByMimeType = {
     "image/jpg": "jpg",
     "image/png": "png",
     "image/webp": "webp",
+    "application/pdf": "pdf"
 };
 
 // Get User Profile
@@ -54,7 +56,17 @@ router.get('/profile', verifyToken, async (req, res) => {
 });
 
 // Upload legal document file for provider onboarding
-router.post('/provider/upload-legal-file', verifyToken, upload.single("file"), async (req, res) => {
+router.post('/provider/upload-legal-file', verifyToken, (req, res, next) => {
+    upload.single("file")(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: "Document too heavy. 5MB limit." });
+            return res.status(400).json({ message: err.message });
+        } else if (err) {
+            return res.status(500).json({ message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         const user = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
         if (!user) {
@@ -93,7 +105,7 @@ router.post('/provider/upload-legal-file', verifyToken, upload.single("file"), a
             const stream = cloudinary.uploader.upload_stream(
                 {
                     folder: `pnetai/legal-documents/${req.userId}`,
-                    resource_type: "image",
+                    resource_type: "auto",
                     public_id: `${fileType}_${Date.now()}.${extension}`,
                 },
                 (error, result) => {
@@ -190,7 +202,12 @@ router.post('/provider/legal-documents', verifyToken, async (req, res) => {
 // Update User Profile
 router.put('/profile', verifyToken, async (req, res) => {
     try {
-        const { name, phone, address, avatarUrl } = req.body;
+        const { 
+            name, phone, address, avatarUrl, 
+            description, clinicImages, doctors, 
+            operatingHours, bookingCapacity,
+            legalDocuments 
+        } = req.body;
         
         const user = await db.User.findById(req.userId);
         if (!user) {
@@ -201,36 +218,69 @@ router.put('/profile', verifyToken, async (req, res) => {
         if (phone) user.phone = phone;
         if (address) user.address = address;
         if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+        if (description !== undefined) user.description = description;
+        
+        // Provider specific assets
+        if (clinicImages) user.clinicImages = clinicImages;
+        if (doctors) user.doctors = doctors;
+        
+        // Provider specific configs
+        if (operatingHours) user.operatingHours = operatingHours;
+        if (bookingCapacity !== undefined) user.bookingCapacity = bookingCapacity;
+
+        // Legal information (if provided)
+        if (legalDocuments) {
+            user.legalDocuments = {
+                ...user.legalDocuments,
+                ...legalDocuments
+            };
+
+            // Auto-advance status if minimum required docs are present
+            const legal = user.legalDocuments;
+            if (user.providerOnboardingStatus === 'pending_legal_submission' && 
+                legal.clinicName && 
+                legal.clinicLicenseNumber && 
+                (legal.clinicLicenseUrl || legal.businessLicenseUrl || legal.doctorLicenseUrl)) {
+                
+                user.providerOnboardingStatus = 'pending_legal_approval';
+                if (!user.legalDocuments.submittedAt) {
+                    user.legalDocuments.submittedAt = new Date();
+                }
+            }
+        }
 
         await user.save();
 
         res.status(200).json({ 
             message: "Profile updated successfully",
-            user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                phone: user.phone,
-                address: user.address,
-                subscriptionPlan: user.subscriptionPlan,
-                subscriptionExpiresAt: user.subscriptionExpiresAt,
-                articleCredits: user.articleCredits
-            }
+            user
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
 
-// General-purpose image upload (does NOT update user profile)
-router.post('/upload', verifyToken, upload.single("image"), async (req, res) => {
+// --- Content & Media Handling ---
+
+// Unified Image Upload (Returns URL, does NOT update profile automatically)
+router.post('/upload', verifyToken, (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: "Image too heavy. 5MB limit." });
+            return res.status(400).json({ message: err.message });
+        } else if (err) {
+            return res.status(500).json({ message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ message: "Image file is required" });
+            return res.status(400).json({ message: "No image file provided or invalid field name (expected 'image')" });
         }
 
         if (!req.file.mimetype?.startsWith("image/")) {
-            return res.status(400).json({ message: "Only image files are allowed" });
+            return res.status(400).json({ message: "Invalid file type. Only standard image formats (JPG, PNG, WEBP) are supported." });
         }
 
         const uploadResult = await new Promise((resolve, reject) => {
@@ -251,24 +301,34 @@ router.post('/upload', verifyToken, upload.single("image"), async (req, res) => 
         });
 
         return res.status(200).json({
-            message: "Image uploaded successfully",
+            message: "Image secured successfully",
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: "Media storage protocol failure: " + error.message });
     }
 });
 
-// Upload User Avatar
-router.post('/upload-avatar', verifyToken, upload.single("image"), async (req, res) => {
+// Avatar Upload (Updates user profile automatically)
+router.post('/upload-avatar', verifyToken, (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: "Identity portrait too heavy. 5MB limit." });
+            return res.status(400).json({ message: err.message });
+        } else if (err) {
+            return res.status(500).json({ message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ message: "Image file is required" });
+            return res.status(400).json({ message: "No portrait file provided" });
         }
 
         if (!req.file.mimetype?.startsWith("image/")) {
-            return res.status(400).json({ message: "Only image files are allowed" });
+            return res.status(400).json({ message: "Portraits must be in image format (JPG, PNG, WEBP)." });
         }
 
         const uploadResult = await new Promise((resolve, reject) => {
@@ -288,7 +348,6 @@ router.post('/upload-avatar', verifyToken, upload.single("image"), async (req, r
             stream.end(req.file.buffer);
         });
 
-        // Optionally update the user profile immediately
         const user = await db.User.findById(req.userId);
         if (user) {
             user.avatarUrl = uploadResult.secure_url;
@@ -296,50 +355,12 @@ router.post('/upload-avatar', verifyToken, upload.single("image"), async (req, r
         }
 
         return res.status(200).json({
-            message: "Avatar uploaded successfully",
+            message: "Identity portrait updated successfully",
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
-    }
-});
-
-// Generic Image Upload (returns URL without updating profile)
-router.post('/upload', verifyToken, upload.single("image"), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: "Image file is required" });
-        }
-
-        if (!req.file.mimetype?.startsWith("image/")) {
-            return res.status(400).json({ message: "Only image files are allowed" });
-        }
-
-        const uploadResult = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-                {
-                    folder: "pnetai/uploads",
-                    resource_type: "image",
-                },
-                (error, result) => {
-                    if (error) {
-                        reject(error);
-                        return;
-                    }
-                    resolve(result);
-                }
-            );
-            stream.end(req.file.buffer);
-        });
-
-        return res.status(200).json({
-            message: "Image uploaded successfully",
-            url: uploadResult.secure_url,
-            publicId: uploadResult.public_id,
-        });
-    } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: "Portrait storage protocol failure: " + error.message });
     }
 });
 

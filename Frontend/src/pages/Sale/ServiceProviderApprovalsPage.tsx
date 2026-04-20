@@ -24,6 +24,7 @@ type Provider = {
     clinicLicenseNumber?: string;
     clinicLicenseUrl?: string;
     businessLicenseUrl?: string;
+    doctorLicenseUrl?: string;
   };
   createdAt: string;
 };
@@ -39,9 +40,25 @@ const isImageDocumentUrl = (url?: string) => {
 export default function ServiceProviderApprovalsPage() {
   const [managedProviders, setManagedProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [activeProviderId, setActiveProviderId] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
+  const fetchProviders = async () => {
+    try {
+      setLoading(true);
+      const managedRes = await apiClient.get("/sale/service-providers");
+      const managed = managedRes.data.providers || [];
+      setManagedProviders(managed);
+      if (!activeProviderId && managed.length > 0) {
+        setActiveProviderId(managed[0]._id);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not load service providers.");
+    } finally {
+      setLoading(false);
+    }
+  };
   const getStatusMeta = (provider: Provider) => {
     const status = provider.providerOnboardingStatus;
     if (!provider.isVerified || status === "pending_sale_approval") {
@@ -57,28 +74,34 @@ export default function ServiceProviderApprovalsPage() {
   };
 
   useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        setLoading(true);
-        const managedRes = await apiClient.get("/sale/service-providers");
-        const managed = managedRes.data.providers || [];
-        setManagedProviders(managed);
-        if (!activeProviderId && managed.length > 0) {
-          setActiveProviderId(managed[0]._id);
-        }
-      } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Could not load service providers.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProviders();
   }, []);
+
+  const approveProvider = async (providerId: string) => {
+    try {
+      setApprovingId(providerId);
+      const res = await apiClient.put(`/sale/service-providers/${providerId}/approve`);
+      const stage = res?.data?.approvalStage;
+      toast.success(stage === "legal_documents" ? "Legal documents approved." : "Initial account approved.");
+      await fetchProviders();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not approve provider.");
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const activeProvider = useMemo(
     () => managedProviders.find((provider) => provider._id === activeProviderId) || null,
     [managedProviders, activeProviderId],
   );
+
+  const hasLegalDocsInUI = useMemo(() => {
+    if (!activeProvider?.legalDocuments) return false;
+    const l = activeProvider.legalDocuments;
+    return !!(l.clinicName && l.clinicLicenseNumber && (l.clinicLicenseUrl || l.businessLicenseUrl));
+  }, [activeProvider]);
+
   const activeStatus = activeProvider ? getStatusMeta(activeProvider) : null;
   const totalPages = Math.max(1, Math.ceil(managedProviders.length / pageSize));
   const paginatedManagedProviders = useMemo(
@@ -216,7 +239,40 @@ export default function ServiceProviderApprovalsPage() {
                   </span>
                 </p>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl border border-sand bg-white/70 p-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      Practitioner License
+                    </p>
+                    {activeProvider.legalDocuments?.doctorLicenseUrl ? (
+                      <>
+                        {isImageDocumentUrl(activeProvider.legalDocuments.doctorLicenseUrl) ? (
+                          <a
+                            href={activeProvider.legalDocuments.doctorLicenseUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 block"
+                          >
+                            <img
+                              src={activeProvider.legalDocuments.doctorLicenseUrl}
+                              alt="Practitioner license"
+                              className="h-32 w-full rounded-lg object-cover"
+                            />
+                          </a>
+                        ) : null}
+                        <a
+                          href={activeProvider.legalDocuments.doctorLicenseUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                        >
+                          Open document
+                        </a>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted italic">No file</p>
+                    )}
+                  </div>
                   <div className="rounded-xl border border-sand bg-white/70 p-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                       Clinic License
@@ -285,6 +341,25 @@ export default function ServiceProviderApprovalsPage() {
                     )}
                   </div>
                 </div>
+
+                {activeProvider.providerOnboardingStatus !== "approved" && (
+                    <div className="mt-6 flex justify-end gap-3 border-t border-sand pt-6 transition-all animate-in fade-in slide-in-from-bottom-2">
+                        <button
+                            type="button"
+                            disabled={approvingId === activeProvider._id}
+                            onClick={() => approveProvider(activeProvider._id)}
+                            className="inline-flex items-center gap-2 rounded-full bg-brown px-8 py-3 text-sm font-bold text-white hover:bg-brown-dark shadow-lg shadow-brown/20 active:scale-95 transition-all disabled:opacity-60"
+                        >
+                            <UserRoundCheck className="h-4 w-4" />
+                            {approvingId === activeProvider._id 
+                                ? "Processing Approval..." 
+                                : (activeProvider.providerOnboardingStatus === "pending_legal_approval" || hasLegalDocsInUI)
+                                    ? "Approve Legal Documents"
+                                    : "Approve Initial Account"
+                            }
+                        </button>
+                    </div>
+                )}
               </div>
             </div>
           )}
