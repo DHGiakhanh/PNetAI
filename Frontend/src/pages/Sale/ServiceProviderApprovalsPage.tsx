@@ -239,77 +239,10 @@ export default function ServiceProviderApprovalsPage() {
                   </span>
                 </p>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-xl border border-sand bg-white/70 p-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                      Practitioner License
-                    </p>
-                    {activeProvider.legalDocuments?.doctorLicenseUrl ? (
-                      <>
-                        {isImageDocumentUrl(activeProvider.legalDocuments.doctorLicenseUrl) ? (
-                          <a
-                            href={activeProvider.legalDocuments.doctorLicenseUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 block"
-                          >
-                            <img
-                              src={activeProvider.legalDocuments.doctorLicenseUrl}
-                              alt="Practitioner license"
-                              className="h-32 w-full rounded-lg object-cover"
-                            />
-                          </a>
-                        ) : null}
-                        <a
-                          href={activeProvider.legalDocuments.doctorLicenseUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-                        >
-                          Open document
-                        </a>
-                      </>
-                    ) : (
-                      <p className="mt-2 text-xs text-muted italic">No file</p>
-                    )}
-                  </div>
-                  <div className="rounded-xl border border-sand bg-white/70 p-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                      Clinic License
-                    </p>
-                    {activeProvider.legalDocuments?.clinicLicenseUrl ? (
-                      <>
-                        {isImageDocumentUrl(activeProvider.legalDocuments.clinicLicenseUrl) ? (
-                          <a
-                            href={activeProvider.legalDocuments.clinicLicenseUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 block"
-                          >
-                            <img
-                              src={activeProvider.legalDocuments.clinicLicenseUrl}
-                              alt="Clinic license"
-                              className="h-40 w-full rounded-lg object-cover"
-                            />
-                          </a>
-                        ) : null}
-                        <a
-                          href={activeProvider.legalDocuments.clinicLicenseUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
-                        >
-                          Open clinic license document
-                        </a>
-                      </>
-                    ) : (
-                      <p className="mt-2 text-xs text-muted">No file</p>
-                    )}
-                  </div>
-
-                  <div className="rounded-xl border border-sand bg-white/70 p-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                      Business License
+                <div className="mt-4">
+                  <div className="rounded-xl border border-sand bg-white/70 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-muted">
+                       Business License Certification
                     </p>
                     {activeProvider.legalDocuments?.businessLicenseUrl ? (
                       <>
@@ -318,12 +251,12 @@ export default function ServiceProviderApprovalsPage() {
                             href={activeProvider.legalDocuments.businessLicenseUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-2 block"
+                            className="mt-3 block"
                           >
                             <img
                               src={activeProvider.legalDocuments.businessLicenseUrl}
                               alt="Business license"
-                              className="h-40 w-full rounded-lg object-cover"
+                              className="h-64 w-full rounded-2xl object-cover shadow-sm border border-sand"
                             />
                           </a>
                         ) : null}
@@ -331,13 +264,13 @@ export default function ServiceProviderApprovalsPage() {
                           href={activeProvider.legalDocuments.businessLicenseUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-2 inline-flex text-xs font-semibold text-brown hover:underline"
+                          className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-brown hover:text-brown/70 transition-colors"
                         >
-                          Open business license document
+                          Inspect Full Business Document
                         </a>
                       </>
                     ) : (
-                      <p className="mt-2 text-xs text-muted">No file</p>
+                      <p className="mt-4 text-xs font-bold text-muted/50 italic">No business license submitted yet.</p>
                     )}
                   </div>
                 </div>

@@ -21,8 +21,8 @@ import { toast } from "react-hot-toast";
 const PLANS = [
   {
     id: 'free',
-    name: 'Essence',
-    type: 'Free',
+    name: 'Free',
+    type: 'Tier',
     price: 0,
     credits: '5 Articles/mo',
     features: ['Basic Profile', 'Service Registration', 'Community Access', 'Community Posts'],
@@ -32,9 +32,9 @@ const PLANS = [
   },
   {
     id: 'silver',
-    name: 'Artisan',
-    type: 'Silver',
-    price: 750000,
+    name: 'Silver',
+    type: 'Tier',
+    price: 50000,
     credits: '25 Articles/mo',
     features: ['Silver Profile Badge', 'Priority Service Listing', 'Basic Analytics', 'Advanced Scheduling', 'Zalo Reminders'],
     color: 'bg-slate-50 text-slate-800',
@@ -44,9 +44,9 @@ const PLANS = [
   },
   {
     id: 'gold',
-    name: 'Maestro',
-    type: 'Gold',
-    price: 2500000,
+    name: 'Gold',
+    type: 'Tier',
+    price: 100000,
     credits: 'Unlimited',
     features: ['Gold Profile Badge', 'Top-of-Search Placement', 'Full Strategic Insights', 'Custom Domain Support', '24/7 Priority Support', 'Dedicated Account Manager'],
     color: 'bg-amber-50 text-amber-800',

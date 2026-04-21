@@ -32,14 +32,14 @@ const ensureValidUrl = (url) => {
 
 const PLAN_PRICES = {
     silver: {
-        priceUSD: 29,
-        priceVND: 725000, 
-        name: "Artisan (Silver)",
+        priceUSD: 2,
+        priceVND: 50000, 
+        name: "Silver Tier",
     },
     gold: {
-        priceUSD: 99,
-        priceVND: 2475000,
-        name: "Maestro (Gold)",
+        priceUSD: 4,
+        priceVND: 100000,
+        name: "Gold Tier",
     }
 };
 

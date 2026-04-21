@@ -238,9 +238,7 @@ router.put('/profile', verifyToken, async (req, res) => {
             // Auto-advance status if minimum required docs are present
             const legal = user.legalDocuments;
             if (user.providerOnboardingStatus === 'pending_legal_submission' && 
-                legal.clinicName && 
-                legal.clinicLicenseNumber && 
-                (legal.clinicLicenseUrl || legal.businessLicenseUrl || legal.doctorLicenseUrl)) {
+                legal.businessLicenseUrl) {
                 
                 user.providerOnboardingStatus = 'pending_legal_approval';
                 if (!user.legalDocuments.submittedAt) {

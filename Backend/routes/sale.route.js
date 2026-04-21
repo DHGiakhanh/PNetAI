@@ -92,13 +92,7 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
 
         // Check if we can perform legal approval (even if technically in submission stage)
         const legal = provider.legalDocuments || {};
-        const hasRequiredLegalInfo =
-            typeof legal.clinicName === "string" && legal.clinicName.trim() &&
-            typeof legal.clinicLicenseNumber === "string" && legal.clinicLicenseNumber.trim() &&
-            (
-                (typeof legal.clinicLicenseUrl === "string" && legal.clinicLicenseUrl.trim()) ||
-                (typeof legal.businessLicenseUrl === "string" && legal.businessLicenseUrl.trim())
-            );
+        const hasRequiredLegalInfo = (typeof legal.businessLicenseUrl === "string" && legal.businessLicenseUrl.trim());
 
         if (!provider.isVerified) {
             provider.isVerified = true;
@@ -114,10 +108,9 @@ router.put("/service-providers/:id/approve", verifyToken, isSale, async (req, re
                     message: "Provider must update phone and address before final approval.",
                 });
             }
-
             if (!hasRequiredLegalInfo) {
                 return res.status(400).json({
-                    message: "Provider legal documents are incomplete. Make sure Clinic Name, License No, and at least one License file are present.",
+                    message: "Provider legal documents are incomplete. Business License is required.",
                 });
             }
 
