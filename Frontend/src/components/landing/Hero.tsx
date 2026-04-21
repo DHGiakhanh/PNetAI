@@ -33,11 +33,11 @@ const Hero = () => {
         <div className="relative flex justify-center lg:justify-end animate-in fade-in slide-in-from-right duration-1000 lg:pr-12">
           <div className="relative w-full max-w-[500px] aspect-[4/5.2]">
             <div className="absolute inset-0 bg-gradient-to-br from-caramel via-sand to-sage rounded-[60px] shadow-2xl overflow-hidden flex items-center justify-center group">
-              <div className="relative opacity-80 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                <div className="flex flex-col gap-2 translate-y-[-10px]">
-                  <span className="text-[120px] drop-shadow-2xl">🐾</span>
-                </div>
-              </div>
+              <img
+                src="https://images.unsplash.com/photo-1544568100-847a948585b9?w=500&h=650&fit=crop&crop=center"
+                alt="Cute pet"
+                className="w-full h-full object-cover rounded-[60px] opacity-80 pointer-events-none group-hover:scale-110 transition-transform duration-700"
+              />
             </div>
 
             <div className="absolute top-10 right-[-15px] bg-brown text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 shadow-xl z-20">
