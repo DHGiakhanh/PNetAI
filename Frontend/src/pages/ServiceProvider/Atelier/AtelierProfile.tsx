@@ -5,9 +5,7 @@ import {
   ShieldCheck, 
   Clock,
   Camera,
-  X,
-  UserRound,
-  Image as ImageIcon
+  X
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { authService, UserProfile } from "@/services/auth.service";
@@ -27,9 +25,7 @@ export const AtelierProfile = () => {
     avatarUrl: "",
     clinicName: "",
     description: "",
-    clinicImages: [] as string[],
     operatingHours: { start: "08:00", end: "20:00" },
-    doctors: ["", ""], // Allow up to 2 doctors
     doctorLicenseUrl: "",
     businessLicenseUrl: "",
     clinicLicenseUrl: "",
@@ -53,9 +49,7 @@ export const AtelierProfile = () => {
           avatarUrl: data.avatarUrl || "",
           clinicName: data.legalDocuments?.clinicName || "",
           description: data.description || "",
-          clinicImages: data.clinicImages || [],
           operatingHours: data.operatingHours || { start: "08:00", end: "20:00" },
-          doctors: data.doctors || ["", ""],
           doctorLicenseUrl: data.legalDocuments?.doctorLicenseUrl || "",
           businessLicenseUrl: data.legalDocuments?.businessLicenseUrl || "",
           clinicLicenseUrl: data.legalDocuments?.clinicLicenseUrl || "",
@@ -79,9 +73,7 @@ export const AtelierProfile = () => {
         address: formData.address,
         avatarUrl: formData.avatarUrl,
         description: formData.description,
-        clinicImages: formData.clinicImages,
         operatingHours: formData.operatingHours,
-        doctors: formData.doctors.filter(d => d.trim() !== ""),
         legalDocuments: {
             clinicName: formData.clinicName,
             clinicLicenseNumber: formData.clinicLicenseNumber,
@@ -101,15 +93,13 @@ export const AtelierProfile = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'gallery' | 'doctor_license' | 'business_license' | 'clinic_license') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'doctor_license' | 'business_license' | 'clinic_license') => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       toast.loading("Securing media...", { id: 'upload' });
       const { url } = await authService.uploadImage(file);
-      if (type === 'gallery') {
-        setFormData(prev => ({ ...prev, clinicImages: [...prev.clinicImages, url] }));
-      } else if (type === 'doctor_license') {
+      if (type === 'doctor_license') {
         setFormData(prev => ({ ...prev, doctorLicenseUrl: url }));
       } else if (type === 'business_license') {
         setFormData(prev => ({ ...prev, businessLicenseUrl: url }));
@@ -147,11 +137,11 @@ export const AtelierProfile = () => {
   if (loading) return <div>Synchronizing Facility Records...</div>;
 
   return (
-    <div className="space-y-12 pb-24 font-sans">
+     <div className="space-y-12 pb-24 font-sans">
       {/* Cinematic Header */}
       <section className="relative h-96 rounded-[4rem] overflow-hidden shadow-2xl group">
          <img 
-           src={formData.clinicImages[0] || "https://images.unsplash.com/photo-1513360309081-38a623659117?q=80&w=2000"} 
+           src="https://images.unsplash.com/photo-1513360309081-38a623659117?q=80&w=2000" 
            className="w-full h-full object-cover transition-transform duration-[3s] group-hover:scale-110" 
            alt="Cover" 
          />
@@ -260,68 +250,10 @@ export const AtelierProfile = () => {
                   </div>
                </div>
             </div>
-
-            {/* Practitioner Network */}
-            <div className="bg-white rounded-[3.5rem] border border-gray-100 p-12 shadow-sm">
-               <div className="flex items-center gap-4 mb-12">
-                  <div className="h-14 w-14 rounded-[1.5rem] bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
-                     <UserRound className="w-6 h-6" />
-                  </div>
-                  <div>
-                     <h3 className="text-xl font-black uppercase tracking-widest text-gray-900">Medical Staff</h3>
-                     <p className="text-xs font-bold text-gray-400">Manage registered doctors & practitioners</p>
-                  </div>
-               </div>
-
-               <div className="grid sm:grid-cols-2 gap-8">
-                  {formData.doctors.map((doctor, idx) => (
-                    <div key={idx} className="space-y-3">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 pl-1">Practitioner {idx + 1}</label>
-                       <div className="relative group">
-                          <UserRound className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-blue-600 transition-colors" />
-                          <input 
-                            type="text" 
-                            placeholder="Full Legal Name"
-                            value={doctor}
-                            onChange={(e) => {
-                               const newDocs = [...formData.doctors];
-                               newDocs[idx] = e.target.value;
-                               setFormData(prev => ({ ...prev, doctors: newDocs }));
-                            }}
-                            className="w-full bg-gray-50/50 border border-gray-100 pl-14 pr-8 py-5 rounded-[2rem] outline-none font-bold text-lg text-gray-900 focus:border-blue-300 transition-all" 
-                          />
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            {/* Visual Registry */}
-            <div className="bg-white rounded-[3.5rem] border border-gray-100 p-12 shadow-sm">
-               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-8 px-1">Clinic Visual Gallery</h3>
-               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {formData.clinicImages.map((img, i) => (
-                    <div key={i} className="relative aspect-square rounded-[2rem] overflow-hidden group border border-gray-100 shadow-md">
-                       <img src={img} className="w-full h-full object-cover" alt="" />
-                       <button 
-                         onClick={() => setFormData(p => ({ ...p, clinicImages: p.clinicImages.filter((_, idx) => idx !== i) }))}
-                         className="absolute top-4 right-4 p-2 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-                       >
-                          <X className="w-4 h-4" />
-                       </button>
-                    </div>
-                  ))}
-                  <label className="aspect-square rounded-[2rem] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 hover:border-blue-300 transition-all group shadow-inner">
-                     <ImageIcon className="w-8 h-8 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-600">Add Image</span>
-                     <input type="file" className="hidden" multiple accept="image/*" onChange={(e) => handleImageUpload(e, 'gallery')} />
-                  </label>
-               </div>
-            </div>
          </div>
 
          {/* Compliance & Operations */}
-         <div className="lg:col-span-4 space-y-12">
+            <div className="lg:col-span-4 space-y-12">
             
             {/* Operating Hours */}
             <div className="bg-gray-950 rounded-[3rem] p-10 text-white shadow-2xl overflow-hidden relative">

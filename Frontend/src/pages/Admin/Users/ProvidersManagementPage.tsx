@@ -39,6 +39,9 @@ type Provider = {
   bookingsCount: number;
   phone?: string;
   address?: string;
+  subscriptionPlan: "free" | "silver" | "gold";
+  subscriptionExpiresAt?: string;
+  articleCredits: number;
 };
 
 export default function ProvidersManagementPage() {
@@ -185,6 +188,7 @@ export default function ProvidersManagementPage() {
             <thead>
               <tr className="bg-warm/5">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Partner Establishment</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Subscription Tier</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Aptitude Status</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Financial Tracking</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Account Management</th>
@@ -218,6 +222,22 @@ export default function ProvidersManagementPage() {
                              <p className="text-sm font-bold text-ink mb-1">{provider.name}</p>
                              <p className="text-[10px] font-bold text-caramel uppercase tracking-widest">{provider.role === 'service_provider' ? 'Clinic' : 'Pet Shop'}</p>
                           </div>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="flex flex-col">
+                          <span className={`w-fit px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${
+                             provider.subscriptionPlan === 'gold' ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-200' :
+                             provider.subscriptionPlan === 'silver' ? 'bg-indigo-500 text-white border-indigo-600 shadow-lg shadow-indigo-200' :
+                             'bg-slate-50 text-muted border-slate-200'
+                          }`}>
+                             {provider.subscriptionPlan || 'Free'}
+                          </span>
+                          {provider.subscriptionExpiresAt && (
+                             <span className="text-[8px] font-bold text-muted mt-1 uppercase tracking-tighter">
+                                Exp: {new Date(provider.subscriptionExpiresAt).toLocaleDateString()}
+                             </span>
+                          )}
                        </div>
                     </td>
                     <td className="px-8 py-6">
@@ -451,6 +471,31 @@ export default function ProvidersManagementPage() {
                             </div>
                          </div>
                       </div>
+
+                      <div>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-4 border-b border-sand pb-2">Plan & Quotas</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                             <div className="p-4 bg-white border border-sand rounded-2xl relative overflow-hidden group">
+                                <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Active Plan</p>
+                                <p className={`text-sm font-black uppercase tracking-widest ${
+                                  selectedProvider.subscriptionPlan === 'gold' ? 'text-amber-600' : 
+                                  selectedProvider.subscriptionPlan === 'silver' ? 'text-indigo-600' : 
+                                  'text-ink'
+                                }`}>
+                                  {selectedProvider.subscriptionPlan || 'Free Tier'}
+                                </p>
+                                {selectedProvider.subscriptionPlan !== 'free' && (
+                                   <div className="absolute top-1 right-1">
+                                      <TrendingUp className={`w-3 h-3 ${selectedProvider.subscriptionPlan === 'gold' ? 'text-amber-400' : 'text-indigo-400'}`} />
+                                   </div>
+                                )}
+                             </div>
+                             <div className="p-4 bg-white border border-sand rounded-2xl">
+                                <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Article Credits</p>
+                                <p className="text-sm font-black text-ink">{selectedProvider.articleCredits || 0} left</p>
+                             </div>
+                          </div>
+                       </div>
                    </div>
 
                    <div className="space-y-8">
