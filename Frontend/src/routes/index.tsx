@@ -53,11 +53,13 @@ import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
 import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
 import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
+import RefundRequestsPage from "@/pages/Admin/RefundRequestsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
 import PurchasedProductsPage from "@/pages/Orders/PurchasedProductsPage";
 import CheckoutPage from "@/pages/Shop/CheckoutPage";
 import CheckoutSuccessPage from "@/pages/Shop/CheckoutSuccessPage";
 import CheckoutCancelPage from "@/pages/Shop/CheckoutCancelPage";
+import AdminOrdersPage from "@/pages/Admin/AdminOrdersPage";
 
 export default function AppRoutes() {
   return (
@@ -66,10 +68,12 @@ export default function AppRoutes() {
       <Route path="admin" element={<AdminLayout />}>
         <Route element={<AdminRoute />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="orders-ledger" element={<AdminOrdersPage />} />
           <Route path="users/sales" element={<SalesManagementPage />} />
           <Route path="users/providers" element={<ProvidersManagementPage />} />
           <Route path="users/owners" element={<OwnersManagementPage />} />
           <Route path="finance/transactions" element={<FinanceTransactionsPage />} />
+          <Route path="finance/refunds" element={<RefundRequestsPage />} />
           <Route path="finance/payouts" element={<div className="p-20 text-center text-xs font-bold uppercase tracking-widest text-muted">Payout / Ledger Ledger Module Coming Soon</div>} />
           <Route path="blogs/approvals" element={<AdminBlogApprovalsPage />} />
           

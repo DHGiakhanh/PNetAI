@@ -12,6 +12,7 @@ const Pet = require("./pet.model");
 const Transaction = require("./transaction.model");
 const Payout = require("./payout.model");
 const Booking = require("./booking.model");
+const Notification = require("./notification.model");
 
 const db = {}
 
@@ -29,6 +30,7 @@ db.Pet = Pet;
 db.Transaction = Transaction;
 db.Payout = Payout;
 db.Booking = Booking;
+db.Notification = Notification;
 
 
 module.exports = db;

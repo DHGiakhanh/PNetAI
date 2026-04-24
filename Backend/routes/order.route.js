@@ -144,6 +144,22 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     }
 
     if (normalizedStatus === "PAID") {
+        if (order.paymentStatus !== "paid") {
+            // Log transaction for GMV
+            const existingTx = await db.Transaction.findOne({ referenceId: order._id });
+            if (!existingTx) {
+                await db.Transaction.create({
+                    user: order.user,
+                    type: "product_purchase",
+                    amount: order.totalAmount,
+                    status: "success",
+                    paymentMethod: order.paymentMethod,
+                    payosOrderCode: order.payos?.orderCode ? String(order.payos.orderCode) : undefined,
+                    referenceId: order._id,
+                    note: `Product order payment`
+                });
+            }
+        }
         order.paymentStatus = "paid";
         order.paidAt = order.paidAt || Date.now();
         if (order.status === "pending") {
@@ -388,6 +404,10 @@ router.post("/payos/webhook", async (req, res) => {
                             .populate('user', 'name');
                             
                         if (booking && booking.status === "pending") {
+                            // Update booking status to confirmed upon successful payment
+                            booking.status = "confirmed";
+                            await booking.save();
+
                             // Fetch full provider details for email
                             const service = await db.Service.findById(booking.service._id || booking.service)
                                 .populate('providerId', 'email');
@@ -566,6 +586,46 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
         await order.save();
 
         res.status(200).json({ message: "Order cancelled successfully", order });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Request return
+router.post("/:id/return-request", verifyToken, async (req, res) => {
+    try {
+        const order = await db.Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ message: "Order not found" });
+
+        if (order.user.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        // Only allow return if paid or delivered (case-insensitive check)
+        const allowedStatus = ["paid", "delivered", "confirmed", "completed", "success"];
+        const currentStatus = order.status ? order.status.toLowerCase() : "";
+        const currentPaymentStatus = order.paymentStatus ? order.paymentStatus.toLowerCase() : "";
+
+        if (!allowedStatus.includes(currentStatus) && currentPaymentStatus !== "paid") {
+             return res.status(400).json({ 
+                 message: `Order status '${order.status}' is not eligible for return`,
+                 status: order.status
+             });
+        }
+
+        order.status = "return_requested";
+        await order.save();
+
+        // Create Admin Notification
+        await db.Notification.create({
+            user: "admin",
+            type: "refund_request",
+            title: "Product Return Request",
+            message: `User requested a return for order ORD-${order._id.slice(-6).toUpperCase()}. Value: ${order.totalPrice.toLocaleString()} VND`,
+            relatedId: order._id,
+        });
+
+        res.status(200).json({ message: "Return request submitted successfully", order });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

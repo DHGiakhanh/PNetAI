@@ -52,6 +52,28 @@ const ensureProviderFullyApproved = async (req, res, next) => {
     }
 };
 
+// Get booking details for Refund Processing
+router.get('/bookings/:id', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const booking = await db.Booking.findById(req.params.id)
+            .populate('user', 'name email phone avatarUrl')
+            .populate('pet', 'name species breed avatarUrl')
+            .populate({
+                path: 'service',
+                select: 'title providerId location',
+                populate: {
+                    path: 'providerId',
+                    select: 'name email phone'
+                }
+            });
+
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+        res.status(200).json({ booking });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Register/Create new user (Manage by Admin)
 router.post('/users', verifyToken, isAdmin, async (req, res) => {
     try {
@@ -851,4 +873,130 @@ router.post('/maintenance/check-inactivity', verifyToken, isAdmin, async (req, r
     }
 });
 
+// --- Order & Booking Management (Global) ---
+
+// List all product orders
+router.get("/orders", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 10, search = "" } = req.query;
+        let query = {};
+        if (status) query.status = status;
+        
+        // Search by order ID or user name if needed (optional implementation)
+        
+        const skip = (page - 1) * limit;
+        const orders = await db.Order.find(query)
+            .populate("user", "name email")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
+
+        const total = await db.Order.countDocuments(query);
+        res.status(200).json({
+            orders,
+            pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// List all service bookings
+router.get("/bookings", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 10 } = req.query;
+        let query = {};
+        if (status) query.status = status;
+
+        const skip = (page - 1) * limit;
+        const bookings = await db.Booking.find(query)
+            .populate("user", "name email phone")
+            .populate("pet", "name species")
+            .populate({
+                path: "service",
+                select: "title location providerId",
+                populate: { path: "providerId", select: "name" }
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
+
+        const total = await db.Booking.countDocuments(query);
+        res.status(200).json({
+            bookings,
+            pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// --- Notification Management ---
+
+// Get all admin notifications
+router.get("/notifications", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const notifications = await db.Notification.find({ isAdmin: true })
+            .sort({ createdAt: -1 })
+            .limit(50);
+        res.status(200).json({ notifications });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Mark notification as read (And process refund if applicable)
+router.patch("/notifications/:id/read", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const notif = await db.Notification.findById(req.params.id);
+        if (!notif) return res.status(404).json({ message: "Notification not found" });
+
+        notif.isRead = true;
+        await notif.save();
+
+        // If this was a refund request, mark the related transaction/booking/order as refunded
+        if (notif.type === "refund_request" && notif.relatedId) {
+            // Check if it's a Booking first
+            const booking = await db.Booking.findById(notif.relatedId);
+            if (booking) {
+                booking.status = "refunded";
+                await booking.save();
+                
+                await db.Transaction.findOneAndUpdate(
+                    { referenceId: booking._id, type: "service_booking" },
+                    { status: "refunded" }
+                );
+            } else {
+                // Check if it's an Order
+                const order = await db.Order.findById(notif.relatedId);
+                if (order) {
+                    order.status = "refunded";
+                    await order.save();
+
+                    // Update the related transaction for product order
+                    await db.Transaction.findOneAndUpdate(
+                        { referenceId: order._id }, 
+                        { status: "refunded" }
+                    );
+                }
+            }
+        }
+
+        res.status(200).json({ message: "Notification marked as read and refund processed" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Delete notification
+router.delete("/notifications/:id", verifyToken, isAdmin, async (req, res) => {
+    try {
+        await db.Notification.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Notification deleted" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
+

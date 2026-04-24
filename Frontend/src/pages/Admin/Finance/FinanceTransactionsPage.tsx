@@ -5,7 +5,8 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Eye
+  Eye,
+  Check
 } from "lucide-react";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
@@ -60,13 +61,25 @@ export default function FinanceTransactionsPage() {
     switch(s) {
       case 'success': return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case 'failed': return "bg-rose-50 text-rose-600 border-rose-100";
+      case 'refunded': return "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100";
       case 'pending': return "bg-amber-50 text-amber-600 border-amber-100";
       default: return "bg-sand/30 text-muted border-sand/50";
     }
   };
 
+  const handleConfirm = async (id: string) => {
+    if (!window.confirm("Manually mark this transaction as PAID? This cannot be undone.")) return;
+    try {
+      await apiClient.put(`/admin/finance/transactions/${id}/confirm`, { note: "Admin manually approved via Ledger" });
+      toast.success("Transaction confirmed");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to confirm transaction");
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl font-serif font-bold italic text-ink mb-2">Incoming Treasury</h1>
@@ -156,7 +169,7 @@ export default function FinanceTransactionsPage() {
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-ink">${tx.amount.toLocaleString()}</p>
+                    <p className="text-sm font-black text-ink">{(tx.amount || 0).toLocaleString()} VND</p>
                     <p className="text-[10px] text-muted/50 font-bold uppercase tracking-widest">{tx.paymentMethod}</p>
                   </td>
                   <td className="px-8 py-6">
@@ -166,6 +179,14 @@ export default function FinanceTransactionsPage() {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
+                       {tx.status === 'pending' && (
+                         <button 
+                           onClick={() => handleConfirm(tx._id)}
+                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
+                         >
+                            <Check className="w-3 h-3" /> Confirm
+                         </button>
+                       )}
                        <button className="p-2.5 rounded-xl hover:bg-warm text-muted transition-all">
                           <Eye className="w-4 h-4" />
                        </button>

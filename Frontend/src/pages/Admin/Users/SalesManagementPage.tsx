@@ -12,7 +12,6 @@ import {
   ArrowUpRight,
   Loader2,
   Filter,
-  DollarSign,
   X,
   Mail,
   Key,
@@ -31,9 +30,8 @@ type Sale = {
   saleCode?: string;
   isVerified: boolean;
   role: string;
-  createdAt: string;
+  createdAt:string;
   partnersCount: number;
-  totalRevenue: number;
 };
 
 export default function SalesManagementPage() {
@@ -402,22 +400,13 @@ export default function SalesManagementPage() {
                <TrendingUp className="w-6 h-6" />
             </div>
          </div>
-         <div className="bg-white rounded-[2.5rem] border border-sand/50 p-8 shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all">
+         <div className="bg-white rounded-[2.5rem] border border-sand/50 p-8 shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all col-span-2">
             <div>
                <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1">Managed Partners</p>
                <h4 className="text-2xl font-bold text-ink">{data.reduce((acc, s) => acc + (s.partnersCount || 0), 0)} Units</h4>
             </div>
             <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                <Users className="w-6 h-6" />
-            </div>
-         </div>
-         <div className="bg-white rounded-[2.5rem] border border-sand/50 p-8 shadow-sm flex items-center justify-between group hover:border-emerald-200 transition-all">
-            <div>
-               <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1">Total Assigned GMV</p>
-               <h4 className="text-2xl font-bold text-ink">${data.reduce((acc, s) => acc + (s.totalRevenue || 0), 0).toLocaleString()}</h4>
-            </div>
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-               <DollarSign className="w-6 h-6" />
             </div>
          </div>
       </div>
@@ -448,7 +437,7 @@ export default function SalesManagementPage() {
               <tr className="bg-white/50">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Agent Information</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Sale Code</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Metrics</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-center">Managed Partners</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted">Status</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted text-right">Actions</th>
               </tr>
@@ -485,18 +474,9 @@ export default function SalesManagementPage() {
                        {sale.saleCode || 'N/A'}
                     </span>
                   </td>
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                       <div className="text-center">
-                          <p className="text-xs font-bold text-ink">{sale.partnersCount || 0}</p>
-                          <p className="text-[8px] font-bold text-muted uppercase tracking-widest">Partners</p>
-                       </div>
-                       <div className="w-px h-6 bg-sand" />
-                       <div className="text-center">
-                          <p className="text-xs font-bold text-ink">${(sale.totalRevenue || 0).toLocaleString()}</p>
-                          <p className="text-[8px] font-bold text-muted uppercase tracking-widest">Revenue</p>
-                       </div>
-                    </div>
+                  <td className="px-8 py-6 text-center">
+                    <p className="text-sm font-bold text-ink">{sale.partnersCount || 0}</p>
+                    <p className="text-[8px] font-medium text-muted uppercase tracking-widest">Units</p>
                   </td>
                   <td className="px-8 py-6">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${sale.isVerified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>

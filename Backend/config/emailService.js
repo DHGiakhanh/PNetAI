@@ -242,10 +242,95 @@ const sendNewBookingNotificationToProvider = async (email, bookingData) => {
     }
 };
 
+// Send cancellation email to user
+const sendBookingCancellationEmailToUser = async (email, bookingData) => {
+    const { serviceTitle, date, time, reason = "Provider availability change" } = bookingData;
+    
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: email,
+        subject: 'Appointment Cancelled - Refund Processing',
+        html: `
+            <div style="font-family: 'Serif', 'Georgia', serif; padding: 20px; color: #1a1a1a;">
+                <h1 style="border-bottom: 2px solid #fecaca; padding-bottom: 10px; color: #dc2626;">Appointment Cancelled ⚠️</h1>
+                <p>Hello,</p>
+                <p>We regret to inform you that your booking for <strong>${serviceTitle}</strong> on <strong>${date}</strong> at <strong>${time}</strong> has been cancelled by the service provider.</p>
+                
+                <div style="background-color: #fef2f2; padding: 20px; border-radius: 12px; border: 1px solid #fecaca; margin: 20px 0;">
+                    <p><strong>Reason:</strong> ${reason}</p>
+                    <p><strong>Refund Status:</strong> Initiated. Our admin team has been notified to process your refund immediately.</p>
+                </div>
+                
+                <p>We apologize for any inconvenience caused. You can browse other available slots or clinics in our registry.</p>
+                <p>Best regards,<br>The PNetAI Team</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ Cancellation email sent to user:', email);
+    } catch (error) {
+        console.error('❌ Error sending cancellation email:', error.message);
+    }
+};
+
+// Send refund request notification to Admin
+const sendRefundRequestToAdmin = async (bookingData) => {
+    const { bookingId, customerName, totalAmount, providerName } = bookingData;
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@pnetai.local";
+
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: adminEmail,
+        subject: 'ACTION REQUIRED: Refund Request for Cancelled Booking',
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a;">
+                <h1 style="color: #dc2626;">Refund Request 💸</h1>
+                <p>An appointment has been cancelled by the provider, necessitating a manual refund for the customer.</p>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <tr style="background-color: #f3f4f6;">
+                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Detail</th>
+                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Value</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Booking ID</td>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">${bookingId}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Customer</td>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">${customerName}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Provider</td>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">${providerName}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Amount to Refund</td>
+                        <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${totalAmount}</td>
+                    </tr>
+                </table>
+                
+                <p style="margin-top: 20px;">Please process this refund via the PayOS dashboard or your payment gateway and update the internal transaction status.</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ Refund request sent to Admin');
+    } catch (error) {
+        console.error('❌ Error sending refund request to Admin:', error.message);
+    }
+};
+
 module.exports = {
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendBookingConfirmationEmail,
     sendAppointmentReminderEmail,
-    sendNewBookingNotificationToProvider
+    sendNewBookingNotificationToProvider,
+    sendBookingCancellationEmailToUser,
+    sendRefundRequestToAdmin
 };

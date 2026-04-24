@@ -436,23 +436,6 @@ export default function CheckoutPage() {
                     {paymentMethod === "qr" && <CheckCircle2 className="w-5 h-5 text-caramel" />}
                   </button>
 
-                  <AnimatePresence>
-                    {paymentMethod === "qr" && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-8 bg-white border-x-2 border-b-2 border-caramel/20 rounded-b-[2.5rem] flex flex-col items-center">
-                          <div className="w-48 h-48 bg-cream/30 backdrop-blur-md rounded-3xl border border-sand/50 p-4 flex items-center justify-center group-hover:scale-105 transition-transform duration-500 shadow-xl">
-                             <QrCode className="w-32 h-32 text-ink/80 opacity-60" />
-                          </div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted mt-6">Scan with your banking app</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </div>
             </section>

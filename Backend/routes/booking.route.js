@@ -1,7 +1,6 @@
 const express = require("express");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
-const { sendBookingConfirmationEmail } = require("../config/emailService");
 const { createPaymentLink } = require("../utils/payos");
 
 const router = express.Router();
@@ -31,7 +30,7 @@ const ensureValidUrl = (url) => {
     }
 };
 
-// Create a new service booking
+// Create a new service booking (Manual/Test)
 router.post("/confirm", verifyToken, async (req, res) => {
     try {
         const { serviceId, petId, bookingDate, bookingTime, totalAmount, paymentMethod } = req.body;
@@ -242,7 +241,6 @@ router.get("/my", verifyToken, async (req, res) => {
 // Get bookings for services owned by current provider
 router.get("/provider", verifyToken, async (req, res) => {
     try {
-        // Find all services owned by this provider
         const myServices = await db.Service.find({ providerId: req.userId }).select('_id');
         const serviceIds = myServices.map(s => s._id);
 
@@ -271,13 +269,21 @@ router.patch("/status/:id", verifyToken, async (req, res) => {
         const booking = await db.Booking.findById(req.params.id)
             .populate('user', 'email name')
             .populate('pet', 'name')
-            .populate('service', 'title providerId');
+            .populate({
+                path: 'service',
+                select: 'title providerId',
+                populate: {
+                    path: 'providerId',
+                    select: 'name'
+                }
+            });
 
         if (!booking) return res.status(404).json({ message: "Booking not found." });
 
-        // Security: Ensure the provider owns the service for this booking
-        const service = booking.service; // already populated
-        if (service.providerId.toString() !== req.userId) {
+        const service = booking.service;
+        const provider = service.providerId;
+
+        if (provider._id.toString() !== req.userId) {
             return res.status(403).json({ message: "Access denied." });
         }
 
@@ -286,15 +292,45 @@ router.patch("/status/:id", verifyToken, async (req, res) => {
         booking.updatedAt = Date.now();
         await booking.save();
 
+        const { 
+            sendBookingConfirmationEmail, 
+            sendBookingCancellationEmailToUser, 
+            sendRefundRequestToAdmin 
+        } = require("../config/emailService");
+
         // Send email to USER if confirmed
         if (status === "confirmed" && oldStatus !== "confirmed") {
-            const { sendBookingConfirmationEmail } = require("../config/emailService");
             await sendBookingConfirmationEmail(booking.user.email, {
                 serviceTitle: service.title,
                 petName: booking.pet.name,
                 date: booking.bookingDate.toLocaleDateString(),
                 time: booking.bookingTime,
                 totalAmount: booking.totalAmount
+            });
+        }
+
+        // Send email to USER & ADMIN if cancelled by Provider
+        if (status === "cancelled" && oldStatus !== "cancelled") {
+            await sendBookingCancellationEmailToUser(booking.user.email, {
+                serviceTitle: service.title,
+                date: booking.bookingDate.toLocaleDateString(),
+                time: booking.bookingTime
+            });
+
+            await sendRefundRequestToAdmin({
+                bookingId: booking._id,
+                customerName: booking.user.name,
+                totalAmount: booking.totalAmount,
+                providerName: provider.name
+            });
+
+            // 3. Create In-App Notification for Admin
+            await db.Notification.create({
+                title: "Refund Required",
+                message: `Booking #${booking._id.toString().slice(-8).toUpperCase()} was cancelled by provider ${provider.name}. Please refund ${booking.totalAmount} VND to ${booking.user.name}.`,
+                type: "refund_request",
+                relatedId: booking._id,
+                isAdmin: true
             });
         }
 

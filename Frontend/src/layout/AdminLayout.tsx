@@ -13,8 +13,10 @@ import {
   CreditCard,
   Banknote,
   UserPlus,
-  Users2
+  Users2,
+  AlertCircle
 } from 'lucide-react';
+import { NotificationCenter } from '@/components/admin/NotificationCenter';
 
 export const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -23,20 +25,23 @@ export const AdminLayout = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const role = user?.role;
   const isServiceProvider = role === "service_provider" || role === "shop";
+  const isAdminRole = role === "admin";
 
   const adminMenuItems = [
     { section: "Main", title: "Overview", icon: LayoutDashboard, path: "/admin", exact: true },
+    { section: "Main", title: "Orders & Bookings", icon: Package, path: "/admin/orders-ledger" },
     
     { section: "Users", title: "Sales Team", icon: UserPlus, path: "/admin/users/sales" },
     { section: "Users", title: "Providers", icon: Users2, path: "/admin/users/providers" },
     { section: "Users", title: "Pet Owners", icon: Users, path: "/admin/users/owners" },
 
     { section: "Finance", title: "Transactions", icon: CreditCard, path: "/admin/finance/transactions" },
+    { section: "Finance", title: "Refund Requests", icon: AlertCircle, path: "/admin/finance/refunds" },
     { section: "Finance", title: "Payouts / Ledger", icon: Banknote, path: "/admin/finance/payouts" },
 
     { section: "Moderation", title: "Blog Queue", icon: BookOpen, path: "/admin/blogs/approvals" },
   ];
-
+ 
   const providerMenuItems = [
     { title: "Overview", icon: LayoutDashboard, path: "/admin", exact: true },
     { title: "Products", icon: Package, path: "/admin/products" },
@@ -44,20 +49,20 @@ export const AdminLayout = () => {
     { title: "Services", icon: Scissors, path: "/admin/services" },
     { title: "Customers Booking", icon: Users, path: "/admin/bookings" },
   ];
-
+ 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) {
       return location.pathname === path;
     }
     return location.pathname.startsWith(path);
   };
-
+ 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
-
+ 
   // Grouped Menu for Admin
   const renderAdminNav = () => {
     const sections = ["Main", "Users", "Finance", "Moderation"];
@@ -91,7 +96,7 @@ export const AdminLayout = () => {
       </div>
     ));
   };
-
+ 
   return (
     <div className="min-h-screen bg-[#FBF9F6]">
       <aside
@@ -106,15 +111,18 @@ export const AdminLayout = () => {
                 <div className="grid h-8 w-8 place-items-center rounded-xl bg-ink text-[10px] font-black text-white shadow-xl shadow-ink/10">
                   A
                 </div>
-                <h1 className="text-xs font-black uppercase tracking-widest text-ink">
-                  {isServiceProvider ? "Provider" : "Admin"}
-                </h1>
+                <div className="flex flex-col">
+                  <h1 className="text-xs font-black uppercase tracking-widest text-ink leading-none">
+                    {isServiceProvider ? "Provider" : "Admin"}
+                  </h1>
+                </div>
               </div>
             ) : (
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-ink mx-auto text-[10px] font-black text-white">
                 A
               </div>
             )}
+            
             {sidebarOpen && (
                <button
                  onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -169,6 +177,19 @@ export const AdminLayout = () => {
       </aside>
 
       <main className={`min-h-screen transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"}`}>
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 h-16 border-b border-sand bg-white/70 backdrop-blur-md px-8 flex items-center justify-between">
+           <div>
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted/40">
+                 {location.pathname.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') || "Overview"}
+              </h2>
+           </div>
+           
+           <div className="flex items-center gap-4">
+              {isAdminRole && <NotificationCenter />}
+           </div>
+        </header>
+
         <div className="p-8">
           <Outlet />
         </div>

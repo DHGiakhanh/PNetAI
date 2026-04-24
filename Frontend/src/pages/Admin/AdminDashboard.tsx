@@ -8,7 +8,7 @@ import {
   Loader2,
   TrendingUp,
   Clock,
-  DollarSign
+  Banknote
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -65,7 +65,7 @@ export const AdminDashboard = () => {
     if (!data) return;
     try {
       const exportData = [
-        { Metric: "Total GMV", Value: data.kpis.gmv },
+        { Metric: "Total GMV (VND)", Value: data.kpis.gmv },
         { Metric: "Orders Today", Value: data.kpis.ordersToday },
         { Metric: "Pending Blog Posts", Value: data.kpis.pendingPosts },
         { Metric: "Pending Legal Reviews", Value: data.kpis.pendingLegal },
@@ -99,8 +99,8 @@ export const AdminDashboard = () => {
   const kpis = [
     { 
       label: "GMV (Gross Merchandise Value)", 
-      value: `$${(data?.kpis.gmv || 0).toLocaleString()}`, 
-      icon: DollarSign, 
+      value: `${(data?.kpis.gmv || 0).toLocaleString()} VND`, 
+      icon: Banknote, 
       color: "text-emerald-600",
       bg: "bg-emerald-50",
       trend: "+12.5%",
