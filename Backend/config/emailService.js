@@ -204,9 +204,48 @@ const sendAppointmentReminderEmail = async (email, reminderData) => {
     }
 };
 
+// Send notification to provider about new booking request
+const sendNewBookingNotificationToProvider = async (email, bookingData) => {
+    const { serviceTitle, petName, date, time, totalAmount, customerName } = bookingData;
+    
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: email,
+        subject: 'New Booking Request - Action Required',
+        html: `
+            <div style="font-family: 'Serif', 'Georgia', serif; padding: 20px; color: #1a1a1a;">
+                <h1 style="border-bottom: 2px solid #e2d1c3; padding-bottom: 10px;">New Booking Alert! 🚨</h1>
+                <p>Hello,</p>
+                <p>You have received a new booking request for <strong>${serviceTitle}</strong> from <strong>${customerName}</strong>.</p>
+                
+                <div style="background-color: #fcf9f6; padding: 20px; border-radius: 12px; border: 1px solid #e2d1c3; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Request Details</h3>
+                    <p><strong>Service:</strong> ${serviceTitle}</p>
+                    <p><strong>Customer:</strong> ${customerName}</p>
+                    <p><strong>Pet:</strong> ${petName}</p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Time:</strong> ${time}</p>
+                    <p><strong>Total Amount:</strong> $${totalAmount}</p>
+                </div>
+                
+                <p>Please log in to your dashboard to approve or decline this request.</p>
+                <p>Best regards,<br>The PNetAI Team</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ New booking notification sent to provider:', email);
+    } catch (error) {
+        console.error('❌ Error sending provider notification email:', error.message);
+    }
+};
+
 module.exports = {
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendBookingConfirmationEmail,
-    sendAppointmentReminderEmail
+    sendAppointmentReminderEmail,
+    sendNewBookingNotificationToProvider
 };

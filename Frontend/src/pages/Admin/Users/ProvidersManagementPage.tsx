@@ -55,6 +55,8 @@ export default function ProvidersManagementPage() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
   const [isFinancialOpen, setIsFinancialOpen] = useState(false);
+  const [financialTransactions, setFinancialTransactions] = useState<any[]>([]);
+  const [loadingFinance, setLoadingFinance] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -136,9 +138,18 @@ export default function ProvidersManagementPage() {
     setIsDossierOpen(true);
   };
 
-  const openFinancial = (provider: Provider) => {
+  const openFinancial = async (provider: Provider) => {
     setSelectedProvider(provider);
     setIsFinancialOpen(true);
+    try {
+      setLoadingFinance(true);
+      const res = await apiClient.get(`/admin/finance/transactions/${provider._id}`);
+      setFinancialTransactions(res.data.transactions);
+    } catch (err) {
+      toast.error("Failed to fetch transaction ledger.");
+    } finally {
+      setLoadingFinance(false);
+    }
   };
 
   return (
@@ -545,9 +556,7 @@ export default function ProvidersManagementPage() {
           <div key="financial-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-6">
              <motion.div 
                key="financial-modal-backdrop"
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                onClick={() => setIsFinancialOpen(false)}
                className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
              />
@@ -569,13 +578,14 @@ export default function ProvidersManagementPage() {
                 </div>
 
                 <div className="p-10 space-y-10">
+                   {/* Summary Cards */}
                    <div className="grid grid-cols-3 gap-6">
                       <div className="p-6 bg-warm/50 border border-sand/50 rounded-3xl">
                          <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm mb-4">
                             <TrendingUp className="w-5 h-5" />
                          </div>
                          <p className="text-[8px] font-black text-muted uppercase tracking-widest mb-1">Total Revenue</p>
-                         <p className="text-xl font-bold text-ink">${selectedProvider.totalRevenue.toLocaleString()}</p>
+                         <p className="text-xl font-bold text-ink">VND {selectedProvider.totalRevenue.toLocaleString()}</p>
                       </div>
                       <div className="p-6 bg-warm/50 border border-sand/50 rounded-3xl">
                          <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-caramel shadow-sm mb-4">
@@ -589,33 +599,45 @@ export default function ProvidersManagementPage() {
                             <DollarSign className="w-5 h-5" />
                          </div>
                          <p className="text-[8px] font-black text-white/50 uppercase tracking-widest mb-1">Net Earnings</p>
-                         <p className="text-xl font-bold">${(selectedProvider.totalRevenue * 0.88).toLocaleString()}</p>
+                         <p className="text-xl font-bold">VND {(selectedProvider.totalRevenue * 0.88).toLocaleString()}</p>
                       </div>
                    </div>
 
+                   {/* Real Transactions Ledger */}
                    <div className="bg-white border border-sand rounded-[2rem] overflow-hidden">
                       <div className="p-6 bg-warm/20 border-b border-sand flex items-center justify-between">
-                         <p className="text-[10px] font-black text-ink uppercase tracking-widest">Recent Cashflow</p>
+                         <p className="text-[10px] font-black text-ink uppercase tracking-widest">Recent Cashflow Ledger</p>
                          <button className="text-[9px] font-black text-caramel uppercase tracking-widest flex items-center gap-1 hover:underline">
                             Export Ledger <ExternalLink className="w-3 h-3" />
                          </button>
                       </div>
-                      <div className="p-6 space-y-4">
-                         {[
-                            { desc: "Appointment #BK-9021", date: "Today", amount: 150, type: "credit" },
-                            { desc: "System Commission Fee", date: "Today", amount: -18, type: "debit" },
-                            { desc: "Grooming Service #BK-8842", date: "Yesterday", amount: 85, type: "credit" }
-                         ].map((tx, i) => (
-                            <div key={i} className="flex items-center justify-between py-2 border-b border-sand/30 last:border-0">
-                               <div>
-                                  <p className="text-xs font-bold text-ink">{tx.desc}</p>
-                                  <p className="text-[9px] font-medium text-muted">{tx.date}</p>
-                               </div>
-                               <p className={`text-xs font-bold ${tx.type === 'credit' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                  {tx.type === 'credit' ? '+' : '-'}${Math.abs(tx.amount)}
-                               </p>
+                      <div className="p-6 space-y-4 max-h-64 overflow-y-auto">
+                         {loadingFinance ? (
+                            <div className="py-10 text-center">
+                               <Loader2 className="w-6 h-6 animate-spin text-caramel mx-auto mb-2" />
+                               <p className="text-[10px] font-bold text-muted uppercase tracking-widest animate-pulse">Requesting Ledger...</p>
                             </div>
-                         ))}
+                         ) : financialTransactions.length > 0 ? financialTransactions.map((tx) => (
+                            <div key={tx._id} className="flex items-center justify-between py-3 border-b border-sand/30 last:border-0 hover:bg-warm/10 transition-colors">
+                               <div className="flex items-center gap-4">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${tx.type === 'service_booking' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                     {tx.type === 'service_booking' ? 'BK' : 'OR'}
+                                  </div>
+                                  <div>
+                                     <p className="text-xs font-bold text-ink">{tx.type === 'service_booking' ? 'Booking' : 'Product'} - {tx.user?.name || 'Customer'}</p>
+                                     <p className="text-[9px] font-medium text-muted">{new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                  </div>
+                                </div>
+                               <div className="text-right">
+                                  <p className="text-xs font-bold text-emerald-600">+ VND {tx.amount.toLocaleString()}</p>
+                                  <p className="text-[8px] font-bold text-rose-400">-{ (tx.amount * 0.12).toLocaleString() } (Fee)</p>
+                               </div>
+                            </div>
+                         )) : (
+                            <div className="py-10 text-center">
+                               <p className="text-xs font-serif italic text-muted/50">No transaction records found for this partner.</p>
+                            </div>
+                         )}
                       </div>
                    </div>
                 </div>

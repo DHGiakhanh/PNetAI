@@ -80,67 +80,72 @@ export default function MyBookingsPage() {
               <p className="text-xs font-bold text-muted uppercase tracking-widest">No appointments found.</p>
             </div>
           ) : (
-            bookings.map((booking) => (
-              <article key={booking._id} className="rounded-2xl border border-sand bg-white/90 overflow-hidden shadow-sm flex flex-col sm:flex-row">
-                {booking.service.images && booking.service.images.length > 0 && (
-                  <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20">
-                    <img
-                      src={booking.service.images[0]}
-                      alt={booking.service.title}
-                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                    />
-                  </div>
-                )}
-                <div className="flex-1 p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-serif font-bold italic text-ink">{booking.service.title}</h3>
-                        <span className={`rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${statusTone[booking.status]}`}>
-                          {booking.status}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted">
-                         <span className="flex items-center gap-1.5">
-                           <Calendar className="w-3" />
-                           {new Date(booking.bookingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
-                         </span>
-                         <span className="flex items-center gap-1.5">
-                           <Clock className="w-3" />
-                           {booking.bookingTime}
-                         </span>
-                         {booking.service.location?.city && (
-                           <span className="flex items-center gap-1.5">
-                             <MapPin className="w-3" />
-                             {booking.service.location.city}
-                           </span>
-                         )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-black text-ink">{formatVnd(booking.totalAmount)}</p>
-                      <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">
-                        ID: {booking._id.slice(-8).toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 p-4 bg-warm/30 rounded-2xl border border-sand/30">
-                     <div className="w-10 h-10 rounded-xl bg-white border border-sand flex items-center justify-center overflow-hidden">
-                        {booking.pet.avatarUrl ? (
-                          <img src={booking.pet.avatarUrl} className="w-full h-full object-cover" />
-                        ) : (
-                          <Dog className="w-5 h-5 text-muted" />
-                        )}
-                     </div>
-                     <div>
-                        <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
-                        <p className="text-[10px] font-medium text-muted">{booking.pet.breed || booking.pet.species}</p>
-                     </div>
-                  </div>
+            bookings.map((booking) => {
+              if (!booking.service || !booking.pet) return null;
+              
+              return (
+                <article key={booking._id} className="rounded-2xl border border-sand bg-white/90 overflow-hidden shadow-sm flex flex-col sm:flex-row">
+                <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20 flex-shrink-0">
+                  <img
+                    src={(booking.service.images && booking.service.images.length > 0) 
+                      ? booking.service.images[0] 
+                      : "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=400&auto=format&fit=crop"
+                    }
+                    alt={booking.service.title}
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                  />
                 </div>
-              </article>
-            ))
+                  <div className="flex-1 p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-serif font-bold italic text-ink">{booking.service.title}</h3>
+                          <span className={`rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest ${statusTone[booking.status]}`}>
+                            {booking.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted">
+                           <span className="flex items-center gap-1.5">
+                             <Calendar className="w-3" />
+                             {new Date(booking.bookingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                           </span>
+                           <span className="flex items-center gap-1.5">
+                             <Clock className="w-3" />
+                             {booking.bookingTime}
+                           </span>
+                           {booking.service.location?.city && (
+                             <span className="flex items-center gap-1.5">
+                               <MapPin className="w-3" />
+                               {booking.service.location.city}
+                             </span>
+                           )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-ink">{formatVnd(booking.totalAmount)}</p>
+                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">
+                          ID: {booking._id.slice(-8).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 p-4 bg-warm/30 rounded-2xl border border-sand/30">
+                       <div className="w-10 h-10 rounded-xl bg-white border border-sand flex items-center justify-center overflow-hidden">
+                          {booking.pet.avatarUrl ? (
+                            <img src={booking.pet.avatarUrl} className="w-full h-full object-cover" />
+                          ) : (
+                            <Dog className="w-5 h-5 text-muted" />
+                          )}
+                       </div>
+                       <div>
+                          <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
+                          <p className="text-[10px] font-medium text-muted">{booking.pet.breed || booking.pet.species}</p>
+                       </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })
           )}
         </section>
       </div>

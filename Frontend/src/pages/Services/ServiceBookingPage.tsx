@@ -4,7 +4,6 @@ import {
   MapPin, 
   ChevronRight, 
   Loader2, 
-  Heart,
   ChevronLeft,
   Check,
   Plus,
@@ -154,14 +153,17 @@ export default function ServiceBookingPage() {
                </div>
             </div>
             <div className="flex-1 min-w-0">
-               <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-ink mb-6 tracking-tighter leading-none">{service.title}</h1>
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-caramel mb-4 italic">Certified Healthcare Provider</p>
+               <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-ink mb-6 tracking-tighter leading-none">
+                  {service.providerName || service.title}
+               </h1>
                <div className="flex flex-wrap items-center gap-4">
                   <button className="flex items-center gap-2.5 px-8 py-3 bg-warm text-ink rounded-full text-[11px] font-black uppercase tracking-widest border border-sand hover:bg-caramel hover:text-white transition-all">
-                     <MapPin className="w-4 h-4" /> Address Info
+                     <MapPin className="w-4 h-4" /> {service.location?.city || "Accredited Location"}
                   </button>
-                  <button className="flex items-center gap-2.5 px-8 py-3 border border-sand text-muted rounded-full text-[11px] font-black uppercase tracking-widest hover:border-ink hover:text-ink transition-all">
-                     <Heart className="w-4 h-4" /> Favorite Clinic
-                  </button>
+                  <div className="px-8 py-3 border border-sand/30 text-muted/40 rounded-full text-[11px] font-black uppercase tracking-widest italic">
+                     {service.title}
+                  </div>
                </div>
             </div>
          </div>
@@ -269,35 +271,53 @@ export default function ServiceBookingPage() {
                     </div>
                  ))}
               </div>
-
-              <div className="p-5 min-h-[320px]">
-                 {step === 1 && (
-                    <div className="space-y-6">
-                       <h3 className="text-xl font-serif font-bold italic text-ink">Identify specialized protocol...</h3>
-                       <div className="grid sm:grid-cols-2 gap-3">
-                          {providerServices.map(s => (
-                            <button 
-                              key={s._id} 
-                              onClick={() => { 
-                                setService(s);
-                                setSelectedSpecialty(s.title); 
-                                setStep(2); 
-                              }} 
-                              className={`group p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden ${selectedSpecialty === s.title ? "border-caramel bg-warm/50" : "border-sand/30 bg-white hover:border-caramel/20"}`}
-                            >
-                               <div className="relative z-10">
-                                  <div className="flex justify-between items-center mb-1">
-                                     <p className="text-base font-bold text-ink">{s.title}</p>
-                                     <ChevronRight className={`w-4 h-4 transition-all ${selectedSpecialty === s.title ? "text-caramel translate-x-0" : "text-sand/30 -translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
-                                  </div>
-                                  <p className="text-[11px] font-black uppercase tracking-widest text-caramel">{formatVnd(s.basePrice)}</p>
-                               </div>
-                               {selectedSpecialty === s.title && <div className="absolute top-0 right-0 w-24 h-24 bg-caramel/5 rounded-full blur-2xl opacity-50" />}
-                            </button>
-                          ))}
-                       </div>
-                    </div>
-                 )}
+               <div className="p-8 min-h-[400px]">
+                  {step === 1 && (
+                     <div className="space-y-10">
+                        <div className="border-b border-sand pb-6">
+                           <h3 className="text-3xl font-serif font-bold italic text-ink">Service Selection</h3>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-caramel mt-2 italic">Select from our certified care packages</p>
+                        </div>
+                        
+                        <div className="grid gap-4">
+                           {providerServices.map(s => (
+                             <button 
+                               key={s._id} 
+                               onClick={() => { 
+                                 setService(s);
+                                 setSelectedSpecialty(s.title); 
+                                 setStep(2); 
+                               }} 
+                               className={`group flex items-center justify-between p-8 rounded-[2rem] border-2 transition-all relative overflow-hidden ${service?._id === s._id ? "border-caramel bg-warm/50 shadow-2xl scale-[1.02]" : "border-sand/30 bg-white hover:border-caramel/20"}`}
+                             >
+                                <div className="relative z-10 flex items-center gap-8">
+                                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${service?._id === s._id ? "bg-caramel text-white" : "bg-warm text-muted/20"}`}>
+                                      <Info className="w-6 h-6" />
+                                   </div>
+                                   <div>
+                                      <p className="text-xl font-bold text-ink mb-1">{s.title}</p>
+                                      <div className="flex gap-4 items-center">
+                                         <p className="text-[12px] font-black uppercase tracking-widest text-caramel">{formatVnd(s.basePrice)}</p>
+                                         <span className="w-1 h-1 rounded-full bg-sand" />
+                                         <p className="text-[10px] font-bold text-muted/40 italic">{s.duration} Minutes</p>
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${service?._id === s._id ? "bg-ink text-white" : "bg-warm text-muted/20"}`}>
+                                   <ChevronRight className="w-5 h-5" />
+                                </div>
+                                {service?._id === s._id && <div className="absolute top-0 right-0 w-32 h-32 bg-caramel/5 rounded-full blur-3xl" />}
+                             </button>
+                           ))}
+                        </div>
+                        {providerServices.length === 0 && (
+                           <div className="py-20 text-center">
+                              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted/20" />
+                              <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-muted/30 italic">Indexing facility offerings...</p>
+                           </div>
+                        )}
+                     </div>
+                  )}
 
                  {step === 2 && (
                     <div className="space-y-6">
@@ -452,11 +472,15 @@ export default function ServiceBookingPage() {
                  </h4>
                  
                  <div className="space-y-6 mb-8">
-                    {step >= 1 && selectedSpecialty && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                         <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-2">Facility Specialty</p>
-                         <p className="text-lg font-bold text-white tracking-tight">{selectedSpecialty}</p>
-                      </motion.div>
+                    {(step > 1 && selectedSpecialty) ? (
+                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-2">Facility Specialty</p>
+                          <p className="text-lg font-bold text-white tracking-tight">{selectedSpecialty}</p>
+                       </motion.div>
+                    ) : (
+                       <div className="py-10 text-center border border-dashed border-white/5 rounded-2xl">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-white/10 italic">Select service to view details</p>
+                       </div>
                     )}
                     
                     {step >= 2 && (
@@ -479,7 +503,7 @@ export default function ServiceBookingPage() {
                     )}
                  </div>
 
-                 {step >= 1 && (
+                 {step > 1 && (
                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-8 border-t-2 border-dashed border-white/5 space-y-3">
                       <div className="flex justify-between items-baseline pt-4 text-2xl font-black text-white">
                          <span className="text-[9px] font-black text-caramel uppercase tracking-[0.3em] mr-3 italic">Total Sync:</span>

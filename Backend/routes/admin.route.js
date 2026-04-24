@@ -675,6 +675,24 @@ router.get("/finance/transactions", verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// Get transactions for a specific provider
+router.get("/finance/transactions/:providerId", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { providerId } = req.params;
+        const transactions = await db.Transaction.find({ 
+            provider: providerId,
+            status: "success" 
+        })
+        .populate("user", "name")
+        .sort({ createdAt: -1 })
+        .limit(20);
+
+        res.status(200).json({ transactions });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Manual Confirm Transaction
 router.put("/finance/transactions/:id/confirm", verifyToken, isAdmin, async (req, res) => {
     try {

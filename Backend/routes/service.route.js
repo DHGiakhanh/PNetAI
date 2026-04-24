@@ -44,9 +44,13 @@ const upload = multer({
 const toServiceResponse = (serviceDoc) => {
     const service = serviceDoc?.toObject ? serviceDoc.toObject() : serviceDoc;
     const provider = service?.providerId && typeof service.providerId === "object" ? service.providerId : null;
+    
+    // Ensure we have a valid name to display, falling back to email or generic label
+    const displayName = provider?.name || provider?.email || "Service Provider";
+    
     return {
         ...service,
-        providerName: provider?.name || "",
+        providerName: displayName
     };
 };
 
@@ -55,11 +59,7 @@ router.get('/', async (req, res) => {
     try {
         const { search, category, minPrice, maxPrice, location, sort, providerId, page = 1, limit = 12 } = req.query;
         
-        let query = {};
-        
-        if (!providerId) {
-            query.isAvailable = true;
-        }
+        let query = {}; // Standardized query without strict availability filtering for registry display
         
         const textSearchQuery = buildTextSearchQuery(search, ["title", "description"]);
         if (textSearchQuery) {
@@ -94,19 +94,78 @@ router.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
         
         const services = await db.Service.find(query)
-            .populate('providerId', 'name email operatingHours')
-            .sort(sortOption)
-            .skip(skip)
-            .limit(Number(limit));
+            .populate({
+                path: 'providerId',
+                select: 'name email address legalDocuments status providerOnboardingStatus'
+            })
+            .sort(sortOption);
             
-        const total = await db.Service.countDocuments(query);
+        const processService = (s) => {
+            const doc = s.toObject ? s.toObject() : s;
+            const p = doc.providerId;
+            return {
+                ...doc,
+                providerName: p?.legalDocuments?.clinicName || p?.name || p?.email || "Service Provider",
+                providerAddress: p?.address || doc?.location?.address || ""
+            };
+        };
+
+        if (providerId) {
+            return res.status(200).json({
+                services: services.map(processService),
+                pagination: {
+                    total: services.length,
+                    page: Number(page),
+                    pages: Math.ceil(services.length / (Number(limit) || 1))
+                }
+            });
+        }
+
+        const providerMap = new Map();
         
+        services.forEach(s => {
+            const p = s.providerId;
+            if (!p) return;
+            
+            const onboardingStatus = (p.providerOnboardingStatus || '').toLowerCase();
+            const isApproved = onboardingStatus === 'approved';
+            const isActive = p.status === 'active';
+            
+            if (isActive && isApproved) {
+                const pId = p._id.toString();
+                const processed = processService(s);
+                
+                if (!providerMap.has(pId)) {
+                    providerMap.set(pId, {
+                        ...processed,
+                        categories: [processed.category]
+                    });
+                } else {
+                    const existing = providerMap.get(pId);
+                    if (!existing.categories.includes(processed.category)) {
+                        existing.categories.push(processed.category);
+                    }
+                    if (processed.isAvailable && !existing.isAvailable) {
+                        providerMap.set(pId, {
+                            ...processed,
+                            categories: existing.categories
+                        });
+                    }
+                }
+            }
+        });
+
+        const allFacilities = Array.from(providerMap.values());
+        const total = allFacilities.length;
+        const pages = Math.ceil(total / (Number(limit) || 1));
+        const paginatedFacilities = allFacilities.slice(skip, skip + (Number(limit) || 12));
+
         res.status(200).json({
-            services: services.map(toServiceResponse),
+            services: paginatedFacilities,
             pagination: {
                 total,
                 page: Number(page),
-                pages: Math.ceil(total / limit)
+                pages
             }
         });
     } catch (error) {
@@ -129,10 +188,8 @@ router.get('/popular', async (req, res) => {
 // Get services by category
 router.get('/category/:category', async (req, res) => {
     try {
-        const services = await db.Service.find({ 
-            category: req.params.category, 
-            isAvailable: true 
-        })
+        let query = { category: req.params.category };
+        const services = await db.Service.find(query)
         .populate('providerId', 'name email operatingHours')
         .limit(8);
         res.status(200).json({ services: services.map(toServiceResponse) });

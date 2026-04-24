@@ -378,13 +378,31 @@ router.post("/payos/webhook", async (req, res) => {
                         }
                     }
 
-                    // Confirm booking on successful payment
+                    // Notify provider on successful payment - wait for manual approval
                     if (transaction.type === "service_booking" && transaction.referenceId) {
-                        const booking = await db.Booking.findById(transaction.referenceId);
+                        const booking = await db.Booking.findById(transaction.referenceId)
+                            .populate({
+                                path: 'service',
+                                select: 'title providerId'
+                            })
+                            .populate('user', 'name');
+                            
                         if (booking && booking.status === "pending") {
-                            booking.status = "confirmed";
-                            booking.updatedAt = Date.now();
-                            await booking.save();
+                            // Fetch full provider details for email
+                            const service = await db.Service.findById(booking.service._id || booking.service)
+                                .populate('providerId', 'email');
+                            
+                            if (service && service.providerId && service.providerId.email) {
+                                const { sendNewBookingNotificationToProvider } = require("../config/emailService");
+                                await sendNewBookingNotificationToProvider(service.providerId.email, {
+                                    serviceTitle: service.title,
+                                    customerName: booking.user.name || "Customer",
+                                    petName: "Your Patient", // We can improve this by populating pet
+                                    date: booking.bookingDate.toLocaleDateString(),
+                                    time: booking.bookingTime,
+                                    totalAmount: booking.totalAmount
+                                });
+                            }
                         }
                     }
                 } else if (["CANCELLED", "EXPIRED", "FAILED"].includes(inferredStatus)) {

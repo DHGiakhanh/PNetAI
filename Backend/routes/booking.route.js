@@ -56,24 +56,28 @@ router.post("/confirm", verifyToken, async (req, res) => {
             bookingDate: new Date(bookingDate),
             bookingTime,
             totalAmount,
-            paymentMethod: paymentMethod || "PayOS",
-            status: "confirmed" // Auto-confirm for this demo/flow
+            paymentMethod: paymentMethod || "Manual",
+            status: "pending"
         });
 
         await newBooking.save();
 
-        // Send automated confirmation email
-        const dateStr = new Date(bookingDate).toLocaleDateString();
-        await sendBookingConfirmationEmail(user.email, {
-            serviceTitle: service.title,
-            petName: pet.name,
-            date: dateStr,
-            time: bookingTime,
-            totalAmount
-        });
+        // Notify provider about the new request
+        if (service.providerId && service.providerId.email) {
+            const { sendNewBookingNotificationToProvider } = require("../config/emailService");
+            const dateStr = new Date(bookingDate).toLocaleDateString();
+            await sendNewBookingNotificationToProvider(service.providerId.email, {
+                serviceTitle: service.title,
+                customerName: user.name || "Customer",
+                petName: pet.name,
+                date: dateStr,
+                time: bookingTime,
+                totalAmount
+            });
+        }
 
         res.status(201).json({
-            message: "Booking confirmed successfully. A confirmation email has been sent.",
+            message: "Booking request received and is pending provider approval.",
             booking: newBooking
         });
     } catch (error) {
@@ -221,10 +225,13 @@ router.get("/service-availability/:serviceId", async (req, res) => {
 // Get user's bookings
 router.get("/my", verifyToken, async (req, res) => {
     try {
-        const bookings = await db.Booking.find({ user: req.userId })
+        const rawBookings = await db.Booking.find({ user: req.userId })
             .populate('service', 'title description images duration location')
             .populate('pet', 'name avatarUrl species breed')
             .sort({ bookingDate: -1 });
+
+        // Filter out bookings where service or pet might have been deleted
+        const bookings = rawBookings.filter(b => b.service && b.pet);
 
         res.status(200).json({ bookings });
     } catch (error) {
@@ -247,6 +254,53 @@ router.get("/provider", verifyToken, async (req, res) => {
 
         res.status(200).json({ bookings });
     } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Update booking status
+router.patch("/status/:id", verifyToken, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ["pending", "confirmed", "completed", "cancelled"];
+        
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid status." });
+        }
+
+        const booking = await db.Booking.findById(req.params.id)
+            .populate('user', 'email name')
+            .populate('pet', 'name')
+            .populate('service', 'title providerId');
+
+        if (!booking) return res.status(404).json({ message: "Booking not found." });
+
+        // Security: Ensure the provider owns the service for this booking
+        const service = booking.service; // already populated
+        if (service.providerId.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied." });
+        }
+
+        const oldStatus = booking.status;
+        booking.status = status;
+        booking.updatedAt = Date.now();
+        await booking.save();
+
+        // Send email to USER if confirmed
+        if (status === "confirmed" && oldStatus !== "confirmed") {
+            const { sendBookingConfirmationEmail } = require("../config/emailService");
+            await sendBookingConfirmationEmail(booking.user.email, {
+                serviceTitle: service.title,
+                petName: booking.pet.name,
+                date: booking.bookingDate.toLocaleDateString(),
+                time: booking.bookingTime,
+                totalAmount: booking.totalAmount
+            });
+        }
+
+        res.status(200).json({ message: `Booking ${status}`, booking });
+    } catch (error) {
+        console.error("Status Update Error:", error);
         res.status(500).json({ message: error.message });
     }
 });

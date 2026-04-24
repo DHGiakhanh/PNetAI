@@ -33,5 +33,10 @@ export const bookingService = {
   getProviderBookings: async () => {
     const response = await apiClient.get('/bookings/provider');
     return response.data.bookings;
+  },
+
+  updateBookingStatus: async (id: string, status: string) => {
+    const response = await apiClient.patch(`/bookings/status/${id}`, { status });
+    return response.data;
   }
 };
