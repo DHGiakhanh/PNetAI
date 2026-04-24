@@ -53,6 +53,7 @@ router.post('/add', verifyToken, async (req, res) => {
         
         if (existingItem) {
             existingItem.quantity += quantity;
+            existingItem.price = product.price; // Sync price
         } else {
             cart.items.push({
                 product: productId,
@@ -105,6 +106,7 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
         }
         
         item.quantity = quantity;
+        item.price = product.price; // Sync price
         
         // Calculate total
         recalculateCartTotal(cart);
@@ -131,7 +133,7 @@ router.delete('/remove/:productId', verifyToken, async (req, res) => {
         }
         
         cart.items = cart.items.filter(
-            item => item.product.toString() !== req.params.productId
+            item => item.product && item.product.toString() !== req.params.productId
         );
         
         // Calculate total

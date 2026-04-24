@@ -802,4 +802,35 @@ router.get('/statistics/dashboard', verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// Maintenance: Check for inactive accounts (dormant for 6 months)
+router.post('/maintenance/check-inactivity', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        // Find users who haven't logged in for 6 months OR created > 6 months ago and never logged in
+        // and are currently "active"
+        const result = await db.User.updateMany(
+            {
+                status: "active",
+                $or: [
+                    { lastLoginAt: { $lt: sixMonthsAgo } },
+                    { lastLoginAt: { $exists: false }, createdAt: { $lt: sixMonthsAgo } }
+                ],
+                role: { $ne: "admin" } // Don't lock admins
+            },
+            {
+                $set: { status: "inactive" }
+            }
+        );
+
+        res.status(200).json({
+            message: `Maintenance completed. ${result.modifiedCount} accounts marked as inactive due to dormancy (>6 months).`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

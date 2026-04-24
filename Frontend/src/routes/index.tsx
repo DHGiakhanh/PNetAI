@@ -11,6 +11,7 @@ import SaleRoute from "@/routes/SaleRoute";
 
 import { ForgotPassword } from "@/pages/Auth/ForgotPassword";
 import OtpVerifyPage from "@/pages/Auth/OtpVerify";
+import VerifyReactivation from "@/pages/Auth/VerifyReactivation";
 import ResetPasswordPage from "@/pages/Auth/ResetPassword";
 import MyPetsPage from "@/pages/Pets/MyPetsPage";
 import UserProfile from "@/pages/Profile/UserProfile";
@@ -111,6 +112,7 @@ export default function AppRoutes() {
         <Route path="register" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="otp-verify" element={<OtpVerifyPage />} />
+        <Route path="verify-reactivation" element={<VerifyReactivation />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="blogs" element={<BlogsPage />} />
         <Route path="blogs/:blogId" element={<BlogDetailPage />} />

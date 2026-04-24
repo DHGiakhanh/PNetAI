@@ -167,6 +167,34 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: "Invalid password" });
         }
 
+        // --- Inactivity & Status Check ---
+        if (user.status === "locked") {
+            return res.status(403).json({ message: "Your account is locked for security. Please contact support." });
+        }
+
+        user.lastLoginAt = new Date();
+        
+        if (user.status === "inactive") {
+            const otpCode = generateOtpCode();
+            user.reactivationToken = otpCode;
+            user.reactivationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+            await user.save();
+            
+            try {
+                await sendVerificationEmail(user.email, otpCode);
+            } catch (err) {
+                console.error("Reactivation email failed:", err.message);
+            }
+
+            return res.status(200).json({ 
+                requiresReactivation: true,
+                email: user.email,
+                message: "You haven't used PNetAI for a long time, your account is temporarily locked for security. We sent a reactivation code to your email." 
+            });
+        }
+
+        await user.save();
+
         if (user.role === "user" && !user.isVerified) {
             return res.status(403).json({
                 message: "Please verify your email before logging in."
@@ -241,7 +269,6 @@ router.post('/google-login', async (req, res) => {
             });
             await user.save();
         } else {
-            // Link googleId if not linked
             if (!user.googleId) {
                 user.googleId = googleId;
                 if (!user.avatarUrl) user.avatarUrl = picture;
@@ -249,6 +276,34 @@ router.post('/google-login', async (req, res) => {
                 await user.save();
             }
         }
+
+        // --- Inactivity & Status Check for Google Login ---
+        if (user.status === "locked") {
+            return res.status(403).json({ message: "Your account is locked for security. Please contact support." });
+        }
+
+        user.lastLoginAt = new Date();
+        
+        if (user.status === "inactive") {
+            const otpCode = generateOtpCode();
+            user.reactivationToken = otpCode;
+            user.reactivationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
+            await user.save();
+            
+            try {
+                await sendVerificationEmail(user.email, otpCode);
+            } catch (err) {
+                console.error("Reactivation email failed:", err.message);
+            }
+
+            return res.status(200).json({ 
+                requiresReactivation: true,
+                email: user.email,
+                message: "Long time no see! Your account was inactive. Please verify it's you via the code sent to your email."
+            });
+        }
+
+        await user.save();
 
         const token = jwt.sign(
             { userId: user._id, role: user.role }, 
@@ -343,6 +398,61 @@ router.post('/resend-verification-otp', async (req, res) => {
         await sendVerificationEmail(user.email, otpCode);
 
         res.status(200).json({ message: "A new verification code has been sent to your email." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Verify Reactivation (for inactive users)
+router.post('/verify-reactivation', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({ message: "Email and OTP are required." });
+        }
+
+        const user = await db.User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        if (user.status !== "inactive") {
+            return res.status(400).json({ message: "Account is already active." });
+        }
+
+        if (!user.reactivationToken || !user.reactivationTokenExpires || user.reactivationTokenExpires < new Date()) {
+            return res.status(400).json({ message: "OTP is expired. Please try logging in again to request a new code." });
+        }
+
+        if (user.reactivationToken !== String(otp)) {
+            return res.status(400).json({ message: "Invalid OTP code." });
+        }
+
+        user.status = "active";
+        user.reactivationToken = undefined;
+        user.reactivationTokenExpires = undefined;
+        user.lastLoginAt = new Date();
+        await user.save();
+
+        const token = jwt.sign(
+            { userId: user._id, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: "24h" }
+        );
+
+        res.status(200).json({ 
+            message: "Account reactivated successfully. Welcome back!", 
+            token,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                avatarUrl: user.avatarUrl,
+                saleCode: user.saleCode,
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

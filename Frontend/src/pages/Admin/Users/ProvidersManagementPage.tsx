@@ -323,8 +323,9 @@ export default function ProvidersManagementPage() {
       {/* Dossier Modal */}
       <AnimatePresence>
         {isDossierOpen && selectedProvider && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div key="dossier-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-6">
              <motion.div 
+               key="dossier-modal-backdrop"
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
@@ -332,6 +333,7 @@ export default function ProvidersManagementPage() {
                className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
              />
              <motion.div 
+               key="dossier-modal-content"
                initial={{ opacity: 0, scale: 0.9, y: 20 }}
                animate={{ opacity: 1, scale: 1, y: 0 }}
                exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -540,8 +542,9 @@ export default function ProvidersManagementPage() {
       {/* Financial Modal */}
       <AnimatePresence>
         {isFinancialOpen && selectedProvider && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div key="financial-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-6">
              <motion.div 
+               key="financial-modal-backdrop"
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
@@ -549,6 +552,7 @@ export default function ProvidersManagementPage() {
                className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
              />
              <motion.div 
+               key="financial-modal-content"
                initial={{ opacity: 0, scale: 0.9, y: 20 }}
                animate={{ opacity: 1, scale: 1, y: 0 }}
                exit={{ opacity: 0, scale: 0.9, y: 20 }}

@@ -104,6 +104,11 @@ export const authService = {
     return response.data;
   },
 
+  verifyReactivation: async (data: { email: string; otp: string }) => {
+    const response = await apiClient.post('/auth/verify-reactivation', data);
+    return response.data;
+  },
+
   logout: () => {
     localStorage.removeItem('token');
   },

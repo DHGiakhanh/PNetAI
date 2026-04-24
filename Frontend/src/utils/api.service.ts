@@ -34,6 +34,9 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      console.error("Access Forbidden: Redirecting to home.", error.response.data);
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }

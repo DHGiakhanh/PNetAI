@@ -14,6 +14,11 @@ export const Login = () => {
   const successMessage = location.state?.successMessage || '';
 
   const handleAuthResponse = (response: any) => {
+    if (response.requiresReactivation) {
+      navigate('/verify-reactivation', { state: { email: response.email, message: response.message } });
+      return;
+    }
+
     localStorage.setItem('token', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     

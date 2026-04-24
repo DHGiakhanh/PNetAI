@@ -97,8 +97,8 @@ export function AppNavbar() {
 
       const preview = items.map((item: any, index: number) => {
         const product = item.product as CartProduct;
-        // Strong ID resolution: Item subdocument ID > Product ID > Product String > Index Fallback
-        const itemId = item._id || (typeof item.product === 'string' ? item.product : (product?._id)) || `key-${index}`;
+        // Strong ID resolution: Product ID > Product String > Item subdocument ID > Index Fallback
+        const itemId = (typeof item.product === 'object' ? (item.product as any)?._id : item.product) || item._id || `key-${index}`;
         
         return {
           id: itemId,

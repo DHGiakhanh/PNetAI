@@ -154,9 +154,24 @@ export const AdminDashboard = () => {
           </div>
           <button 
             onClick={handleExport}
-            className="px-6 py-2.5 bg-ink text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-caramel transition-all"
+            className="px-6 py-2.5 bg-white border border-sand text-ink rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-warm transition-all shadow-sm"
           >
             Export Report
+          </button>
+          <button 
+            onClick={async () => {
+              if (window.confirm("Run system-wide inactivity check? Accounts with no login for 6 months will be marked as Inactive and secured.")) {
+                try {
+                  const res = await apiClient.post("/admin/maintenance/check-inactivity");
+                  toast.success(res.data.message);
+                } catch (err) {
+                  toast.error("Maintenance task failed.");
+                }
+              }
+            }}
+            className="px-6 py-2.5 bg-ink text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-ink/20"
+          >
+            Run Maintenance
           </button>
         </div>
       </div>
@@ -192,7 +207,7 @@ export const AdminDashboard = () => {
               <TrendingUp className="w-6 h-6 text-caramel" />
             </div>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <AreaChart data={data?.charts.revenueTrend || []}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -229,7 +244,7 @@ export const AdminDashboard = () => {
               <Users className="w-6 h-6 text-ink" />
             </div>
             <div className="h-[300px] w-full">
-               <ResponsiveContainer width="100%" height="100%">
+               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={data?.charts.userGrowth || []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4D5BC" />
                     <XAxis 

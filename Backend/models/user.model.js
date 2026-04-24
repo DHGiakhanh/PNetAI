@@ -23,6 +23,14 @@ const userSchema = new Schema({
     verificationTokenExpires: { type: Date },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    lastLoginAt: { type: Date, default: Date.now },
+    status: {
+        type: String,
+        enum: ["active", "inactive", "locked"],
+        default: "active"
+    },
+    reactivationToken: { type: String },
+    reactivationTokenExpires: { type: Date },
     providerOnboardingStatus: {
         type: String,
         enum: [
