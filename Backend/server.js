@@ -47,11 +47,10 @@ app.use(async (err, req, res, next) => {
         });
 })
 
-const HOSTNAME = process.env.HOSTNAME || "localhost";
 const PORT = process.env.PORT || 9999;
 
-app.listen(PORT, HOSTNAME, () => {
-    console.log(`Server running at: http://${HOSTNAME}:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server running on port: ${PORT}`);
     //Connect database 
     connectDb();
     // Initialize notification cron jobs
