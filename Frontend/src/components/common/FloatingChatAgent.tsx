@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, MessageCircle, Send, Sparkles, X, Loader2 } from "lucide-react";
+import { buildApiUrl } from "../../utils/api.service";
 
 type ChatRole = "user" | "agent";
 
@@ -62,7 +63,7 @@ export default function FloatingChatAgent() {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://159.48.242.1:20735/api/chat", {
+      const response = await fetch(buildApiUrl("/chat"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -73,6 +74,11 @@ export default function FloatingChatAgent() {
           top_k: 3,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Chat request failed.");
+      }
 
       if (!response.body) throw new Error("Could not receive data from server.");
 

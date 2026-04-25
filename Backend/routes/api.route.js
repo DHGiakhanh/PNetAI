@@ -14,6 +14,7 @@ const petRoutes = require("./pet.route");
 const saleRoutes = require("./sale.route");
 const bookingRoutes = require("./booking.route");
 const subscriptionRoutes = require("./subscription.route");
+const chatRoutes = require("./chat.route");
 const ApiRouter = express.Router();
 
 // Auth routes
@@ -60,5 +61,8 @@ ApiRouter.use('/bookings', bookingRoutes);
 
 // Subscription routes
 ApiRouter.use('/subscriptions', subscriptionRoutes);
+
+// AI chat routes
+ApiRouter.use('/', chatRoutes);
 
 module.exports = ApiRouter;
