@@ -20,6 +20,9 @@ export const ProductCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [updatingProduct, setUpdatingProduct] = useState(false);
 
   const [cropper, setCropper] = useState<{ image: string; open: boolean }>({
     image: "",
@@ -113,8 +116,36 @@ export const ProductCatalog = () => {
   };
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) &&
+    (selectedCategory === "all" || p.category === selectedCategory)
   );
+
+  const handleSaveEdit = async () => {
+    if (!editingProduct) return;
+    if (!editingProduct.name?.trim() || !editingProduct.description?.trim()) {
+      toast.error("Please fill in product name and description.");
+      return;
+    }
+
+    try {
+      setUpdatingProduct(true);
+      const updated = await productService.updateProduct(editingProduct._id, {
+        name: editingProduct.name,
+        description: editingProduct.description,
+        category: editingProduct.category,
+        price: editingProduct.price,
+        stock: editingProduct.stock,
+        images: editingProduct.images,
+      });
+      setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
+      setEditingProduct(null);
+      toast.success("Product updated successfully.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update product.");
+    } finally {
+      setUpdatingProduct(false);
+    }
+  };
 
   if (loading) return (
     <div className="h-96 flex items-center justify-center">
@@ -156,9 +187,21 @@ export const ProductCatalog = () => {
           />
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-           <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white border border-sand rounded-[1.5rem] text-xs font-black uppercase tracking-widest text-muted hover:bg-warm transition">
-              <Filter className="w-4 h-4" /> Category
-           </button>
+          <div className="flex flex-1 items-center gap-3 rounded-[1.5rem] border border-sand bg-white px-4 py-3 md:flex-none">
+            <Filter className="w-4 h-4 text-muted" />
+            <select
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+              className="w-full bg-transparent text-xs font-black uppercase tracking-widest text-muted outline-none"
+            >
+              <option value="all">All Categories</option>
+              {CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -229,7 +272,10 @@ export const ProductCatalog = () => {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                       <button className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition">
+                       <button
+                          onClick={() => setEditingProduct({ ...p })}
+                          className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition"
+                       >
                           <Edit3 className="w-4 h-4" />
                        </button>
                     </div>
@@ -356,6 +402,117 @@ export const ProductCatalog = () => {
                     {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Authorize Registry"}
                   </button>
                </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingProduct && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center px-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingProduct(null)}
+              className="absolute inset-0 bg-ink/70 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 40 }}
+              className="relative w-full max-w-2xl rounded-[3rem] bg-white p-10 shadow-2xl"
+            >
+              <h2 className="text-3xl font-serif font-bold italic text-ink">Edit Product</h2>
+              <div className="mt-8 space-y-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Product Name</label>
+                    <input
+                      value={editingProduct.name}
+                      onChange={(event) => setEditingProduct((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+                      className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-bold text-ink outline-none focus:border-caramel"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Category</label>
+                    <select
+                      value={editingProduct.category}
+                      onChange={(event) => setEditingProduct((prev) => (prev ? { ...prev, category: event.target.value } : prev))}
+                      className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-bold text-ink outline-none focus:border-caramel"
+                    >
+                      {CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Description</label>
+                  <textarea
+                    value={editingProduct.description}
+                    onChange={(event) => setEditingProduct((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
+                    className="w-full min-h-[110px] resize-none rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-medium text-ink outline-none focus:border-caramel"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Price (VND)</label>
+                    <input
+                      type="number"
+                      value={editingProduct.price}
+                      onChange={(event) =>
+                        setEditingProduct((prev) =>
+                          prev ? { ...prev, price: Number(event.target.value) || 0 } : prev
+                        )
+                      }
+                      className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-bold text-ink outline-none focus:border-caramel"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Stock</label>
+                    <input
+                      type="number"
+                      value={editingProduct.stock}
+                      onChange={(event) =>
+                        setEditingProduct((prev) =>
+                          prev ? { ...prev, stock: Number(event.target.value) || 0 } : prev
+                        )
+                      }
+                      className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-bold text-ink outline-none focus:border-caramel"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Image URL</label>
+                  <input
+                    value={editingProduct.images?.[0] || ""}
+                    onChange={(event) =>
+                      setEditingProduct((prev) =>
+                        prev ? { ...prev, images: [event.target.value] } : prev
+                      )
+                    }
+                    className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-medium text-ink outline-none focus:border-caramel"
+                  />
+                </div>
+              </div>
+              <div className="mt-10 flex gap-4">
+                <button
+                  onClick={() => setEditingProduct(null)}
+                  className="flex-1 rounded-full border border-sand py-4 text-xs font-bold uppercase tracking-widest text-ink hover:bg-warm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={updatingProduct}
+                  className="flex-1 rounded-full bg-ink py-4 text-xs font-bold uppercase tracking-widest text-white hover:bg-caramel disabled:opacity-60"
+                >
+                  {updatingProduct ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save Changes"}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

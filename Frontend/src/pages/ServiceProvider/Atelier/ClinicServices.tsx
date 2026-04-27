@@ -33,6 +33,7 @@ export const ClinicServices = () => {
    const [loading, setLoading] = useState(true);
    const [isAdding, setIsAdding] = useState(false);
    const [editingService, setEditingService] = useState<Service | null>(null);
+   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
 
    // Config state
    const [capacity, setCapacity] = useState(4);
@@ -155,6 +156,18 @@ export const ClinicServices = () => {
       } catch (error: any) {
          toast.error(error.response?.data?.message || "Status synchronization failed.");
       }
+   };
+
+   const formatDateBadge = (bookingDate: string) => {
+      const date = new Date(bookingDate);
+      return `${date.getDate()}/${date.getMonth() + 1}`;
+   };
+
+   const normalizeTimeRange = (bookingTime: string) => {
+      if (!bookingTime) return "";
+      const parts = bookingTime.split("-").map((item) => item.trim());
+      if (parts.length === 2) return `${parts[0]}-${parts[1]}`;
+      return bookingTime;
    };
 
    if (loading) return (
@@ -302,6 +315,103 @@ export const ClinicServices = () => {
                </div>
             )}
 
+            {selectedBooking && (
+               <div className="fixed inset-0 z-[110] flex items-center justify-center px-6">
+                  <motion.div
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
+                     onClick={() => setSelectedBooking(null)}
+                  />
+                  <motion.div
+                     initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                     animate={{ opacity: 1, y: 0, scale: 1 }}
+                     className="relative w-full max-w-2xl rounded-[2.5rem] border border-sand bg-[#FBF9F2] p-8 shadow-2xl"
+                  >
+                     <button
+                        onClick={() => setSelectedBooking(null)}
+                        className="absolute right-6 top-6 rounded-full border border-sand bg-white p-2 text-muted hover:text-ink"
+                     >
+                        <X className="h-4 w-4" />
+                     </button>
+                     <h3 className="text-3xl font-serif font-bold italic text-ink">Pet Profile</h3>
+                     <p className="mt-1 text-xs font-black uppercase tracking-widest text-caramel">
+                        Booking {formatDateBadge(selectedBooking.bookingDate)} · {normalizeTimeRange(selectedBooking.bookingTime)}
+                     </p>
+
+                     <div className="mt-6 flex items-center gap-4 rounded-2xl border border-sand bg-white p-4">
+                        <div className="h-16 w-16 overflow-hidden rounded-2xl border border-sand bg-warm">
+                           {selectedBooking.pet?.avatarUrl ? (
+                              <img src={selectedBooking.pet.avatarUrl} alt={selectedBooking.pet?.name || "Pet"} className="h-full w-full object-cover" />
+                           ) : (
+                              <div className="grid h-full w-full place-items-center text-xs font-bold text-muted">No Photo</div>
+                           )}
+                        </div>
+                        <div>
+                           <p className="text-xl font-bold text-ink">{selectedBooking.pet?.name || "Unknown Pet"}</p>
+                           <p className="text-xs font-bold uppercase tracking-widest text-muted">
+                              {selectedBooking.pet?.species || "Unknown"} {selectedBooking.pet?.breed ? `• ${selectedBooking.pet.breed}` : ""}
+                           </p>
+                        </div>
+                     </div>
+
+                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Gender</p>
+                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.gender || "Unknown"}</p>
+                        </div>
+                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Age / Weight</p>
+                           <p className="mt-1 text-sm font-bold text-ink">
+                              {selectedBooking.pet?.age ?? "N/A"} yrs · {selectedBooking.pet?.weightKg ?? "N/A"} kg
+                           </p>
+                        </div>
+                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Health Status</p>
+                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.healthStatus || "No data"}</p>
+                        </div>
+                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Allergies</p>
+                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.allergies || "No data"}</p>
+                        </div>
+                     </div>
+
+                     <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Medical History</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-ink">
+                           {selectedBooking.pet?.medicalHistory || "No history recorded yet."}
+                        </p>
+                     </div>
+
+                     {selectedBooking.pet?.medicalHistoryRecords?.length > 0 && (
+                        <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
+                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Clinic Note Timeline</p>
+                           <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
+                              {selectedBooking.pet.medicalHistoryRecords
+                                 .slice()
+                                 .reverse()
+                                 .map((record: any, idx: number) => (
+                                    <div key={record._id || `${record.createdAt}-${idx}`} className="rounded-xl border border-sand/50 bg-warm/20 p-3">
+                                       <p className="text-sm font-semibold text-ink">{record.note}</p>
+                                       <p className="mt-1 text-[11px] text-muted">
+                                          {record.providerName || "Clinic"} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : ""}
+                                       </p>
+                                    </div>
+                                 ))}
+                           </div>
+                        </div>
+                     )}
+
+                     <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Additional Notes</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-ink">
+                           {selectedBooking.pet?.notes || "No additional note."}
+                        </p>
+                     </div>
+                  </motion.div>
+               </div>
+            )}
+
             {activeTab === 'bookings' && (
                <div className="grid lg:grid-cols-12 gap-10">
                   <div className="lg:col-span-8 space-y-8">
@@ -317,13 +427,14 @@ export const ClinicServices = () => {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               key={booking._id}
-                              className="bg-white rounded-[2.5rem] p-8 border border-sand shadow-sm hover:shadow-xl hover:border-caramel/20 transition-all group"
+                              onClick={() => setSelectedBooking(booking)}
+                              className="bg-white rounded-[2.5rem] p-8 border border-sand shadow-sm hover:shadow-xl hover:border-caramel/20 transition-all group cursor-pointer"
                            >
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-8">
                                  <div className="flex items-center gap-8">
                                     <div className={`h-20 w-20 rounded-[1.8rem] flex flex-col items-center justify-center border transition-all ${booking.status === 'confirmed' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-lg shadow-emerald-500/10' : 'bg-warm border-sand/50 text-ink opacity-40 group-hover:opacity-100'}`}>
-                                       <span className="text-2xl font-serif font-bold leading-none">{booking.bookingTime.split(':')[0]}</span>
-                                       <span className="text-[8px] font-black uppercase tracking-tighter mt-1">{booking.bookingTime.split(':')[1]} AM</span>
+                                       <span className="text-2xl font-serif font-bold leading-none">{formatDateBadge(booking.bookingDate)}</span>
+                                       <span className="text-[9px] font-black tracking-tight mt-1">{normalizeTimeRange(booking.bookingTime)}</span>
                                     </div>
                                     <div>
                                        <div className="flex items-center gap-3 mb-2">
@@ -342,18 +453,18 @@ export const ClinicServices = () => {
                                     <AnimatePresence mode="wait">
                                        {booking.status === 'pending' ? (
                                           <div className="flex gap-2">
-                                             <button onClick={() => handleStatusUpdate(booking._id, 'confirmed')} className="px-8 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl">Authorize</button>
-                                             <button onClick={() => handleStatusUpdate(booking._id, 'cancelled')} className="p-3 rounded-full border border-sand text-muted hover:bg-rose-50 hover:text-rose-600 transition"><Trash2 className="w-4 h-4" /></button>
+                                             <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'confirmed'); }} className="px-8 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl">Authorize</button>
+                                             <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'cancelled'); }} className="p-3 rounded-full border border-sand text-muted hover:bg-rose-50 hover:text-rose-600 transition"><Trash2 className="w-4 h-4" /></button>
                                           </div>
                                        ) : booking.status === 'confirmed' ? (
-                                          <button onClick={() => handleStatusUpdate(booking._id, 'completed')} className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5">
+                                          <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'completed'); }} className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5">
                                              <CheckCircle2 className="w-4 h-4" /> Finalize Session
                                           </button>
                                        ) : (
                                           <span className="px-6 py-2.5 rounded-full bg-warm text-[10px] font-black uppercase tracking-widest text-muted/40 italic border border-sand/30">{booking.status}</span>
                                        )}
                                     </AnimatePresence>
-                                    <button className="p-4 rounded-full hover:bg-warm text-muted transition border border-transparent hover:border-sand group-hover:rotate-90">
+                                    <button onClick={(event) => event.stopPropagation()} className="p-4 rounded-full hover:bg-warm text-muted transition border border-transparent hover:border-sand group-hover:rotate-90">
                                        <MoreVertical className="w-5 h-5" />
                                     </button>
                                  </div>
@@ -677,6 +788,3 @@ export const ClinicServices = () => {
       </div>
    );
 };
-
-
-

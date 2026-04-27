@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const mongoose = require("mongoose");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 const { cloudinary } = require("../config/cloudinary");
@@ -56,7 +57,9 @@ router.get('/', async (req, res) => {
         }
 
         if (providerId) {
-            query.providerId = providerId;
+            query.providerId = mongoose.Types.ObjectId.isValid(providerId)
+                ? new mongoose.Types.ObjectId(providerId)
+                : providerId;
         }
         
         if (minPrice || maxPrice) {

@@ -31,6 +31,13 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 type BookingStep = 1 | 2 | 3 | 4;
+type AddPetForm = {
+  name: string;
+  species: "Dog" | "Cat" | "Other";
+  breed: string;
+  gender: "Male" | "Female" | "Unknown";
+  age?: number;
+};
 
 const generateTimeSlots = (startStr: string, endStr: string, interval: number = 30) => {
   const slots: string[] = [];
@@ -74,6 +81,17 @@ export default function ServiceBookingPage() {
   const [description, setDescription] = useState("");
   const [pets, setPets] = useState<Pet[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [occupiedSlots, setOccupiedSlots] = useState<Record<string, Set<string>>>({});
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isAddingPet, setIsAddingPet] = useState(false);
+  const [isSavingPet, setIsSavingPet] = useState(false);
+  const [addPetForm, setAddPetForm] = useState<AddPetForm>({
+    name: "",
+    species: "Dog",
+    breed: "",
+    gender: "Unknown",
+    age: undefined,
+  });
 
   const [providerServices, setProviderServices] = useState<Service[]>([]);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
@@ -89,6 +107,41 @@ export default function ServiceBookingPage() {
       petService.getMyPets().then(setPets).catch(() => setPets([]));
     }
   }, [isLoggedIn, view]);
+
+  useEffect(() => {
+    if (view !== "wizard") return;
+
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60_000);
+
+    return () => window.clearInterval(timer);
+  }, [view]);
+
+  useEffect(() => {
+    if (!service?._id || view !== "wizard") return;
+
+    const month = currentMonth.getMonth();
+    const year = currentMonth.getFullYear();
+    bookingService
+      .getServiceAvailability(service._id, month, year)
+      .then((bookings) => {
+        const next: Record<string, Set<string>> = {};
+        bookings.forEach((booking: any) => {
+          const dateKey = format(new Date(booking.bookingDate), "yyyy-MM-dd");
+          if (!next[dateKey]) next[dateKey] = new Set();
+          next[dateKey].add(booking.bookingTime);
+        });
+        setOccupiedSlots(next);
+      })
+      .catch(() => setOccupiedSlots({}));
+  }, [service?._id, currentMonth, view]);
+
+  useEffect(() => {
+    if (!selectedPetId && pets.length > 0) {
+      setSelectedPetId(pets[0]._id);
+    }
+  }, [pets, selectedPetId]);
 
   const fetchService = async (id: string) => {
     try {
@@ -110,6 +163,68 @@ export default function ServiceBookingPage() {
   };
 
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const getSlotStartDate = (date: Date, slot: string) => {
+    const [start] = slot.split("-").map((item) => item.trim());
+    const [hh, mm] = (start || "").split(":").map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    const next = new Date(date);
+    next.setHours(hh, mm, 0, 0);
+    return next;
+  };
+
+  const isSlotInPast = (date: Date, slot: string) => {
+    if (!isSameDay(date, currentTime)) return false;
+    const slotStart = getSlotStartDate(date, slot);
+    if (!slotStart) return false;
+    return slotStart <= currentTime;
+  };
+
+  const isSlotOccupied = (date: Date, slot: string) => {
+    const key = format(date, "yyyy-MM-dd");
+    return occupiedSlots[key]?.has(slot) || false;
+  };
+
+  useEffect(() => {
+    if (!selectedTime) return;
+    if (isSlotInPast(selectedDate, selectedTime) || isSlotOccupied(selectedDate, selectedTime)) {
+      setSelectedTime("");
+    }
+  }, [selectedDate, selectedTime, occupiedSlots, currentTime]);
+
+  const handleCreatePet = async () => {
+    const name = addPetForm.name.trim();
+    if (!name) {
+      toast.error("Pet name is required.");
+      return;
+    }
+
+    try {
+      setIsSavingPet(true);
+      const createdPet = await petService.createPet({
+        name,
+        species: addPetForm.species,
+        breed: addPetForm.breed.trim(),
+        gender: addPetForm.gender,
+        age: addPetForm.age,
+      });
+      setPets((prev) => [createdPet, ...prev]);
+      setSelectedPetId(createdPet._id);
+      setIsAddingPet(false);
+      setAddPetForm({
+        name: "",
+        species: "Dog",
+        breed: "",
+        gender: "Unknown",
+        age: undefined,
+      });
+      toast.success("New pet profile added.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to add new pet.");
+    } finally {
+      setIsSavingPet(false);
+    }
+  };
 
   const handleConfirm = async () => {
     if (!service || !selectedPetId || !selectedTime) return;
@@ -360,9 +475,23 @@ export default function ServiceBookingPage() {
                              const provider = typeof service.providerId === 'object' ? service.providerId : null;
                              const hours = provider?.operatingHours || { start: "08:00", end: "18:00" };
                              const allSlots = generateTimeSlots(hours.start, hours.end, 30);
-                             
-                             const morning = allSlots.filter(s => parseInt(s.split(':')[0]) < 12);
-                             const afternoon = allSlots.filter(s => parseInt(s.split(':')[0]) >= 12);
+                             const slotsWithState = allSlots.map((slot) => {
+                               const blockedByTime = isSlotInPast(selectedDate, slot);
+                               const blockedByBooking = isSlotOccupied(selectedDate, slot);
+                               return {
+                                 slot,
+                                 unavailable: blockedByTime || blockedByBooking,
+                               };
+                             });
+
+                             const parseHour = (slot: string) => {
+                               const [start] = slot.split("-").map((item) => item.trim());
+                               return Number(start.split(":")[0]);
+                             };
+
+                             const morning = slotsWithState.filter((item) => parseHour(item.slot) < 12);
+                             const afternoon = slotsWithState.filter((item) => parseHour(item.slot) >= 12);
+                             const hasAvailable = slotsWithState.some((item) => !item.unavailable);
 
                              return (
                                <>
@@ -372,9 +501,20 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Morning sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {morning.map(t => (
-                                            <button key={t} onClick={() => setSelectedTime(t)} className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-xl scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
-                                               {t}
+                                         {morning.map(({ slot, unavailable }) => (
+                                            <button
+                                              key={slot}
+                                              onClick={() => !unavailable && setSelectedTime(slot)}
+                                              disabled={unavailable}
+                                              className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                unavailable
+                                                  ? "bg-warm/30 border-sand/20 text-muted/30 cursor-not-allowed"
+                                                  : selectedTime === slot
+                                                    ? "bg-ink border-ink text-white shadow-xl scale-105"
+                                                    : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
+                                              }`}
+                                            >
+                                               {slot}
                                             </button>
                                          ))}
                                       </div>
@@ -386,12 +526,30 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Afternoon sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {afternoon.map(t => (
-                                            <button key={t} onClick={() => setSelectedTime(t)} className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedTime === t ? "bg-ink border-ink text-white shadow-xl scale-105" : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"}`}>
-                                               {t}
+                                         {afternoon.map(({ slot, unavailable }) => (
+                                            <button
+                                              key={slot}
+                                              onClick={() => !unavailable && setSelectedTime(slot)}
+                                              disabled={unavailable}
+                                              className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                unavailable
+                                                  ? "bg-warm/30 border-sand/20 text-muted/30 cursor-not-allowed"
+                                                  : selectedTime === slot
+                                                    ? "bg-ink border-ink text-white shadow-xl scale-105"
+                                                    : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
+                                              }`}
+                                            >
+                                               {slot}
                                             </button>
                                          ))}
                                       </div>
+                                   </div>
+                                 )}
+                                 {!hasAvailable && (
+                                   <div className="rounded-2xl border border-sand/40 bg-warm/40 p-4 text-center">
+                                     <p className="text-xs font-bold text-muted">
+                                       No available slot remains for this date. Please choose another date.
+                                     </p>
                                    </div>
                                  )}
                                </>
@@ -424,7 +582,11 @@ export default function ServiceBookingPage() {
                                </button>
                              )
                           })}
-                          <button className="flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-sand/30 text-muted/20 hover:text-caramel hover:border-caramel/30 transition-all font-black text-[9px] uppercase tracking-widest bg-warm/10">
+                          <button
+                             type="button"
+                             onClick={() => setIsAddingPet(true)}
+                             className="flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-sand/30 text-muted/20 hover:text-caramel hover:border-caramel/30 transition-all font-black text-[9px] uppercase tracking-widest bg-warm/10"
+                          >
                              <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center border border-sand/20">
                                 <Plus className="w-4 h-4" />
                              </div>
@@ -496,7 +658,7 @@ export default function ServiceBookingPage() {
                     )}
 
                     {step >= 4 && selectedPetId && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-6 border-t border-white/5">
+                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-6 border-t border-white/5">
                          <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Companion Profile</p>
                          <p className="text-lg font-bold text-warm/90 tracking-tight">{pets.find(p => p._id === selectedPetId)?.name}</p>
                       </motion.div>
@@ -531,6 +693,94 @@ export default function ServiceBookingPage() {
   return (
     <AnimatePresence mode="wait">
       {view === "info" ? renderInfoView() : renderWizardView()}
+      {isAddingPet && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={() => setIsAddingPet(false)} />
+          <div className="relative w-full max-w-xl rounded-[2rem] border border-sand bg-white p-8 shadow-2xl">
+            <h3 className="text-2xl font-serif font-bold italic text-ink">Add New Pet</h3>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-muted">
+              Create profile and attach it to this booking
+            </p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">Pet name</label>
+                <input
+                  value={addPetForm.name}
+                  onChange={(event) => setAddPetForm((prev) => ({ ...prev, name: event.target.value }))}
+                  className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-caramel"
+                  placeholder="e.g. Mochi"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">Species</label>
+                <select
+                  value={addPetForm.species}
+                  onChange={(event) => setAddPetForm((prev) => ({ ...prev, species: event.target.value as AddPetForm["species"] }))}
+                  className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-caramel"
+                >
+                  <option value="Dog">Dog</option>
+                  <option value="Cat">Cat</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">Breed</label>
+                <input
+                  value={addPetForm.breed}
+                  onChange={(event) => setAddPetForm((prev) => ({ ...prev, breed: event.target.value }))}
+                  className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-caramel"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">Gender</label>
+                <select
+                  value={addPetForm.gender}
+                  onChange={(event) => setAddPetForm((prev) => ({ ...prev, gender: event.target.value as AddPetForm["gender"] }))}
+                  className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-caramel"
+                >
+                  <option value="Unknown">Unknown</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-widest text-muted">Age (years)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={addPetForm.age ?? ""}
+                  onChange={(event) =>
+                    setAddPetForm((prev) => ({
+                      ...prev,
+                      age: event.target.value === "" ? undefined : Number(event.target.value),
+                    }))
+                  }
+                  className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold text-ink outline-none focus:border-caramel"
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+            <div className="mt-8 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAddingPet(false)}
+                className="rounded-full border border-sand px-5 py-2.5 text-sm font-semibold text-ink hover:bg-warm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreatePet}
+                disabled={isSavingPet}
+                className="rounded-full bg-ink px-6 py-2.5 text-sm font-semibold text-white hover:bg-caramel disabled:opacity-60"
+              >
+                {isSavingPet ? "Saving..." : "Add pet"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }
