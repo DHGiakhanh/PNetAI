@@ -1,5 +1,14 @@
 import apiClient from "../utils/api.service";
 
+export type MedicalHistoryRecord = {
+  _id?: string;
+  note: string;
+  provider?: string;
+  providerName?: string;
+  sourceBooking?: string;
+  createdAt?: string;
+};
+
 export type Pet = {
   _id: string;
   name: string;
@@ -13,6 +22,7 @@ export type Pet = {
   healthStatus?: string;
   allergies?: string;
   medicalHistory?: string;
+  medicalHistoryRecords?: MedicalHistoryRecord[];
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
@@ -32,6 +42,7 @@ export type PetPayload = {
   healthStatus?: string;
   allergies?: string;
   medicalHistory?: string;
+  medicalHistoryRecords?: MedicalHistoryRecord[];
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
@@ -72,5 +83,13 @@ export const petService = {
   getUserPets: async (userId: string): Promise<Pet[]> => {
     const response = await apiClient.get(`/pets/user/${userId}`);
     return response.data?.pets ?? [];
+  },
+
+  addMedicalHistoryNote: async (
+    petId: string,
+    payload: { note: string; bookingId?: string }
+  ): Promise<Pet> => {
+    const response = await apiClient.post(`/pets/${petId}/medical-history-note`, payload);
+    return response.data?.pet;
   },
 };

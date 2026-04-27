@@ -274,7 +274,7 @@ router.get("/service-availability/:serviceId", async (req, res) => {
         const { serviceId } = req.params;
         const { month, year } = req.query; // 0-indexed month
 
-        if (!month || !year) {
+        if (month === undefined || year === undefined) {
             return res.status(400).json({ message: "Month and year are required." });
         }
 

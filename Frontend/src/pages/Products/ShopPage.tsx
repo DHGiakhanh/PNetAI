@@ -57,6 +57,15 @@ type ShopItem = {
   addLabel: string;
 };
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "Latest" },
+  { value: "popular", label: "Popular" },
+  { value: "price-asc", label: "Price: Low to high" },
+  { value: "price-desc", label: "Price: High to low" },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
 function slugifyCategory(value: string) {
   return value
     .trim()
@@ -70,6 +79,13 @@ function parsePage(value: string | null) {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+function parseSort(value: string | null): SortValue {
+  if (SORT_OPTIONS.some((item) => item.value === value)) {
+    return value as SortValue;
+  }
+  return "newest";
+}
+
 export default function ShopPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,6 +94,7 @@ export default function ShopPage() {
   );
   const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [sortBy, setSortBy] = useState<SortValue>(parseSort(searchParams.get("sort")));
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,11 +111,13 @@ export default function ShopPage() {
     const categoryParam = searchParams.get("category") || "all";
     const queryParam = searchParams.get("q") || "";
     const pageParam = parsePage(searchParams.get("page"));
+    const sortParam = parseSort(searchParams.get("sort"));
 
     setActiveCategory((prev) => (prev === categoryParam ? prev : categoryParam));
     setSearchInput((prev) => (prev === queryParam ? prev : queryParam));
     setSearchQuery((prev) => (prev === queryParam ? prev : queryParam));
     setCurrentPage((prev) => (prev === pageParam ? prev : pageParam));
+    setSortBy((prev) => (prev === sortParam ? prev : sortParam));
   }, [searchParams]);
 
   useEffect(() => {
@@ -161,12 +180,13 @@ export default function ShopPage() {
     const nextParams = new URLSearchParams();
     if (searchQuery) nextParams.set("q", searchQuery);
     if (activeCategory !== "all") nextParams.set("category", activeCategory);
+    if (sortBy !== "newest") nextParams.set("sort", sortBy);
     if (currentPage > 1) nextParams.set("page", currentPage.toString());
 
     if (nextParams.toString() !== searchParams.toString()) {
       setSearchParams(nextParams, { replace: true });
     }
-  }, [activeCategory, currentPage, searchParams, searchQuery, setSearchParams]);
+  }, [activeCategory, currentPage, searchParams, searchQuery, setSearchParams, sortBy]);
 
   useEffect(() => {
     if (activeCategory !== "all" && categories.length === 0) return;
@@ -187,6 +207,7 @@ export default function ShopPage() {
         const response = await productService.getProducts({
           search: searchQuery || undefined,
           category: activeCategoryConfig?.apiValue,
+          sort: sortBy,
           page: currentPage,
           limit: pageSize,
         });
@@ -211,7 +232,7 @@ export default function ShopPage() {
     };
 
     fetchProducts();
-  }, [activeCategory, categories, currentPage, pageSize, searchQuery]);
+  }, [activeCategory, categories, currentPage, pageSize, searchQuery, sortBy]);
 
   const items = useMemo<ShopItem[]>(() => {
     return products.map((product) => {
@@ -260,7 +281,7 @@ export default function ShopPage() {
     activeCategory === "all"
       ? undefined
       : categories.find((category) => category.id === activeCategory)?.label;
-  const hasActiveFilters = Boolean(searchQuery) || activeCategory !== "all";
+  const hasActiveFilters = Boolean(searchQuery) || activeCategory !== "all" || sortBy !== "newest";
   const hasCatalogData = totalItems > 0;
   const isSearchBusy = searching || searchInput.trim() !== searchQuery;
 
@@ -368,6 +389,7 @@ export default function ShopPage() {
                   setSearchInput("");
                   setSearchQuery("");
                   setActiveCategory("all");
+                  setSortBy("newest");
                   setCurrentPage(1);
                 }}
                 className="text-sm font-semibold text-brown hover:text-brown-dark"
@@ -375,6 +397,26 @@ export default function ShopPage() {
                 Clear search
               </button>
             ) : null}
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <label className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink ring-1 ring-sand">
+              Sort by
+              <select
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(parseSort(event.target.value));
+                  setCurrentPage(1);
+                }}
+                className="rounded-full border border-sand bg-warm px-3 py-1 text-sm font-semibold text-ink outline-none focus:border-caramel"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           {loading ? (

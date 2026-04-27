@@ -21,8 +21,9 @@ export const CustomerDirectory = () => {
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [selectedCustomerPets, setSelectedCustomerPets] = useState<any[]>([]);
-  const [currentNote, setCurrentNote] = useState("Patient shows significant improvement since last session. Continue current dietary plan.");
+  const [currentNote, setCurrentNote] = useState("");
   const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
@@ -60,6 +61,10 @@ export const CustomerDirectory = () => {
       try {
         const pets = await petService.getUserPets(selectedId);
         setSelectedCustomerPets(pets);
+        setSelectedPetId((prev) => {
+          if (prev && pets.some((pet: any) => pet._id === prev)) return prev;
+          return pets[0]?._id || null;
+        });
       } catch {
         console.error("Failed to fetch customer pets");
       }
@@ -68,11 +73,36 @@ export const CustomerDirectory = () => {
   }, [selectedId]);
 
   const selectedCustomer = customers.find(c => c._id === selectedId);
+  const selectedPet = selectedCustomerPets.find((pet) => pet._id === selectedPetId) || null;
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search)
   );
+
+  const handleStoreMemorandum = async () => {
+    if (!selectedPetId) {
+      toast.error("Please select a pet profile first.");
+      return;
+    }
+
+    const note = currentNote.trim();
+    if (!note) {
+      toast.error("Please enter a note before storing.");
+      return;
+    }
+
+    try {
+      const updatedPet = await petService.addMedicalHistoryNote(selectedPetId, { note });
+      setSelectedCustomerPets((prev) =>
+        prev.map((pet) => (pet._id === updatedPet._id ? updatedPet : pet))
+      );
+      setCurrentNote("");
+      toast.success("Memorandum synced to pet medical history.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to store memorandum.");
+    }
+  };
 
   if (loading) return (
     <div className="h-96 flex items-center justify-center">
@@ -181,7 +211,16 @@ export const CustomerDirectory = () => {
 
                          <div className="space-y-6">
                             {selectedCustomerPets.map(pet => (
-                              <div key={pet._id} className="flex items-center gap-5 p-4 rounded-2xl bg-[#FBF9F2]/50 border border-sand/20 group transition-all">
+                              <button
+                                type="button"
+                                key={pet._id}
+                                onClick={() => setSelectedPetId(pet._id)}
+                                className={`w-full flex items-center gap-5 p-4 rounded-2xl border group transition-all text-left ${
+                                  selectedPetId === pet._id
+                                    ? "bg-ink text-white border-ink shadow-lg shadow-ink/10"
+                                    : "bg-[#FBF9F2]/50 border-sand/20 hover:border-caramel/30"
+                                }`}
+                              >
                                  <div className="h-14 w-14 rounded-2xl overflow-hidden border border-sand/50 bg-warm flex items-center justify-center">
                                     {pet.avatarUrl ? (
                                       <img src={pet.avatarUrl} className="w-full h-full object-cover" alt={pet.name} />
@@ -190,10 +229,12 @@ export const CustomerDirectory = () => {
                                     )}
                                  </div>
                                  <div className="flex-1">
-                                    <p className="text-sm font-bold text-ink">{pet.name}</p>
-                                    <p className="text-[10px] font-medium text-muted uppercase tracking-widest">{pet.species} • {pet.breed}</p>
+                                    <p className={`text-sm font-bold ${selectedPetId === pet._id ? "text-white" : "text-ink"}`}>{pet.name}</p>
+                                    <p className={`text-[10px] font-medium uppercase tracking-widest ${selectedPetId === pet._id ? "text-white/60" : "text-muted"}`}>
+                                      {pet.species} • {pet.breed}
+                                    </p>
                                  </div>
-                              </div>
+                              </button>
                             ))}
                             {selectedCustomerPets.length === 0 && (
                                <p className="text-xs font-serif italic text-muted text-center py-4">No companions registered.</p>
@@ -210,10 +251,34 @@ export const CustomerDirectory = () => {
                            className="w-full h-40 bg-[#FBF9F2]/50 border border-sand/20 p-6 rounded-2xl text-[13px] font-medium text-ink leading-relaxed outline-none focus:border-caramel/30 transition-all resize-none italic font-serif"
                            value={currentNote}
                            onChange={(e) => setCurrentNote(e.target.value)}
+                           placeholder={selectedPet ? `Write note for ${selectedPet.name}...` : "Select a pet profile to write note"}
                          />
-                         <button className="w-full mt-6 py-4 rounded-full bg-ink text-white text-xs font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl shadow-ink/10 flex items-center justify-center gap-3">
+                         <button
+                            onClick={handleStoreMemorandum}
+                            className="w-full mt-6 py-4 rounded-full bg-ink text-white text-xs font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl shadow-ink/10 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                            disabled={!selectedPetId}
+                         >
                             <Save className="w-4 h-4" /> Store Memorandum
                          </button>
+                         {(selectedPet?.medicalHistoryRecords?.length || 0) > 0 && (
+                           <div className="mt-6 rounded-2xl border border-sand/30 bg-warm/20 p-4">
+                             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-muted">Recent Medical History</p>
+                             <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                               {selectedPet.medicalHistoryRecords
+                                 .slice()
+                                 .reverse()
+                                 .slice(0, 8)
+                                 .map((record: any, index: number) => (
+                                   <div key={record._id || `${record.createdAt}-${index}`} className="rounded-xl bg-white p-3 border border-sand/40">
+                                     <p className="text-xs font-medium text-ink">{record.note}</p>
+                                     <p className="mt-1 text-[10px] font-semibold text-muted">
+                                       {record.providerName || "Clinic"} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : ""}
+                                     </p>
+                                   </div>
+                                 ))}
+                             </div>
+                           </div>
+                         )}
                       </div>
                    </div>
 

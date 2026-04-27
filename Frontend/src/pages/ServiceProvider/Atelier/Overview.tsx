@@ -14,21 +14,26 @@ import {
 import { motion } from "framer-motion";
 import { authService, UserProfile } from "@/services/auth.service";
 import { bookingService } from "@/services/booking.service";
+import apiClient from "@/utils/api.service";
 
 export const ServiceProviderOverview = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [productRevenue, setProductRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userData, bookingData] = await Promise.all([
+        const now = new Date();
+        const [userData, bookingData, productRevenueData] = await Promise.all([
           authService.getCurrentUser(),
-          bookingService.getProviderBookings()
+          bookingService.getProviderBookings(),
+          apiClient.get(`/orders/provider/product-revenue?month=${now.getMonth() + 1}&year=${now.getFullYear()}`),
         ]);
         setUser(userData);
         setBookings(bookingData);
+        setProductRevenue(Number(productRevenueData?.data?.productRevenue || 0));
       } catch (error) {
         console.error("Fetch Data Error:", error);
       } finally {
@@ -38,9 +43,18 @@ export const ServiceProviderOverview = () => {
     fetchData();
   }, []);
 
-  const totalRevenue = bookings
-    .filter(b => b.status === 'confirmed' || b.status === 'completed')
+  const now = new Date();
+  const monthlyClinicRevenue = bookings
+    .filter((b) => {
+      if (!(b.status === "confirmed" || b.status === "completed")) return false;
+      const bookingDate = new Date(b.bookingDate);
+      return (
+        bookingDate.getMonth() === now.getMonth() &&
+        bookingDate.getFullYear() === now.getFullYear()
+      );
+    })
     .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const totalRevenue = monthlyClinicRevenue + productRevenue;
 
   const pendingBookings = bookings.filter(b => b.status === 'pending').length;
 
@@ -49,7 +63,7 @@ export const ServiceProviderOverview = () => {
       id: "revenue", 
       label: "Monthly Revenue", 
       value: `VND ${totalRevenue.toLocaleString()}`, 
-      subvalue: "Total from confirmed appointments", 
+      subvalue: "Clinic services + product sales", 
       icon: TrendingUp, 
       color: "bg-emerald-50 text-emerald-600" 
     },

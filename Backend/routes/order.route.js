@@ -136,14 +136,6 @@ const ensureCartAndStock = async (userId) => {
     return { cart };
 };
 
-const isSuccessfulProviderOrder = (order) =>
-    order &&
-    order.status !== "cancelled" &&
-    (
-        order.paymentStatus === "paid" ||
-        (order.paymentMethod === "COD" && ["processing", "shipped", "delivered"].includes(order.status))
-    );
-
 const createProductOrderTransactions = async (order) => {
     const existingTx = await db.Transaction.exists({
         referenceId: order._id,

@@ -118,6 +118,7 @@ export default function MyPetsPage() {
       healthStatus: pet.healthStatus || "Healthy",
       allergies: pet.allergies || "",
       medicalHistory: pet.medicalHistory || "",
+      medicalHistoryRecords: pet.medicalHistoryRecords || [],
       avatarUrl: pet.avatarUrl || "",
       notes: pet.notes || "",
       lastVisitDate: pet.lastVisitDate ? new Date(pet.lastVisitDate).toISOString().slice(0, 10) : "",
@@ -585,6 +586,23 @@ export default function MyPetsPage() {
                           placeholder="Ear infection, Apoquel..."
                           className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                         />
+                        {(form.medicalHistoryRecords?.length || 0) > 0 ? (
+                          <div className="mt-3 rounded-xl border border-sand bg-warm/30 p-3">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                              Clinic Notes Timeline
+                            </p>
+                            <div className="max-h-32 space-y-2 overflow-y-auto pr-1">
+                              {form.medicalHistoryRecords?.map((record, index) => (
+                                <div key={record._id || `${record.createdAt}-${index}`} className="rounded-lg bg-white px-3 py-2 ring-1 ring-sand">
+                                  <p className="text-xs font-semibold text-ink">{record.note}</p>
+                                  <p className="mt-1 text-[11px] text-muted">
+                                    {(record.providerName || "Clinic")} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : "Unknown time"}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     <label className="mt-4 mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
