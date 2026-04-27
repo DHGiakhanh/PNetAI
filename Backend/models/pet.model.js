@@ -1,6 +1,17 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const medicalHistoryRecordSchema = new Schema(
+    {
+        note: { type: String, required: true, trim: true },
+        provider: { type: Schema.Types.ObjectId, ref: "User" },
+        providerName: { type: String, default: "" },
+        sourceBooking: { type: Schema.Types.ObjectId, ref: "ServiceBooking" },
+        createdAt: { type: Date, default: Date.now },
+    },
+    { _id: true }
+);
+
 const petSchema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
@@ -14,6 +25,7 @@ const petSchema = new Schema({
     healthStatus: { type: String, default: "Healthy" },
     allergies: { type: String, default: "" },
     medicalHistory: { type: String, default: "" },
+    medicalHistoryRecords: { type: [medicalHistoryRecordSchema], default: [] },
     lastVisitDate: { type: Date },
     avatarUrl: { type: String, default: "" },
     notes: { type: String, default: "" },

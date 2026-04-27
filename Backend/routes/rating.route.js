@@ -17,11 +17,18 @@ async function recalculateProductRating(productId) {
     });
 }
 
-async function hasDeliveredOrder(userId, productId) {
+async function hasPurchasedOrder(userId, productId) {
     return db.Order.exists({
         user: userId,
-        status: "delivered",
-        "items.product": productId
+        "items.product": productId,
+        status: { $ne: "cancelled" },
+        $or: [
+            { paymentStatus: "paid" },
+            {
+                paymentMethod: "COD",
+                status: { $in: ["processing", "shipped", "delivered"] },
+            },
+        ],
     });
 }
 
@@ -56,7 +63,7 @@ router.get('/product/:productId/me', verifyToken, async (req, res) => {
 router.get('/product/:productId/eligibility', verifyToken, async (req, res) => {
     try {
         const [purchaseRecord, existingRating] = await Promise.all([
-            hasDeliveredOrder(req.userId, req.params.productId),
+            hasPurchasedOrder(req.userId, req.params.productId),
             db.Rating.findOne({
                 product: req.params.productId,
                 user: req.userId
@@ -92,7 +99,7 @@ router.post('/', verifyToken, async (req, res) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        const purchaseRecord = await hasDeliveredOrder(req.userId, product);
+        const purchaseRecord = await hasPurchasedOrder(req.userId, product);
         if (!purchaseRecord) {
             return res.status(403).json({
                 message: "You can only review products from delivered orders"

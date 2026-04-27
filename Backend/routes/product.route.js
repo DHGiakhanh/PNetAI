@@ -43,6 +43,8 @@ router.get('/', async (req, res) => {
         const { search, category, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
         
         let query = {};
+        const numericPage = Math.max(Number(page) || 1, 1);
+        const numericLimit = Math.max(Number(limit) || 12, 1);
         
         const textSearchQuery = buildTextSearchQuery(search, ["name", "description"]);
         if (textSearchQuery) {
@@ -62,29 +64,100 @@ router.get('/', async (req, res) => {
             if (minPrice) query.price.$gte = Number(minPrice);
             if (maxPrice) query.price.$lte = Number(maxPrice);
         }
-        
-        let sortOption = {};
-        if (sort === 'price-asc') sortOption.price = 1;
-        else if (sort === 'price-desc') sortOption.price = -1;
-        else if (sort === 'newest') sortOption.createdAt = -1;
-        else if (sort === 'popular') sortOption.totalReviews = -1;
-        
-        const skip = (page - 1) * limit;
-        
-        const products = await db.Product.find(query)
-            .populate('providerId', 'name email')
-            .sort(sortOption)
-            .skip(skip)
-            .limit(Number(limit));
-            
+
+        const skip = (numericPage - 1) * numericLimit;
         const total = await db.Product.countDocuments(query);
+
+        let products = [];
+
+        if (sort === "popular") {
+            products = await db.Product.aggregate([
+                { $match: query },
+                {
+                    $lookup: {
+                        from: "orders",
+                        let: { productId: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    status: { $ne: "cancelled" },
+                                    $or: [
+                                        { paymentStatus: "paid" },
+                                        {
+                                            paymentMethod: "COD",
+                                            status: { $in: ["processing", "shipped", "delivered"] },
+                                        },
+                                    ],
+                                },
+                            },
+                            { $unwind: "$items" },
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$items.product", "$$productId"] },
+                                },
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    totalSold: { $sum: "$items.quantity" },
+                                },
+                            },
+                        ],
+                        as: "salesStats",
+                    },
+                },
+                {
+                    $addFields: {
+                        totalSold: { $ifNull: [{ $first: "$salesStats.totalSold" }, 0] },
+                    },
+                },
+                { $sort: { totalSold: -1, createdAt: -1 } },
+                { $skip: skip },
+                { $limit: numericLimit },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "providerId",
+                        foreignField: "_id",
+                        as: "provider",
+                    },
+                },
+                {
+                    $addFields: {
+                        providerId: {
+                            $cond: [
+                                { $gt: [{ $size: "$provider" }, 0] },
+                                {
+                                    _id: { $arrayElemAt: ["$provider._id", 0] },
+                                    name: { $arrayElemAt: ["$provider.name", 0] },
+                                    email: { $arrayElemAt: ["$provider.email", 0] },
+                                },
+                                "$providerId",
+                            ],
+                        },
+                    },
+                },
+                { $project: { salesStats: 0, provider: 0 } },
+            ]);
+        } else {
+            let sortOption = { createdAt: -1 };
+            if (sort === 'price-asc') sortOption = { price: 1 };
+            else if (sort === 'price-desc') sortOption = { price: -1 };
+            else if (sort === 'newest') sortOption = { createdAt: -1 };
+
+            products = await db.Product.find(query)
+                .populate('providerId', 'name email')
+                .sort(sortOption)
+                .skip(skip)
+                .limit(numericLimit);
+        }
         
         res.status(200).json({
             products,
             pagination: {
                 total,
-                page: Number(page),
-                pages: Math.ceil(total / limit)
+                page: numericPage,
+                pages: Math.ceil(total / numericLimit)
             }
         });
     } catch (error) {

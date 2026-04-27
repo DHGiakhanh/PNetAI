@@ -136,6 +136,61 @@ const ensureCartAndStock = async (userId) => {
     return { cart };
 };
 
+const isSuccessfulProviderOrder = (order) =>
+    order &&
+    order.status !== "cancelled" &&
+    (
+        order.paymentStatus === "paid" ||
+        (order.paymentMethod === "COD" && ["processing", "shipped", "delivered"].includes(order.status))
+    );
+
+const createProductOrderTransactions = async (order) => {
+    const existingTx = await db.Transaction.exists({
+        referenceId: order._id,
+        type: "product_order",
+    });
+    if (existingTx) {
+        return;
+    }
+
+    const productIds = order.items.map((item) => item.product).filter(Boolean);
+    if (productIds.length === 0) {
+        return;
+    }
+
+    const products = await db.Product.find({ _id: { $in: productIds } }).select("_id providerId");
+    const providerMap = new Map(
+        products.map((product) => [String(product._id), product.providerId ? String(product.providerId) : null])
+    );
+
+    const providerRevenueMap = new Map();
+    for (const item of order.items) {
+        const providerId = providerMap.get(String(item.product));
+        if (!providerId) continue;
+
+        const lineAmount = Number(item.price || 0) * Number(item.quantity || 0);
+        providerRevenueMap.set(providerId, (providerRevenueMap.get(providerId) || 0) + lineAmount);
+    }
+
+    const payloads = Array.from(providerRevenueMap.entries())
+        .filter(([, amount]) => amount > 0)
+        .map(([providerId, amount]) => ({
+            user: order.user,
+            type: "product_order",
+            provider: providerId,
+            amount,
+            status: "success",
+            paymentMethod: order.paymentMethod,
+            payosOrderCode: order.payos?.orderCode ? String(order.payos.orderCode) : undefined,
+            referenceId: order._id,
+            note: "Product order payment",
+        }));
+
+    if (payloads.length > 0) {
+        await db.Transaction.insertMany(payloads);
+    }
+};
+
 const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     const normalizedStatus = toUpperText(payOSStatus);
 
@@ -145,20 +200,7 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
 
     if (normalizedStatus === "PAID") {
         if (order.paymentStatus !== "paid") {
-            // Log transaction for GMV
-            const existingTx = await db.Transaction.findOne({ referenceId: order._id });
-            if (!existingTx) {
-                await db.Transaction.create({
-                    user: order.user,
-                    type: "product_purchase",
-                    amount: order.totalAmount,
-                    status: "success",
-                    paymentMethod: order.paymentMethod,
-                    payosOrderCode: order.payos?.orderCode ? String(order.payos.orderCode) : undefined,
-                    referenceId: order._id,
-                    note: `Product order payment`
-                });
-            }
+            await createProductOrderTransactions(order);
         }
         order.paymentStatus = "paid";
         order.paidAt = order.paidAt || Date.now();
@@ -521,6 +563,98 @@ router.get("/history", verifyToken, async (req, res) => {
         res.status(200).json({ orders });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// Provider monthly product revenue summary
+router.get("/provider/product-revenue", verifyToken, async (req, res) => {
+    try {
+        if (!["service_provider", "shop", "admin"].includes(req.role)) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        const now = new Date();
+        const monthInput = Number(req.query.month);
+        const yearInput = Number(req.query.year);
+        const monthIndex = Number.isInteger(monthInput) && monthInput >= 1 && monthInput <= 12
+            ? monthInput - 1
+            : now.getMonth();
+        const year = Number.isInteger(yearInput) ? yearInput : now.getFullYear();
+
+        const startDate = new Date(year, monthIndex, 1);
+        const endDate = new Date(year, monthIndex + 1, 1);
+
+        const providerProducts = await db.Product.find({ providerId: req.userId }).select("_id");
+        const productIds = providerProducts.map((item) => item._id);
+
+        if (productIds.length === 0) {
+            return res.status(200).json({
+                month: monthIndex + 1,
+                year,
+                productRevenue: 0,
+                unitsSold: 0,
+                ordersCount: 0,
+            });
+        }
+
+        const summary = await db.Order.aggregate([
+            {
+                $match: {
+                    status: { $ne: "cancelled" },
+                    $or: [
+                        { paymentStatus: "paid" },
+                        {
+                            paymentMethod: "COD",
+                            status: { $in: ["processing", "shipped", "delivered"] },
+                        },
+                    ],
+                },
+            },
+            {
+                $addFields: {
+                    revenueDate: { $ifNull: ["$paidAt", "$createdAt"] },
+                },
+            },
+            {
+                $match: {
+                    revenueDate: { $gte: startDate, $lt: endDate },
+                },
+            },
+            { $unwind: "$items" },
+            {
+                $match: {
+                    "items.product": { $in: productIds },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    productRevenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } },
+                    unitsSold: { $sum: "$items.quantity" },
+                    orderIds: { $addToSet: "$_id" },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    productRevenue: 1,
+                    unitsSold: 1,
+                    ordersCount: { $size: "$orderIds" },
+                },
+            },
+        ]);
+
+        const result = summary[0] || { productRevenue: 0, unitsSold: 0, ordersCount: 0 };
+
+        return res.status(200).json({
+            month: monthIndex + 1,
+            year,
+            productRevenue: result.productRevenue || 0,
+            unitsSold: result.unitsSold || 0,
+            ordersCount: result.ordersCount || 0,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
     }
 });
 

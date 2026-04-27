@@ -30,6 +30,71 @@ const ensureValidUrl = (url) => {
     }
 };
 
+const parseDateToLocal = (input) => {
+    if (input instanceof Date) {
+        return new Date(input.getFullYear(), input.getMonth(), input.getDate());
+    }
+
+    if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+        const [yearStr, monthStr, dayStr] = input.split("-");
+        return new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr));
+    }
+
+    const parsed = new Date(input);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const parseBookingStart = (bookingDate, bookingTime) => {
+    if (typeof bookingTime !== "string") return null;
+
+    const [startRaw] = bookingTime.split("-").map((item) => item.trim());
+    const match = /^(\d{1,2}):(\d{2})$/.exec(startRaw || "");
+    if (!match) return null;
+
+    const [, hh, mm] = match;
+    const hour = Number(hh);
+    const minute = Number(mm);
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+    const baseDate = parseDateToLocal(bookingDate);
+    if (!baseDate) return null;
+
+    const slotStart = new Date(baseDate);
+    slotStart.setHours(hour, minute, 0, 0);
+    return slotStart;
+};
+
+const validateBookingSlot = async ({ serviceId, bookingDate, bookingTime }) => {
+    const slotStart = parseBookingStart(bookingDate, bookingTime);
+    if (!slotStart) {
+        return { ok: false, code: 400, message: "Invalid booking date or time slot format." };
+    }
+
+    const now = new Date();
+    if (slotStart <= now) {
+        return { ok: false, code: 400, message: "This booking slot has already passed. Please choose a future slot." };
+    }
+
+    const dayStart = new Date(slotStart);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const occupied = await db.Booking.findOne({
+        service: serviceId,
+        bookingDate: { $gte: dayStart, $lt: dayEnd },
+        bookingTime,
+        status: { $ne: "cancelled" },
+    }).select("_id");
+
+    if (occupied) {
+        return { ok: false, code: 409, message: "This slot is no longer available. Please choose another slot." };
+    }
+
+    return { ok: true, normalizedBookingDate: dayStart };
+};
+
 // Create a new service booking (Manual/Test)
 router.post("/confirm", verifyToken, async (req, res) => {
     try {
@@ -48,11 +113,16 @@ router.post("/confirm", verifyToken, async (req, res) => {
         const user = await db.User.findById(req.userId);
         if (!user) return res.status(404).json({ message: "User not found." });
 
+        const slotValidation = await validateBookingSlot({ serviceId, bookingDate, bookingTime });
+        if (!slotValidation.ok) {
+            return res.status(slotValidation.code).json({ message: slotValidation.message });
+        }
+
         const newBooking = new db.Booking({
             user: req.userId,
             service: serviceId,
             pet: petId,
-            bookingDate: new Date(bookingDate),
+            bookingDate: slotValidation.normalizedBookingDate,
             bookingTime,
             totalAmount,
             paymentMethod: paymentMethod || "Manual",
@@ -64,7 +134,7 @@ router.post("/confirm", verifyToken, async (req, res) => {
         // Notify provider about the new request
         if (service.providerId && service.providerId.email) {
             const { sendNewBookingNotificationToProvider } = require("../config/emailService");
-            const dateStr = new Date(bookingDate).toLocaleDateString();
+            const dateStr = slotValidation.normalizedBookingDate.toLocaleDateString();
             await sendNewBookingNotificationToProvider(service.providerId.email, {
                 serviceTitle: service.title,
                 customerName: user.name || "Customer",
@@ -103,6 +173,11 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
         const user = await db.User.findById(req.userId);
         if (!user) return res.status(404).json({ message: "User not found." });
 
+        const slotValidation = await validateBookingSlot({ serviceId, bookingDate, bookingTime });
+        if (!slotValidation.ok) {
+            return res.status(slotValidation.code).json({ message: slotValidation.message });
+        }
+
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const finalReturnUrl = returnUrl || `${frontendUrl}/services/${serviceId}/booking/success`;
         const finalCancelUrl = cancelUrl || `${frontendUrl}/services/${serviceId}/booking/cancel`;
@@ -121,7 +196,7 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
             user: req.userId,
             service: serviceId,
             pet: petId,
-            bookingDate: new Date(bookingDate),
+            bookingDate: slotValidation.normalizedBookingDate,
             bookingTime,
             totalAmount: amount,
             paymentMethod: "PayOS",
@@ -247,7 +322,7 @@ router.get("/provider", verifyToken, async (req, res) => {
         const bookings = await db.Booking.find({ service: { $in: serviceIds } })
             .populate('service', 'title')
             .populate('user', 'name email phone')
-            .populate('pet', 'name avatarUrl species breed')
+            .populate('pet', 'name avatarUrl species breed gender age weightKg healthStatus allergies medicalHistory medicalHistoryRecords notes')
             .sort({ bookingDate: -1 });
 
         res.status(200).json({ bookings });
