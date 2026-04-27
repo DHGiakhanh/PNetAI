@@ -485,7 +485,7 @@ export default function ProductDetailPage() {
                   Customer Reviews
                 </p>
                 <p className="mt-1 text-sm font-semibold text-muted">
-                  Only customers with delivered orders can review this product.
+                  Only customers who purchased this product can review.
                 </p>
               </div>
               <div className="rounded-2xl bg-warm px-4 py-3 text-right ring-1 ring-sand">
@@ -639,8 +639,7 @@ export default function ProductDetailPage() {
               </div>
             ) : (
               <div className="mt-5 rounded-2xl bg-warm p-4 text-sm font-semibold text-muted ring-1 ring-sand">
-                You can review this product after at least one order containing it is marked as
-                delivered.
+                You can review this product after at least one successful purchase containing it.
               </div>
             )}
           </div>
