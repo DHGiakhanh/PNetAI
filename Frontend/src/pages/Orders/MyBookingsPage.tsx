@@ -11,6 +11,7 @@ type Booking = {
     description: string;
     images?: string[];
     location?: { city: string };
+    providerId?: string | { name?: string };
   };
   pet: {
     name: string;
@@ -30,6 +31,14 @@ const statusTone: Record<Booking["status"], string> = {
   confirmed: "bg-sky-100 text-sky-700",
   completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-rose-100 text-rose-700",
+};
+
+const getProviderName = (booking: Booking) => {
+  if (booking.service.providerId && typeof booking.service.providerId !== "string") {
+    return booking.service.providerId.name || "Service Provider";
+  }
+
+  return "Service Provider";
 };
 
 export default function MyBookingsPage() {
@@ -82,7 +91,8 @@ export default function MyBookingsPage() {
           ) : (
             bookings.map((booking) => {
               if (!booking.service || !booking.pet) return null;
-              
+              const providerName = getProviderName(booking);
+
               return (
                 <article key={booking._id} className="rounded-2xl border border-sand bg-white/90 overflow-hidden shadow-sm flex flex-col sm:flex-row">
                 <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20 flex-shrink-0">
@@ -104,6 +114,7 @@ export default function MyBookingsPage() {
                             {booking.status}
                           </span>
                         </div>
+                        <p className="mb-2 text-xs font-semibold text-brown">Provided by {providerName}</p>
                         <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted">
                            <span className="flex items-center gap-1.5">
                              <Calendar className="w-3" />
