@@ -34,6 +34,7 @@ import { AtelierProfile as ServiceProviderProfilePage } from "@/pages/ServicePro
 import { Subscription as SubscriptionPage } from "@/pages/ServiceProvider/Atelier/Subscription";
 import { CheckoutSuccess as SubscriptionSuccessPage } from "@/pages/ServiceProvider/Atelier/CheckoutSuccess";
 import { CheckoutCancel as SubscriptionCancelPage } from "@/pages/ServiceProvider/Atelier/CheckoutCancel";
+import { OrdersManagement as ServiceProviderOrdersPage } from "@/pages/ServiceProvider/Atelier/OrdersManagement";
 
 import { Login } from "@/pages/Auth/Login";
 import { Register } from "@/pages/Auth/Register";
@@ -86,6 +87,7 @@ export default function AppRoutes() {
       <Route element={<ServiceProviderRoute />}>
         <Route path="service-provider" element={<ServiceProviderLayout />}>
           <Route index element={<ServiceProviderOverview />} />
+          <Route path="orders" element={<ServiceProviderOrdersPage />} />
           <Route path="products" element={<ProductManagement />} />
           <Route path="services" element={<ServiceManagement />} />
           <Route path="customers" element={<CustomerBookingsPage />} />

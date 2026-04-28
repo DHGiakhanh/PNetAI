@@ -11,7 +11,8 @@ import {
   Bell,
   Sparkles,
   Stethoscope,
-  Clock
+  Clock,
+  Package
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/booking.service";
@@ -63,6 +64,7 @@ export default function ServiceProviderLayout() {
 
   const navItems = [
     { to: "/service-provider", label: "Overview", icon: LayoutDashboard, protected: true },
+    { to: "/service-provider/orders", label: "Orders Management", icon: Package, protected: true },
     { to: "/service-provider/products", label: "Product Catalog", icon: Boxes, protected: true },
     { to: "/service-provider/services", label: "Clinic Services", icon: Stethoscope, protected: true },
     { to: "/service-provider/customers", label: "Client Directory", icon: Users, protected: true },

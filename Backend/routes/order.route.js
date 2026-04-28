@@ -115,6 +115,116 @@ const clearCart = async (cart) => {
     await cart.save();
 };
 
+const isProviderRole = (role) => role === "service_provider" || role === "shop";
+
+const getProviderOnboardingStatus = (user) => {
+    if (!isProviderRole(user?.role)) return undefined;
+    if (user.providerOnboardingStatus) return user.providerOnboardingStatus;
+    return user.isVerified ? "pending_legal_submission" : "pending_sale_approval";
+};
+
+const canProviderOperate = (user) =>
+    isProviderRole(user?.role) &&
+    user.isVerified &&
+    getProviderOnboardingStatus(user) === "approved";
+
+const ensureProviderFullyApproved = async (req, res, next) => {
+    try {
+        const provider = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
+        if (!provider || !isProviderRole(provider.role)) {
+            return res.status(403).json({ message: "Access denied. Service Provider only." });
+        }
+
+        if (!canProviderOperate(provider)) {
+            return res.status(403).json({
+                message: "Upload legal documents and wait for approval before accessing order management.",
+                code: "PROVIDER_NOT_READY",
+                providerOnboardingStatus: getProviderOnboardingStatus(provider),
+            });
+        }
+
+        return next();
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+const parseDateBoundary = (input, endOfDay = false) => {
+    if (!input || typeof input !== "string") return null;
+
+    let parsed = null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+        const [yearStr, monthStr, dayStr] = input.split("-");
+        parsed = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr));
+    } else {
+        const candidate = new Date(input);
+        if (!Number.isNaN(candidate.getTime())) {
+            parsed = candidate;
+        }
+    }
+
+    if (!parsed || Number.isNaN(parsed.getTime())) return null;
+
+    if (endOfDay) {
+        parsed.setHours(23, 59, 59, 999);
+    } else {
+        parsed.setHours(0, 0, 0, 0);
+    }
+
+    return parsed;
+};
+
+const serializeProviderOrder = (order, providerId) => {
+    const rawOrder = typeof order.toObject === "function" ? order.toObject() : order;
+    const providerIdStr = String(providerId);
+    const allItems = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+
+    const providerItems = allItems
+        .filter((item) => {
+            const productProviderId = item?.product?.providerId?._id || item?.product?.providerId;
+            return productProviderId && String(productProviderId) === providerIdStr;
+        })
+        .map((item) => ({
+            productId: item?.product?._id || item?.product || null,
+            name: item?.name || item?.product?.name || "Product",
+            quantity: Number(item?.quantity || 0),
+            price: Number(item?.price || 0),
+            image: item?.product?.images?.[0] || null,
+            category: item?.product?.category || "",
+            lineTotal: Number(item?.price || 0) * Number(item?.quantity || 0),
+        }));
+
+    const providerSubtotal = providerItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const hasForeignItems = allItems.some((item) => {
+        const productProviderId = item?.product?.providerId?._id || item?.product?.providerId;
+        return !productProviderId || String(productProviderId) !== providerIdStr;
+    });
+
+    return {
+        _id: rawOrder._id,
+        status: rawOrder.status,
+        paymentMethod: rawOrder.paymentMethod,
+        paymentStatus: rawOrder.paymentStatus,
+        totalAmount: rawOrder.totalAmount,
+        providerSubtotal,
+        providerItemCount: providerItems.reduce((sum, item) => sum + item.quantity, 0),
+        providerItems,
+        createdAt: rawOrder.createdAt,
+        updatedAt: rawOrder.updatedAt,
+        paidAt: rawOrder.paidAt,
+        shippingAddress: rawOrder.shippingAddress,
+        user: rawOrder.user,
+        hasForeignItems,
+        canManageStatus: !hasForeignItems,
+        payos: rawOrder.payos
+            ? {
+                orderCode: rawOrder.payos.orderCode,
+                status: rawOrder.payos.status,
+            }
+            : null,
+    };
+};
+
 const ensureCartAndStock = async (userId) => {
     let cart = await db.Cart.findOne({ user: userId }).populate("items.product");
     cart = await removeMissingProductsFromCart(cart);
@@ -644,6 +754,170 @@ router.get("/provider/product-revenue", verifyToken, async (req, res) => {
             productRevenue: result.productRevenue || 0,
             unitsSold: result.unitsSold || 0,
             ordersCount: result.ordersCount || 0,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+// Provider orders list
+router.get("/provider/orders", verifyToken, ensureProviderFullyApproved, async (req, res) => {
+    try {
+        const status = typeof req.query.status === "string" ? req.query.status.trim() : "";
+        const page = Math.max(Number(req.query.page) || 1, 1);
+        const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+        const dateFrom = parseDateBoundary(req.query.dateFrom, false);
+        const dateTo = parseDateBoundary(req.query.dateTo, true);
+
+        const providerProducts = await db.Product.find({ providerId: req.userId }).select("_id");
+        const productIds = providerProducts.map((item) => item._id);
+
+        if (productIds.length === 0) {
+            return res.status(200).json({
+                orders: [],
+                pagination: {
+                    total: 0,
+                    page,
+                    pages: 0,
+                    limit,
+                },
+            });
+        }
+
+        const query = {
+            "items.product": { $in: productIds },
+        };
+
+        if (status) {
+            query.status = status;
+        }
+
+        if (dateFrom || dateTo) {
+            query.createdAt = {};
+            if (dateFrom) query.createdAt.$gte = dateFrom;
+            if (dateTo) query.createdAt.$lte = dateTo;
+        }
+
+        const skip = (page - 1) * limit;
+        const [orders, total] = await Promise.all([
+            db.Order.find(query)
+                .populate("user", "name email phone")
+                .populate("items.product", "name images category providerId")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            db.Order.countDocuments(query),
+        ]);
+
+        return res.status(200).json({
+            orders: orders
+                .map((order) => serializeProviderOrder(order, req.userId))
+                .filter((order) => order.providerItems.length > 0),
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+// Provider order details
+router.get("/provider/orders/:id", verifyToken, ensureProviderFullyApproved, async (req, res) => {
+    try {
+        const order = await db.Order.findById(req.params.id)
+            .populate("user", "name email phone")
+            .populate("items.product", "name images category providerId");
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const normalizedOrder = serializeProviderOrder(order, req.userId);
+        if (normalizedOrder.providerItems.length === 0) {
+            return res.status(404).json({ message: "Order not found for this provider" });
+        }
+
+        return res.status(200).json({ order: normalizedOrder });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+// Provider order status update
+router.patch("/provider/orders/:id/status", verifyToken, ensureProviderFullyApproved, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ["processing", "shipped", "delivered", "cancelled"];
+        const allowedTransitions = {
+            pending: ["processing", "cancelled"],
+            processing: ["shipped", "cancelled"],
+            shipped: ["delivered"],
+            delivered: [],
+            cancelled: [],
+        };
+
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid order status." });
+        }
+
+        const order = await db.Order.findById(req.params.id)
+            .populate("user", "name email phone")
+            .populate("items.product", "name images category providerId");
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const normalizedOrder = serializeProviderOrder(order, req.userId);
+        if (normalizedOrder.providerItems.length === 0) {
+            return res.status(404).json({ message: "Order not found for this provider" });
+        }
+
+        if (!normalizedOrder.canManageStatus) {
+            return res.status(409).json({
+                message: "This order contains products from multiple providers, so only admins can update its global status.",
+                code: "MULTI_PROVIDER_ORDER",
+            });
+        }
+
+        const currentStatus = order.status || "pending";
+        if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+            return res.status(400).json({
+                message: `Cannot move order from '${currentStatus}' to '${status}'.`,
+            });
+        }
+
+        if (status === "cancelled" && order.paymentMethod === "PAYOS" && order.payos?.orderCode && order.paymentStatus !== "paid") {
+            try {
+                const payOSCancelResponse = await cancelPaymentLink(order.payos.orderCode, "Cancelled by provider");
+                order.payos = {
+                    ...toPlainObject(order.payos),
+                    status: payOSCancelResponse?.data?.status || "CANCELLED",
+                };
+            } catch (error) {
+                // Keep local cancellation flow even if PayOS cancellation fails.
+            }
+        }
+
+        order.status = status;
+        order.updatedAt = Date.now();
+
+        if (status === "cancelled") {
+            if (order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+                order.paymentStatus = "cancelled";
+            }
+            await restoreInventory(order);
+        }
+
+        await order.save();
+
+        return res.status(200).json({
+            message: "Order status updated",
+            order: serializeProviderOrder(order, req.userId),
         });
     } catch (error) {
         return res.status(500).json({ message: error.message });
