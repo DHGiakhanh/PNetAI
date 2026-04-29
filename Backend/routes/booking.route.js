@@ -300,7 +300,14 @@ router.get("/service-availability/:serviceId", async (req, res) => {
 router.get("/my", verifyToken, async (req, res) => {
     try {
         const rawBookings = await db.Booking.find({ user: req.userId })
-            .populate('service', 'title description images duration location')
+            .populate({
+                path: 'service',
+                select: 'title description images duration location providerId',
+                populate: {
+                    path: 'providerId',
+                    select: 'name'
+                }
+            })
             .populate('pet', 'name avatarUrl species breed')
             .sort({ bookingDate: -1 });
 
