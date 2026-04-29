@@ -21,6 +21,7 @@ PORT=9999
 
 # Database
 MONGO_URI=mongodb+srv://khanhdhgqe180127_db_user:AAbZWUEsrMXN6J0V@pnetai.1cqxyoo.mongodb.net/
+MONGO_DIRECT_URI=mongodb://khanhdhgqe180127_db_user:AAbZWUEsrMXN6J0V@ac-ffalx1o-shard-00-00.1cqxyoo.mongodb.net:27017,ac-ffalx1o-shard-00-01.1cqxyoo.mongodb.net:27017,ac-ffalx1o-shard-00-02.1cqxyoo.mongodb.net:27017/test?ssl=true&replicaSet=atlas-gpxv6i-shard-0&authSource=admin&retryWrites=true&w=majority
 
 # JWT
 JWT_SECRET=your_jwt_secret_key_here
@@ -57,6 +58,8 @@ npm run frontend
 ### 4. Access Application
 - Frontend: http://localhost:5173
 - Backend: http://localhost:9999
+
+If you see `querySrv ECONNREFUSED` on Windows, keep `MONGO_URI` as the Atlas SRV string and add `MONGO_DIRECT_URI` as a fallback. This avoids the SRV DNS lookup that sometimes fails in Node or the VS Code MongoDB extension even when MongoDB Compass still connects.
 
 ## Available Commands
 
