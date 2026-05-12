@@ -6,9 +6,16 @@ import { X, Check, RotateCcw } from 'lucide-react';
 interface ImageCropperModalProps {
   image: string;
   onClose: () => void;
-  onCropComplete: (croppedImage: Blob) => void;
+  onCropComplete: (croppedImage: Blob) => void | Promise<void>;
   aspect?: number;
 }
+
+type CroppedAreaPixels = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 export const ImageCropperModal = ({ 
   image, 
@@ -18,13 +25,13 @@ export const ImageCropperModal = ({
 }: ImageCropperModalProps) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedAreaPixels | null>(null);
 
-  const onCropChange = (crop: any) => setCrop(crop);
+  const onCropChange = (nextCrop: { x: number; y: number }) => setCrop(nextCrop);
   const onZoomChange = (zoom: number) => setZoom(zoom);
 
-  const onCropCompleteInternal = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
-    setCroppedAreaPixels(croppedAreaPixels);
+  const onCropCompleteInternal = useCallback((_croppedArea: unknown, nextCroppedAreaPixels: CroppedAreaPixels) => {
+    setCroppedAreaPixels(nextCroppedAreaPixels);
   }, []);
 
   const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -38,33 +45,46 @@ export const ImageCropperModal = ({
 
   const handleDone = async () => {
     try {
+      if (!croppedAreaPixels) return;
+
       const img = await createImage(image);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
       if (!ctx) return;
 
-      canvas.width = croppedAreaPixels.width;
-      canvas.height = croppedAreaPixels.height;
+      const cropWidth = Math.max(1, Math.round(croppedAreaPixels.width));
+      const cropHeight = Math.max(1, Math.round(croppedAreaPixels.height));
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       ctx.drawImage(
         img,
         croppedAreaPixels.x,
         croppedAreaPixels.y,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height,
+        cropWidth,
+        cropHeight,
         0,
         0,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height
+        cropWidth,
+        cropHeight
       );
 
       canvas.toBlob((blob) => {
         if (blob) {
-          onCropComplete(blob);
-          onClose();
+          Promise.resolve(onCropComplete(blob))
+            .then(() => {
+              onClose();
+            })
+            .catch((error) => {
+              console.error(error);
+            });
         }
-      }, 'image/jpeg');
+      }, 'image/jpeg', 0.95);
     } catch (e) {
       console.error(e);
     }
@@ -75,7 +95,7 @@ export const ImageCropperModal = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-ink/40 backdrop-blur-md"
+      className="fixed inset-0 z-[160] flex items-center justify-center p-6 bg-ink/40 backdrop-blur-md"
     >
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}

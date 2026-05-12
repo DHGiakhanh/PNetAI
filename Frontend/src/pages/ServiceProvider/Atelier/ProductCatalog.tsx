@@ -5,15 +5,23 @@ import {
   Filter, 
   Edit3, 
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Trash2,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { productService, Product } from "@/services/product.service";
-import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
 const CATEGORIES = ["Food", "Accessories", "Health", "Toys", "Grooming", "Travel"];
+const PRODUCT_IMAGE_ASPECT = 4 / 3;
+const MAX_PRODUCT_IMAGES = 6;
+
+const moveImageToFront = (images: string[], index: number) => {
+  if (index <= 0 || index >= images.length) return images;
+  return [images[index], ...images.filter((_, imageIndex) => imageIndex !== index)];
+};
 
 export const ProductCatalog = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,10 +31,13 @@ export const ProductCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [updatingProduct, setUpdatingProduct] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
+  const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
 
-  const [cropper, setCropper] = useState<{ image: string; open: boolean }>({
+  const [cropper, setCropper] = useState<{ image: string; open: boolean; target: "new" | "edit" }>({
     image: "",
     open: false,
+    target: "new",
   });
 
   // New item state
@@ -43,8 +54,7 @@ export const ProductCatalog = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const user = await authService.getCurrentUser();
-      const res = await productService.getProducts({ providerId: user.id });
+      const res = await productService.getProviderProducts();
       setProducts(res.products);
     } catch (error) {
        toast.error("Failed to retrieve inventory records.");
@@ -53,32 +63,105 @@ export const ProductCatalog = () => {
     }
   }, []);
 
-  const handleProductImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProductImageSelect = (target: "new" | "edit") => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const currentImageCount =
+      target === "new" ? newItem.images.length : editingProduct?.images?.length || 0;
+
+    if (currentImageCount >= MAX_PRODUCT_IMAGES) {
+      toast.error(`You can upload up to ${MAX_PRODUCT_IMAGES} product images.`);
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
-      setCropper({ image: reader.result as string, open: true });
+      setCropper({ image: reader.result as string, open: true, target });
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
+  const removeProductImage = (target: "new" | "edit", index: number) => {
+    if (target === "new") {
+      setNewItem((prev) => ({
+        ...prev,
+        images: prev.images.filter((_, imageIndex) => imageIndex !== index),
+      }));
+      return;
+    }
+
+    setEditingProduct((prev) =>
+      prev
+        ? {
+            ...prev,
+            images: prev.images.filter((_, imageIndex) => imageIndex !== index),
+          }
+        : prev
+    );
+  };
+
+  const setCoverProductImage = (target: "new" | "edit", index: number) => {
+    if (target === "new") {
+      setNewItem((prev) => ({
+        ...prev,
+        images: moveImageToFront(prev.images, index),
+      }));
+      return;
+    }
+
+    setEditingProduct((prev) =>
+      prev
+        ? {
+            ...prev,
+            images: moveImageToFront(prev.images, index),
+          }
+        : prev
+    );
+  };
+
   const handleCropComplete = async (blob: Blob) => {
+    const target = cropper.target;
+
     try {
-      setCropper(p => ({ ...p, open: false }));
       setImgUploading(true);
-      
       const file = new File([blob], "product.jpg", { type: "image/jpeg" });
       const { url } = await productService.uploadProductImage(file);
-      
-      setNewItem(prev => ({ ...prev, images: [url] }));
-      toast.success("Portrait captured.");
+
+      if (!url) {
+        throw new Error("Missing upload URL");
+      }
+
+      if (target === "new") {
+        setNewItem((prev) => ({
+          ...prev,
+          images:
+            prev.images.length >= MAX_PRODUCT_IMAGES
+              ? prev.images
+              : [...prev.images, url],
+        }));
+      } else {
+        setEditingProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                images:
+                  prev.images.length >= MAX_PRODUCT_IMAGES
+                    ? prev.images
+                    : [...prev.images, url],
+              }
+            : prev
+        );
+      }
+
+      toast.success("Image added to product gallery.");
     } catch {
-      toast.error("Portrait upload failed.");
+      toast.error("Product image upload failed.");
     } finally {
       setImgUploading(false);
+      setCropper((prev) => ({ ...prev, open: false }));
     }
   };
 
@@ -107,11 +190,55 @@ export const ProductCatalog = () => {
 
   const handleQuickUpdate = async (id: string, updates: Partial<Product>) => {
     try {
-      await productService.updateProduct(id, updates);
-      setProducts(prev => prev.map(p => p._id === id ? { ...p, ...updates } : p));
+      const updated = await productService.updateProduct(id, updates);
+      if (!updated?._id) {
+        await fetchProducts();
+        toast.success("Registry synchronized.");
+        return;
+      }
+      setProducts(prev => prev.map(p => p._id === id ? updated : p));
       toast.success("Registry synchronized.");
     } catch {
       toast.error("Failed to update record.");
+    }
+  };
+
+  const handleToggleStatus = async (product: Product) => {
+    const nextStatus: Product["status"] = product.status === "active" ? "inactive" : "active";
+
+    try {
+      setTogglingProductId(product._id);
+      const updated = await productService.updateProductStatus(product._id, nextStatus);
+      if (!updated?._id) {
+        await fetchProducts();
+        toast.success(nextStatus === "active" ? "Product is visible in the shop again." : "Product hidden from customers.");
+        return;
+      }
+      setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
+      setEditingProduct((prev) => (prev?._id === updated._id ? updated : prev));
+      toast.success(nextStatus === "active" ? "Product is visible in the shop again." : "Product hidden from customers.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update product visibility.");
+    } finally {
+      setTogglingProductId(null);
+    }
+  };
+
+  const handleArchive = async (product: Product) => {
+    if (!window.confirm(`Archive "${product.name}"? Customers will no longer see this product.`)) {
+      return;
+    }
+
+    try {
+      setArchivingProductId(product._id);
+      await productService.deleteProduct(product._id);
+      setProducts((prev) => prev.filter((item) => item._id !== product._id));
+      setEditingProduct((prev) => (prev?._id === product._id ? null : prev));
+      toast.success("Product archived successfully.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to archive product.");
+    } finally {
+      setArchivingProductId(null);
     }
   };
 
@@ -136,6 +263,7 @@ export const ProductCatalog = () => {
         price: editingProduct.price,
         stock: editingProduct.stock,
         images: editingProduct.images,
+        status: editingProduct.status,
       });
       setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
       setEditingProduct(null);
@@ -263,8 +391,13 @@ export const ProductCatalog = () => {
                     />
                   </td>
                   <td className="px-8 py-6">
-                    <div className="flex items-center gap-2">
-                       <div className={`w-2 h-2 rounded-full ${p.stock > 0 ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                    <div className="flex flex-col gap-2">
+                       <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`}></div>
+                          <span className={`text-[11px] font-bold uppercase tracking-wide ${p.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                             {p.status}
+                          </span>
+                       </div>
                        <span className={`text-[11px] font-bold ${p.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {p.stock > 0 ? 'In Stock' : 'Out of Stock'}
                        </span>
@@ -273,10 +406,28 @@ export const ProductCatalog = () => {
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
                        <button
+                          onClick={() => handleToggleStatus(p)}
+                          disabled={togglingProductId === p._id}
+                          className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                            p.status === 'active'
+                              ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          } disabled:opacity-60`}
+                       >
+                          {togglingProductId === p._id ? "Saving" : p.status === 'active' ? 'Hide' : 'Show'}
+                       </button>
+                       <button
                           onClick={() => setEditingProduct({ ...p })}
                           className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition"
                        >
                           <Edit3 className="w-4 h-4" />
+                       </button>
+                       <button
+                          onClick={() => handleArchive(p)}
+                          disabled={archivingProductId === p._id}
+                          className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-500 transition disabled:opacity-60"
+                       >
+                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
                   </td>
@@ -307,11 +458,11 @@ export const ProductCatalog = () => {
               initial={{ scale: 0.9, opacity: 0, y: 60 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 60 }}
-              className="relative w-full max-w-2xl bg-white rounded-[3rem] p-12 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-[3rem] bg-white p-8 shadow-2xl sm:p-10"
             >
-               <h2 className="text-3xl font-serif font-bold italic text-ink mb-10">Add Atelier Item</h2>
-               <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+               <h2 className="mb-8 text-3xl font-serif font-bold italic text-ink">Add Atelier Item</h2>
+               <div className="space-y-5 pb-2">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                      <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Product Name</label>
                         <input 
@@ -336,42 +487,11 @@ export const ProductCatalog = () => {
                      <textarea 
                        value={newItem.description}
                        onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                       className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink min-h-[100px] resize-none" 
+                       className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink min-h-[96px] resize-none" 
                        placeholder="Tell the story of this artifact..."
                      />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Portrait Image</label>
-                    <label className="relative block w-full aspect-[21/9] border-2 border-dashed border-sand/50 rounded-[2rem] overflow-hidden bg-[#FBF9F2]/50 hover:bg-warm transition-colors cursor-pointer group">
-                       {newItem.images[0] ? (
-                         <img src={newItem.images[0]} className="w-full h-full object-cover" alt="Preview" />
-                       ) : (
-                         <div className="h-full w-full flex flex-col items-center justify-center gap-3">
-                            <ImageIcon className="w-8 h-8 text-sand group-hover:scale-110 transition-transform" />
-                            <span className="text-xs font-bold text-muted">Drop or Browse Collection</span>
-                         </div>
-                       )}
-                       {imgUploading && (
-                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 animate-spin text-caramel" />
-                         </div>
-                       )}
-                       <input type="file" className="hidden" accept="image/*" onChange={handleProductImageSelect} />
-                    </label>
-                  </div>
-
-                  <AnimatePresence>
-                    {cropper.open && (
-                        <ImageCropperModal 
-                          image={cropper.image}
-                          aspect={21/9}
-                          onClose={() => setCropper(p => ({ ...p, open: false }))}
-                          onCropComplete={handleCropComplete}
-                        />
-                    )}
-                  </AnimatePresence>
-
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                      <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Public Rate (VND)</label>
                         <input 
@@ -391,15 +511,74 @@ export const ProductCatalog = () => {
                         />
                      </div>
                   </div>
+                  <div className="space-y-3 rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-3 px-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted">Product Gallery</label>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">
+                        {newItem.images.length}/{MAX_PRODUCT_IMAGES} images
+                      </span>
+                    </div>
+                    <label className="relative block h-52 w-full cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-sand/50 bg-white/70 transition-colors hover:bg-warm group sm:h-60">
+                       {newItem.images[0] ? (
+                         <>
+                           <img src={newItem.images[0]} className="w-full h-full object-cover" alt="Cover preview" />
+                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent px-5 py-4 text-white">
+                             <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Cover image</p>
+                             <p className="mt-1 text-xs font-medium text-white/85">
+                               Click thumbnails below to switch cover.
+                             </p>
+                           </div>
+                         </>
+                       ) : (
+                         <div className="h-full w-full flex flex-col items-center justify-center gap-2 px-6 text-center">
+                            <ImageIcon className="w-7 h-7 text-sand group-hover:scale-110 transition-transform" />
+                            <span className="text-xs font-bold text-muted">Upload product photos in a crisp 4:3 frame</span>
+                            <span className="text-[11px] text-muted/80">The first image becomes the shop cover image.</span>
+                         </div>
+                       )}
+                       {imgUploading && (
+                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-caramel" />
+                         </div>
+                       )}
+                       <input type="file" className="hidden" accept="image/*" onChange={handleProductImageSelect("new")} />
+                    </label>
+                    {newItem.images.length > 0 && (
+                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                        {newItem.images.map((image, index) => (
+                          <div key={`${image}-${index}`} className="relative overflow-hidden rounded-[1.25rem] border border-sand/50 bg-white">
+                            <button
+                              type="button"
+                              onClick={() => setCoverProductImage("new", index)}
+                              className="block aspect-[4/3] w-full"
+                            >
+                              <img src={image} className="h-full w-full object-cover" alt={`Product preview ${index + 1}`} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeProductImage("new", index)}
+                              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink shadow-sm transition hover:bg-white"
+                              aria-label={`Remove image ${index + 1}`}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                            <div className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white">
+                              {index === 0 ? "Cover" : "Set"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                </div>
-               <div className="mt-12 flex gap-4">
-                  <button onClick={() => setIsAdding(false)} className="flex-1 py-5 rounded-full border border-sand font-bold text-xs uppercase tracking-widest hover:bg-warm transition">Esc</button>
+               <div className="mt-8 flex gap-4 bg-white">
+                  <button onClick={() => setIsAdding(false)} className="flex-1 py-5 rounded-full border border-sand font-bold text-xs uppercase tracking-widest hover:bg-warm transition">Cancel</button>
                   <button 
                     disabled={imgUploading || creating}
                     onClick={handleCreateProduct}
                     className="flex-1 py-5 rounded-full bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-caramel transition shadow-xl shadow-ink/10 disabled:opacity-50"
                   >
-                    {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Authorize Registry"}
+                    {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add to Catalog"}
                   </button>
                </div>
             </motion.div>
@@ -421,11 +600,11 @@ export const ProductCatalog = () => {
               initial={{ scale: 0.95, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 40 }}
-              className="relative w-full max-w-2xl rounded-[3rem] bg-white p-10 shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-[3rem] bg-white p-8 shadow-2xl sm:p-10"
             >
               <h2 className="text-3xl font-serif font-bold italic text-ink">Edit Product</h2>
-              <div className="mt-8 space-y-5">
-                <div className="grid grid-cols-2 gap-5">
+              <div className="mt-8 space-y-5 pb-2">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Product Name</label>
                     <input
@@ -457,7 +636,7 @@ export const ProductCatalog = () => {
                     className="w-full min-h-[110px] resize-none rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-medium text-ink outline-none focus:border-caramel"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Price (VND)</label>
                     <input
@@ -485,20 +664,73 @@ export const ProductCatalog = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Image URL</label>
-                  <input
-                    value={editingProduct.images?.[0] || ""}
-                    onChange={(event) =>
-                      setEditingProduct((prev) =>
-                        prev ? { ...prev, images: [event.target.value] } : prev
-                      )
-                    }
-                    className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-medium text-ink outline-none focus:border-caramel"
-                  />
+                <div className="rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-muted">Product Gallery</label>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted">
+                      {editingProduct.images?.length || 0}/{MAX_PRODUCT_IMAGES} images
+                    </span>
+                  </div>
+                  <label className="relative block h-52 w-full cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-sand/50 bg-white/70 transition-colors hover:bg-warm sm:h-60">
+                    {editingProduct.images?.[0] ? (
+                      <>
+                        <img
+                          src={editingProduct.images[0]}
+                          className="h-full w-full object-cover"
+                          alt="Editing cover preview"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/65 via-ink/5 to-transparent px-5 py-4 text-white">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Cover image</p>
+                          <p className="mt-1 text-xs text-white/85">Add more photos or click a thumbnail to make it the first image.</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center">
+                        <ImageIcon className="h-8 w-8 text-sand" />
+                        <span className="text-xs font-bold text-muted">Upload crisp product photos</span>
+                      </div>
+                    )}
+                    {imgUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                        <Loader2 className="h-8 w-8 animate-spin text-caramel" />
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleProductImageSelect("edit")}
+                    />
+                  </label>
+                  {editingProduct.images?.length ? (
+                    <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                      {editingProduct.images.map((image, index) => (
+                        <div key={`${image}-${index}`} className="relative overflow-hidden rounded-[1.25rem] border border-sand/50 bg-white">
+                          <button
+                            type="button"
+                            onClick={() => setCoverProductImage("edit", index)}
+                            className="block aspect-[4/3] w-full"
+                          >
+                            <img src={image} alt={`Product image ${index + 1}`} className="h-full w-full object-cover" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProductImage("edit", index)}
+                            className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink shadow-sm transition hover:bg-white"
+                            aria-label={`Remove image ${index + 1}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white">
+                            {index === 0 ? "Cover" : "Set"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
-              <div className="mt-10 flex gap-4">
+              <div className="mt-8 flex gap-4 bg-white">
                 <button
                   onClick={() => setEditingProduct(null)}
                   className="flex-1 rounded-full border border-sand py-4 text-xs font-bold uppercase tracking-widest text-ink hover:bg-warm"
@@ -515,6 +747,17 @@ export const ProductCatalog = () => {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {cropper.open && (
+          <ImageCropperModal
+            image={cropper.image}
+            aspect={PRODUCT_IMAGE_ASPECT}
+            onClose={() => setCropper((p) => ({ ...p, open: false }))}
+            onCropComplete={handleCropComplete}
+          />
         )}
       </AnimatePresence>
     </div>

@@ -15,6 +15,7 @@ type Product = {
   category: string;
   images: string[];
   stock: number;
+  status: "active" | "inactive";
   isHot: boolean;
   isRecommended: boolean;
   createdAt: string;
@@ -30,10 +31,19 @@ type ProductForm = {
   description: string;
   price: number;
   category: string;
-  imageUrl: string;
+  imageUrls: string[];
+  imageUrlInput: string;
   stock: number;
+  status: "active" | "inactive";
   isHot: boolean;
   isRecommended: boolean;
+};
+
+const MAX_PRODUCT_IMAGES = 6;
+
+const moveImageToFront = (images: string[], index: number) => {
+  if (index <= 0 || index >= images.length) return images;
+  return [images[index], ...images.filter((_, imageIndex) => imageIndex !== index)];
 };
 
 const initialForm: ProductForm = {
@@ -41,8 +51,10 @@ const initialForm: ProductForm = {
   description: "",
   price: 0,
   category: "",
-  imageUrl: "",
+  imageUrls: [],
+  imageUrlInput: "",
   stock: 0,
+  status: "active",
   isHot: false,
   isRecommended: false,
 };
@@ -59,6 +71,8 @@ export const ProductManagement = () => {
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [currentPage, setCurrentPage] = useState(1);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
+  const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pageSize = 8;
 
@@ -66,10 +80,10 @@ export const ProductManagement = () => {
     try {
       setLoading(true);
       const [productsRes, categoriesRes] = await Promise.all([
-        apiClient.get("/admin/products", { params: search ? { search } : {} }),
+        productService.getProviderProducts(search),
         apiClient.get("/admin/categories"),
       ]);
-      setProducts(productsRes.data.products || []);
+      setProducts(productsRes.products || []);
       setCategories(categoriesRes.data.categories || []);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Could not load products.");
@@ -109,8 +123,10 @@ export const ProductManagement = () => {
       description: product.description,
       price: product.price,
       category: product.category,
-      imageUrl: product.images?.[0] || "",
+      imageUrls: product.images?.filter(Boolean) || [],
+      imageUrlInput: "",
       stock: product.stock || 0,
+      status: product.status || "active",
       isHot: product.isHot,
       isRecommended: product.isRecommended,
     });
@@ -141,8 +157,9 @@ export const ProductManagement = () => {
         description: form.description.trim(),
         price: Number(form.price),
         category: form.category,
-        images: form.imageUrl ? [form.imageUrl] : [],
+        images: form.imageUrls.filter(Boolean),
         stock: Number(form.stock),
+        status: form.status,
         isHot: form.isHot,
         isRecommended: form.isRecommended,
       };
@@ -166,27 +183,71 @@ export const ProductManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
+    if (!confirm("Archive this product? Customers will no longer see it in the shop.")) return;
     try {
+      setArchivingProductId(id);
       await apiClient.delete(`/products/${id}`);
-      toast.success("Product deleted.");
-      await fetchData();
+      toast.success("Product archived.");
+      setProducts((prev) => prev.filter((product) => product._id !== id));
     } catch (error: any) {
       if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not delete product.");
+    } finally {
+      setArchivingProductId(null);
+    }
+  };
+
+  const handleToggleStatus = async (product: Product) => {
+    const nextStatus = product.status === "active" ? "inactive" : "active";
+    try {
+      setTogglingProductId(product._id);
+      const updated = await productService.updateProductStatus(product._id, nextStatus);
+      setProducts((prev) => prev.map((item) => (item._id === updated._id ? { ...item, ...updated } : item)));
+      if (editing?._id === updated._id) {
+        setEditing({ ...editing, ...updated });
+        setForm((prev) => ({ ...prev, status: updated.status }));
+      }
+      toast.success(nextStatus === "active" ? "Product is visible again." : "Product hidden from customers.");
+    } catch (error: any) {
+      if (handleProviderNotReady(error)) return;
+      toast.error(error?.response?.data?.message || "Could not update status.");
+    } finally {
+      setTogglingProductId(null);
     }
   };
 
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remainingSlots = MAX_PRODUCT_IMAGES - form.imageUrls.length;
+    if (remainingSlots <= 0) {
+      toast.error(`You can upload up to ${MAX_PRODUCT_IMAGES} product images.`);
+      e.target.value = "";
+      return;
+    }
 
     try {
       setUploadingImage(true);
-      const { url } = await productService.uploadProductImage(file);
-      if (!url) throw new Error("Upload failed");
-      setForm((prev) => ({ ...prev, imageUrl: url }));
-      toast.success("Image uploaded.");
+      const uploadedUrls: string[] = [];
+
+      for (const file of files.slice(0, remainingSlots)) {
+        const { url } = await productService.uploadProductImage(file);
+        if (!url) {
+          throw new Error("Upload failed");
+        }
+        uploadedUrls.push(url);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        imageUrls: [...prev.imageUrls, ...uploadedUrls].slice(0, MAX_PRODUCT_IMAGES),
+      }));
+      toast.success(
+        uploadedUrls.length === 1
+          ? "Image uploaded."
+          : `${uploadedUrls.length} images uploaded.`
+      );
     } catch (error: any) {
       if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not upload image.");
@@ -194,6 +255,35 @@ export const ProductManagement = () => {
       setUploadingImage(false);
       e.target.value = "";
     }
+  };
+
+  const handleAddImageUrl = () => {
+    const trimmedUrl = form.imageUrlInput.trim();
+    if (!trimmedUrl) return;
+    if (form.imageUrls.length >= MAX_PRODUCT_IMAGES) {
+      toast.error(`You can upload up to ${MAX_PRODUCT_IMAGES} product images.`);
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      imageUrls: [...prev.imageUrls, trimmedUrl].slice(0, MAX_PRODUCT_IMAGES),
+      imageUrlInput: "",
+    }));
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, imageIndex) => imageIndex !== index),
+    }));
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      imageUrls: moveImageToFront(prev.imageUrls, index),
+    }));
   };
 
   return (
@@ -251,12 +341,23 @@ export const ProductManagement = () => {
                   <tr key={product._id} className="border-t border-sand/70">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="grid h-10 w-10 place-items-center rounded-xl bg-warm ring-1 ring-sand">
-                          <Package className="h-4 w-4 text-brown" />
+                        <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-warm ring-1 ring-sand">
+                          {product.images?.[0] ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Package className="h-4 w-4 text-brown" />
+                          )}
                         </div>
                         <div>
                           <p className="font-semibold text-ink">{product.name}</p>
                           <p className="line-clamp-1 max-w-[300px] text-xs text-muted">{product.description}</p>
+                          <p className="mt-1 text-[11px] font-medium text-muted">
+                            {product.images?.length || 0} image{product.images?.length === 1 ? "" : "s"}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -264,11 +365,33 @@ export const ProductManagement = () => {
                     <td className="px-4 py-3 text-sm font-semibold text-ink">{formatVnd(product.price)}</td>
                     <td className="px-4 py-3 text-sm text-ink">{product.stock}</td>
                     <td className="px-4 py-3 text-sm text-muted">
-                      {product.isHot ? "Hot " : ""}
-                      {product.isRecommended ? "Recommended" : ""}
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          product.status === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {product.status}
+                        </span>
+                        <span>
+                          {product.isHot ? "Hot " : ""}
+                          {product.isRecommended ? "Recommended" : ""}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleToggleStatus(product)}
+                          disabled={togglingProductId === product._id}
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            product.status === "active"
+                              ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          } disabled:opacity-60`}
+                        >
+                          {togglingProductId === product._id ? "Saving..." : product.status === "active" ? "Hide" : "Show"}
+                        </button>
                         <button
                           onClick={() => openEdit(product)}
                           className="inline-flex items-center gap-1 rounded-lg border border-sand px-3 py-1.5 text-sm font-medium text-ink hover:bg-warm"
@@ -277,9 +400,10 @@ export const ProductManagement = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(product._id)}
+                          disabled={archivingProductId === product._id}
                           className="inline-flex items-center gap-1 rounded-lg border border-rust/30 px-3 py-1.5 text-sm font-medium text-rust hover:bg-[#fff1eb]"
                         >
-                          <Trash2 className="h-4 w-4" /> Delete
+                          <Trash2 className="h-4 w-4" /> Archive
                         </button>
                       </div>
                     </td>
@@ -364,6 +488,14 @@ export const ProductManagement = () => {
                     placeholder="Price in VND"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as "active" | "inactive" }))}
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
 
@@ -390,31 +522,75 @@ export const ProductManagement = () => {
                       ref={imageInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleImageUpload}
                       className="hidden"
                     />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="rounded-full border border-sand bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:opacity-60"
+                      >
+                        {uploadingImage ? "Uploading..." : "Upload from device"}
+                      </button>
+                      <span className="text-xs font-medium text-muted">
+                        {form.imageUrls.length}/{MAX_PRODUCT_IMAGES} images
+                      </span>
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2 flex gap-2">
+                    <input
+                      value={form.imageUrlInput}
+                      onChange={(e) => setForm((p) => ({ ...p, imageUrlInput: e.target.value }))}
+                      placeholder="Paste image URL"
+                      className="flex-1 rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                    />
                     <button
                       type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      disabled={uploadingImage}
-                      className="rounded-full border border-sand bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:opacity-60"
+                      onClick={handleAddImageUrl}
+                      className="rounded-xl border border-sand bg-white px-4 py-3 text-sm font-semibold text-ink hover:bg-warm"
                     >
-                      {uploadingImage ? "Uploading..." : "Upload from device"}
+                      Add URL
                     </button>
                   </div>
-                  <input
-                    value={form.imageUrl}
-                    onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-                    placeholder="Image URL"
-                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel sm:col-span-2"
-                  />
-                  {form.imageUrl ? (
+                  {form.imageUrls.length ? (
                     <div className="sm:col-span-2">
-                      <img
-                        src={form.imageUrl}
-                        alt="Product preview"
-                        className="h-28 w-28 rounded-xl object-cover ring-1 ring-sand"
-                      />
+                      <div className="mb-3 text-xs font-medium text-muted">
+                        The first image is used as the product cover in the catalog.
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {form.imageUrls.map((image, index) => (
+                          <div
+                            key={`${image}-${index}`}
+                            className="relative overflow-hidden rounded-2xl border border-sand bg-white"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryImage(index)}
+                              className="block aspect-[4/3] w-full"
+                            >
+                              <img
+                                src={image}
+                                alt={`Product preview ${index + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(index)}
+                              className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink shadow-sm transition hover:bg-white"
+                              aria-label={`Remove image ${index + 1}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                            <div className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                              {index === 0 ? "Cover" : "Set as cover"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                   <label className="inline-flex items-center gap-2 text-sm text-ink">

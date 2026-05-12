@@ -238,6 +238,10 @@ const ensureCartAndStock = async (userId) => {
             return { error: "Product in cart not found" };
         }
 
+        if (item.product.isDeleted === true || item.product.status === "inactive") {
+            return { error: `${item.product.name} is no longer available` };
+        }
+
         if (item.product.stock < item.quantity) {
             return { error: `Insufficient stock for ${item.product.name}` };
         }

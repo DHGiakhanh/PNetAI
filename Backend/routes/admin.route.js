@@ -473,7 +473,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
 router.get('/products', verifyToken, isServiceProvider, ensureProviderFullyApproved, async (req, res) => {
     try {
         const { search } = req.query;
-        let query = { providerId: req.userId };
+        let query = { providerId: req.userId, isDeleted: { $ne: true } };
 
         if (search) {
             query.$or = [
