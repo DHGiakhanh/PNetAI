@@ -6,11 +6,11 @@ import {
   Edit3, 
   Image as ImageIcon,
   Loader2,
+  Trash2,
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { productService, Product } from "@/services/product.service";
-import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
@@ -31,6 +31,8 @@ export const ProductCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [updatingProduct, setUpdatingProduct] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
+  const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
 
   const [cropper, setCropper] = useState<{ image: string; open: boolean; target: "new" | "edit" }>({
     image: "",
@@ -52,8 +54,7 @@ export const ProductCatalog = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const user = await authService.getCurrentUser();
-      const res = await productService.getProducts({ providerId: user.id });
+      const res = await productService.getProviderProducts();
       setProducts(res.products);
     } catch (error) {
        toast.error("Failed to retrieve inventory records.");
@@ -189,11 +190,55 @@ export const ProductCatalog = () => {
 
   const handleQuickUpdate = async (id: string, updates: Partial<Product>) => {
     try {
-      await productService.updateProduct(id, updates);
-      setProducts(prev => prev.map(p => p._id === id ? { ...p, ...updates } : p));
+      const updated = await productService.updateProduct(id, updates);
+      if (!updated?._id) {
+        await fetchProducts();
+        toast.success("Registry synchronized.");
+        return;
+      }
+      setProducts(prev => prev.map(p => p._id === id ? updated : p));
       toast.success("Registry synchronized.");
     } catch {
       toast.error("Failed to update record.");
+    }
+  };
+
+  const handleToggleStatus = async (product: Product) => {
+    const nextStatus: Product["status"] = product.status === "active" ? "inactive" : "active";
+
+    try {
+      setTogglingProductId(product._id);
+      const updated = await productService.updateProductStatus(product._id, nextStatus);
+      if (!updated?._id) {
+        await fetchProducts();
+        toast.success(nextStatus === "active" ? "Product is visible in the shop again." : "Product hidden from customers.");
+        return;
+      }
+      setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
+      setEditingProduct((prev) => (prev?._id === updated._id ? updated : prev));
+      toast.success(nextStatus === "active" ? "Product is visible in the shop again." : "Product hidden from customers.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update product visibility.");
+    } finally {
+      setTogglingProductId(null);
+    }
+  };
+
+  const handleArchive = async (product: Product) => {
+    if (!window.confirm(`Archive "${product.name}"? Customers will no longer see this product.`)) {
+      return;
+    }
+
+    try {
+      setArchivingProductId(product._id);
+      await productService.deleteProduct(product._id);
+      setProducts((prev) => prev.filter((item) => item._id !== product._id));
+      setEditingProduct((prev) => (prev?._id === product._id ? null : prev));
+      toast.success("Product archived successfully.");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to archive product.");
+    } finally {
+      setArchivingProductId(null);
     }
   };
 
@@ -218,6 +263,7 @@ export const ProductCatalog = () => {
         price: editingProduct.price,
         stock: editingProduct.stock,
         images: editingProduct.images,
+        status: editingProduct.status,
       });
       setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
       setEditingProduct(null);
@@ -345,8 +391,13 @@ export const ProductCatalog = () => {
                     />
                   </td>
                   <td className="px-8 py-6">
-                    <div className="flex items-center gap-2">
-                       <div className={`w-2 h-2 rounded-full ${p.stock > 0 ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                    <div className="flex flex-col gap-2">
+                       <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`}></div>
+                          <span className={`text-[11px] font-bold uppercase tracking-wide ${p.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                             {p.status}
+                          </span>
+                       </div>
                        <span className={`text-[11px] font-bold ${p.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {p.stock > 0 ? 'In Stock' : 'Out of Stock'}
                        </span>
@@ -355,10 +406,28 @@ export const ProductCatalog = () => {
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
                        <button
+                          onClick={() => handleToggleStatus(p)}
+                          disabled={togglingProductId === p._id}
+                          className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                            p.status === 'active'
+                              ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          } disabled:opacity-60`}
+                       >
+                          {togglingProductId === p._id ? "Saving" : p.status === 'active' ? 'Hide' : 'Show'}
+                       </button>
+                       <button
                           onClick={() => setEditingProduct({ ...p })}
                           className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition"
                        >
                           <Edit3 className="w-4 h-4" />
+                       </button>
+                       <button
+                          onClick={() => handleArchive(p)}
+                          disabled={archivingProductId === p._id}
+                          className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-500 transition disabled:opacity-60"
+                       >
+                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
                   </td>

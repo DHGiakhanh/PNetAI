@@ -7,6 +7,10 @@ const { cloudinary } = require("../config/cloudinary");
 const { buildTextSearchQuery } = require("../utils/search");
 
 const router = express.Router();
+const ACTIVE_PRODUCT_FILTER = {
+    isDeleted: { $ne: true },
+    $or: [{ status: "active" }, { status: { $exists: false } }],
+};
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProvider(user?.role)) return undefined;
@@ -16,6 +20,10 @@ const getProviderOnboardingStatus = (user) => {
 const canProviderPublish = (user) =>
     isServiceProvider(user?.role) && user.isVerified && getProviderOnboardingStatus(user) === "approved";
 const ensureProviderCanPublish = async (req, res) => {
+    if (req.role === "admin") {
+        return { _id: req.userId, role: "admin" };
+    }
+
     const provider = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
     if (!provider || !isServiceProvider(provider.role)) {
         res.status(403).json({ message: "Access denied" });
@@ -38,12 +46,25 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const sanitizeProductPayload = (payload = {}) => {
+    const nextPayload = { ...payload };
+    delete nextPayload.providerId;
+    delete nextPayload.isDeleted;
+    delete nextPayload.deletedAt;
+    return nextPayload;
+};
+
+const canManageProduct = (product, userId, role) => {
+    if (role === "admin") return true;
+    return Boolean(product?.providerId && product.providerId.toString() === userId);
+};
+
 // Get all products with filters and search
 router.get('/', async (req, res) => {
     try {
         const { search, category, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
         
-        let query = {};
+        let query = { ...ACTIVE_PRODUCT_FILTER };
         const numericPage = Math.max(Number(page) || 1, 1);
         const numericLimit = Math.max(Number(limit) || 12, 1);
         
@@ -171,7 +192,7 @@ router.get('/', async (req, res) => {
 // Get hot products
 router.get('/hot', async (req, res) => {
     try {
-        const products = await db.Product.find({ isHot: true }).limit(8);
+        const products = await db.Product.find({ ...ACTIVE_PRODUCT_FILTER, isHot: true }).limit(8);
         res.status(200).json({ products });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -181,7 +202,7 @@ router.get('/hot', async (req, res) => {
 // Get recommended products
 router.get('/recommended', async (req, res) => {
     try {
-        const products = await db.Product.find({ isRecommended: true }).limit(8);
+        const products = await db.Product.find({ ...ACTIVE_PRODUCT_FILTER, isRecommended: true }).limit(8);
         res.status(200).json({ products });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -191,7 +212,7 @@ router.get('/recommended', async (req, res) => {
 // Get latest products
 router.get('/latest', async (req, res) => {
     try {
-        const products = await db.Product.find().sort({ createdAt: -1 }).limit(8);
+        const products = await db.Product.find(ACTIVE_PRODUCT_FILTER).sort({ createdAt: -1 }).limit(8);
         res.status(200).json({ products });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -201,7 +222,10 @@ router.get('/latest', async (req, res) => {
 // Get product by ID
 router.get('/:id', async (req, res) => {
     try {
-        const product = await db.Product.findById(req.params.id).populate('providerId', 'name email');
+        const product = await db.Product.findOne({
+            _id: req.params.id,
+            ...ACTIVE_PRODUCT_FILTER,
+        }).populate('providerId', 'name email');
         
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -261,7 +285,7 @@ router.post('/', verifyToken, async (req, res) => {
         if (!provider) return;
 
         const product = new db.Product({
-            ...req.body,
+            ...sanitizeProductPayload(req.body),
             providerId: req.userId,
         });
         await product.save();
@@ -278,12 +302,12 @@ router.put('/:id', verifyToken, async (req, res) => {
         const provider = await ensureProviderCanPublish(req, res);
         if (!provider) return;
 
-        const existing = await db.Product.findById(req.params.id);
+        const existing = await db.Product.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
         if (!existing) {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        if (existing.providerId && existing.providerId.toString() !== req.userId) {
+        if (!canManageProduct(existing, req.userId, req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -291,7 +315,13 @@ router.put('/:id', verifyToken, async (req, res) => {
             existing.providerId = req.userId;
         }
 
-        const payload = { ...req.body, updatedAt: Date.now(), providerId: existing.providerId };
+        const payload = {
+            ...sanitizeProductPayload(req.body),
+            updatedAt: Date.now(),
+            providerId: existing.providerId,
+            isDeleted: false,
+            deletedAt: null,
+        };
         const product = await db.Product.findByIdAndUpdate(req.params.id, payload, { new: true });
         
         if (!product) {
@@ -310,22 +340,55 @@ router.delete('/:id', verifyToken, async (req, res) => {
         const provider = await ensureProviderCanPublish(req, res);
         if (!provider) return;
 
-        const existing = await db.Product.findById(req.params.id);
+        const existing = await db.Product.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
         if (!existing) {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        if (existing.providerId && existing.providerId.toString() !== req.userId) {
+        if (!canManageProduct(existing, req.userId, req.role)) {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const product = await db.Product.findByIdAndDelete(req.params.id);
-        
+        existing.isDeleted = true;
+        existing.deletedAt = new Date();
+        existing.status = "inactive";
+        existing.updatedAt = Date.now();
+        await existing.save();
+
+        res.status(200).json({ message: "Product archived successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Update product status (Service Provider owner only)
+router.patch('/:id/status', verifyToken, async (req, res) => {
+    try {
+        const provider = await ensureProviderCanPublish(req, res);
+        if (!provider) return;
+
+        const { status } = req.body;
+        if (!["active", "inactive"].includes(status)) {
+            return res.status(400).json({ message: "Invalid product status" });
+        }
+
+        const product = await db.Product.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
-        
-        res.status(200).json({ message: "Product deleted successfully" });
+
+        if (!canManageProduct(product, req.userId, req.role)) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        product.status = status;
+        product.updatedAt = Date.now();
+        await product.save();
+
+        return res.status(200).json({
+            message: `Product ${status === "active" ? "activated" : "hidden"} successfully`,
+            product,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

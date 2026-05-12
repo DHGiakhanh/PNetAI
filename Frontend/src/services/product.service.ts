@@ -13,6 +13,9 @@ export interface Product {
   category: string;
   images: string[];
   stock: number;
+  status: 'active' | 'inactive';
+  isDeleted?: boolean;
+  deletedAt?: string | null;
   isHot: boolean;
   isRecommended: boolean;
   averageRating: number;
@@ -42,6 +45,10 @@ export interface ProductFilters {
 }
 
 export const productService = {
+  normalizeProductResponse: (payload: any): Product => {
+    return (payload?.product ?? payload) as Product;
+  },
+
   // Get all products with filters
   getProducts: async (filters: ProductFilters = {}): Promise<ProductsResponse> => {
     const params = new URLSearchParams();
@@ -77,24 +84,48 @@ export const productService = {
   // Get product by ID
   getProductById: async (id: string): Promise<Product> => {
     const response = await apiClient.get(`/products/${id}`);
-    return response.data.product;
+    return productService.normalizeProductResponse(response.data);
+  },
+
+  // Get provider-owned products, including inactive items but excluding soft-deleted ones
+  getProviderProducts: async (search?: string): Promise<{ products: Product[] }> => {
+    const response = await apiClient.get('/admin/products', {
+      params: search ? { search } : {},
+    });
+    return response.data;
   },
 
   // Create product (Service Provider only)
   createProduct: async (productData: Partial<Product>): Promise<Product> => {
     const response = await apiClient.post('/products', productData);
-    return response.data.product;
+    return productService.normalizeProductResponse(response.data);
   },
 
   // Update product (Service Provider owner only)
   updateProduct: async (id: string, productData: Partial<Product>): Promise<Product> => {
     const response = await apiClient.put(`/products/${id}`, productData);
-    return response.data.product;
+    return productService.normalizeProductResponse(response.data);
   },
 
   // Delete product (Service Provider owner only)
   deleteProduct: async (id: string): Promise<void> => {
     await apiClient.delete(`/products/${id}`);
+  },
+
+  // Toggle product visibility (Service Provider owner only)
+  updateProductStatus: async (id: string, status: Product['status']): Promise<Product> => {
+    try {
+      const response = await apiClient.patch(`/products/${id}/status`, { status });
+      return productService.normalizeProductResponse(response.data);
+    } catch (error: any) {
+      const statusCode = error?.response?.status;
+      if (statusCode !== 404 && statusCode !== 405) {
+        throw error;
+      }
+
+      const response = await apiClient.put(`/products/${id}`, { status });
+      return productService.normalizeProductResponse(response.data);
+    }
   },
 
   // Upload product image (Service Provider only)

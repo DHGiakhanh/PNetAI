@@ -15,6 +15,7 @@ type Product = {
   category: string;
   images: string[];
   stock: number;
+  status: "active" | "inactive";
   isHot: boolean;
   isRecommended: boolean;
   createdAt: string;
@@ -33,6 +34,7 @@ type ProductForm = {
   imageUrls: string[];
   imageUrlInput: string;
   stock: number;
+  status: "active" | "inactive";
   isHot: boolean;
   isRecommended: boolean;
 };
@@ -52,6 +54,7 @@ const initialForm: ProductForm = {
   imageUrls: [],
   imageUrlInput: "",
   stock: 0,
+  status: "active",
   isHot: false,
   isRecommended: false,
 };
@@ -68,6 +71,8 @@ export const ProductManagement = () => {
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [currentPage, setCurrentPage] = useState(1);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
+  const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pageSize = 8;
 
@@ -75,10 +80,10 @@ export const ProductManagement = () => {
     try {
       setLoading(true);
       const [productsRes, categoriesRes] = await Promise.all([
-        apiClient.get("/admin/products", { params: search ? { search } : {} }),
+        productService.getProviderProducts(search),
         apiClient.get("/admin/categories"),
       ]);
-      setProducts(productsRes.data.products || []);
+      setProducts(productsRes.products || []);
       setCategories(categoriesRes.data.categories || []);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Could not load products.");
@@ -121,6 +126,7 @@ export const ProductManagement = () => {
       imageUrls: product.images?.filter(Boolean) || [],
       imageUrlInput: "",
       stock: product.stock || 0,
+      status: product.status || "active",
       isHot: product.isHot,
       isRecommended: product.isRecommended,
     });
@@ -153,6 +159,7 @@ export const ProductManagement = () => {
         category: form.category,
         images: form.imageUrls.filter(Boolean),
         stock: Number(form.stock),
+        status: form.status,
         isHot: form.isHot,
         isRecommended: form.isRecommended,
       };
@@ -176,14 +183,36 @@ export const ProductManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
+    if (!confirm("Archive this product? Customers will no longer see it in the shop.")) return;
     try {
+      setArchivingProductId(id);
       await apiClient.delete(`/products/${id}`);
-      toast.success("Product deleted.");
-      await fetchData();
+      toast.success("Product archived.");
+      setProducts((prev) => prev.filter((product) => product._id !== id));
     } catch (error: any) {
       if (handleProviderNotReady(error)) return;
       toast.error(error?.response?.data?.message || "Could not delete product.");
+    } finally {
+      setArchivingProductId(null);
+    }
+  };
+
+  const handleToggleStatus = async (product: Product) => {
+    const nextStatus = product.status === "active" ? "inactive" : "active";
+    try {
+      setTogglingProductId(product._id);
+      const updated = await productService.updateProductStatus(product._id, nextStatus);
+      setProducts((prev) => prev.map((item) => (item._id === updated._id ? { ...item, ...updated } : item)));
+      if (editing?._id === updated._id) {
+        setEditing({ ...editing, ...updated });
+        setForm((prev) => ({ ...prev, status: updated.status }));
+      }
+      toast.success(nextStatus === "active" ? "Product is visible again." : "Product hidden from customers.");
+    } catch (error: any) {
+      if (handleProviderNotReady(error)) return;
+      toast.error(error?.response?.data?.message || "Could not update status.");
+    } finally {
+      setTogglingProductId(null);
     }
   };
 
@@ -336,11 +365,33 @@ export const ProductManagement = () => {
                     <td className="px-4 py-3 text-sm font-semibold text-ink">{formatVnd(product.price)}</td>
                     <td className="px-4 py-3 text-sm text-ink">{product.stock}</td>
                     <td className="px-4 py-3 text-sm text-muted">
-                      {product.isHot ? "Hot " : ""}
-                      {product.isRecommended ? "Recommended" : ""}
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          product.status === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {product.status}
+                        </span>
+                        <span>
+                          {product.isHot ? "Hot " : ""}
+                          {product.isRecommended ? "Recommended" : ""}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleToggleStatus(product)}
+                          disabled={togglingProductId === product._id}
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            product.status === "active"
+                              ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          } disabled:opacity-60`}
+                        >
+                          {togglingProductId === product._id ? "Saving..." : product.status === "active" ? "Hide" : "Show"}
+                        </button>
                         <button
                           onClick={() => openEdit(product)}
                           className="inline-flex items-center gap-1 rounded-lg border border-sand px-3 py-1.5 text-sm font-medium text-ink hover:bg-warm"
@@ -349,9 +400,10 @@ export const ProductManagement = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(product._id)}
+                          disabled={archivingProductId === product._id}
                           className="inline-flex items-center gap-1 rounded-lg border border-rust/30 px-3 py-1.5 text-sm font-medium text-rust hover:bg-[#fff1eb]"
                         >
-                          <Trash2 className="h-4 w-4" /> Delete
+                          <Trash2 className="h-4 w-4" /> Archive
                         </button>
                       </div>
                     </td>
@@ -436,6 +488,14 @@ export const ProductManagement = () => {
                     placeholder="Price in VND"
                     className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
                   />
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as "active" | "inactive" }))}
+                    className="rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
 

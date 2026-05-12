@@ -36,6 +36,10 @@ router.post('/add', verifyToken, async (req, res) => {
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
+
+        if (product.isDeleted === true || product.status === "inactive") {
+            return res.status(400).json({ message: "Product is not available for purchase" });
+        }
         
         if (product.stock < quantity) {
             return res.status(400).json({ message: "Insufficient stock" });
@@ -99,6 +103,10 @@ router.put('/update/:productId', verifyToken, async (req, res) => {
         const product = await db.Product.findById(req.params.productId);
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (product.isDeleted === true || product.status === "inactive") {
+            return res.status(400).json({ message: "Product is not available for purchase" });
         }
 
         if (product.stock < quantity) {
