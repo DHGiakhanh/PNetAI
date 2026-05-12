@@ -11,6 +11,12 @@ const ACTIVE_PRODUCT_FILTER = {
     isDeleted: { $ne: true },
     $or: [{ status: "active" }, { status: { $exists: false } }],
 };
+const combineProductFilters = (...filters) => {
+    const validFilters = filters.filter(Boolean);
+    if (validFilters.length === 0) return {};
+    if (validFilters.length === 1) return validFilters[0];
+    return { $and: validFilters };
+};
 const isServiceProvider = (role) => role === "service_provider" || role === "shop";
 const getProviderOnboardingStatus = (user) => {
     if (!isServiceProvider(user?.role)) return undefined;
@@ -64,30 +70,35 @@ router.get('/', async (req, res) => {
     try {
         const { search, category, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
         
-        let query = { ...ACTIVE_PRODUCT_FILTER };
+        const queryFilters = [ACTIVE_PRODUCT_FILTER];
         const numericPage = Math.max(Number(page) || 1, 1);
         const numericLimit = Math.max(Number(limit) || 12, 1);
         
         const textSearchQuery = buildTextSearchQuery(search, ["name", "description"]);
         if (textSearchQuery) {
-            Object.assign(query, textSearchQuery);
+            queryFilters.push(textSearchQuery);
         }
         
         if (category) {
-            query.category = category;
+            queryFilters.push({ category });
         }
 
         if (providerId) {
-            query.providerId = mongoose.Types.ObjectId.isValid(providerId)
-                ? new mongoose.Types.ObjectId(providerId)
-                : providerId;
+            queryFilters.push({
+                providerId: mongoose.Types.ObjectId.isValid(providerId)
+                    ? new mongoose.Types.ObjectId(providerId)
+                    : providerId,
+            });
         }
         
         if (minPrice || maxPrice) {
-            query.price = {};
-            if (minPrice) query.price.$gte = Number(minPrice);
-            if (maxPrice) query.price.$lte = Number(maxPrice);
+            const priceQuery = {};
+            if (minPrice) priceQuery.$gte = Number(minPrice);
+            if (maxPrice) priceQuery.$lte = Number(maxPrice);
+            queryFilters.push({ price: priceQuery });
         }
+
+        const query = combineProductFilters(...queryFilters);
 
         const skip = (numericPage - 1) * numericLimit;
         const total = await db.Product.countDocuments(query);
