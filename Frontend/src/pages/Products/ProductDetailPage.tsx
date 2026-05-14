@@ -424,7 +424,7 @@ export default function ProductDetailPage() {
                   disabled={addLoading || product.stock <= 0}
                   className="inline-flex w-full items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
                 >
-                  {addLoading ? "Adding..." : `Add to cart · ${formatVnd(product.price * qty)}`}
+                  {addLoading ? "Adding..." : "Add to cart"}
                 </button>
                 <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
                   <ShieldCheck className="h-5 w-5 text-brown" />

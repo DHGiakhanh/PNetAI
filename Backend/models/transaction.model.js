@@ -12,7 +12,7 @@ const transactionSchema = new Schema({
     amount: { type: Number, required: true },
     status: { 
         type: String, 
-        enum: ["pending", "success", "failed", "cancelled"], 
+        enum: ["pending", "success", "failed", "cancelled", "refund_pending", "refunded"],
         default: "pending" 
     },
     paymentMethod: { type: String, default: "PayOS" },

@@ -297,6 +297,52 @@ const createProductOrderTransactions = async (order) => {
     }
 };
 
+const appendTransactionNote = (transaction, noteLine) => {
+    transaction.note = transaction.note ? `${transaction.note}\n${noteLine}` : noteLine;
+};
+
+const markPaidProductOrderRefundPending = async (order, cancelledBy = "system") => {
+    if (order.paymentStatus !== "paid") {
+        return false;
+    }
+
+    order.paymentStatus = "refund_pending";
+
+    const noteLine = `Refund pending: paid product order cancelled by ${cancelledBy}.`;
+    const transactions = await db.Transaction.find({
+        referenceId: order._id,
+        type: "product_order",
+        status: "success",
+    });
+
+    for (const transaction of transactions) {
+        transaction.status = "refund_pending";
+        appendTransactionNote(transaction, noteLine);
+        transaction.updatedAt = Date.now();
+        await transaction.save();
+    }
+
+    const existingNotification = await db.Notification.findOne({
+        type: "refund_request",
+        relatedId: order._id,
+        isAdmin: true,
+        isRead: false,
+    });
+
+    if (!existingNotification) {
+        await db.Notification.create({
+            user: null,
+            type: "refund_request",
+            title: "Product Order Refund Required",
+            message: `Paid order ORD-${order._id.toString().slice(-6).toUpperCase()} was cancelled by ${cancelledBy}. Please refund ${Number(order.totalAmount || 0).toLocaleString()} VND and mark this request as processed.`,
+            relatedId: order._id,
+            isAdmin: true,
+        });
+    }
+
+    return true;
+};
+
 const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     const normalizedStatus = toUpperText(payOSStatus);
 
@@ -305,6 +351,9 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     }
 
     if (normalizedStatus === "PAID") {
+        if (["refund_pending", "refunded"].includes(order.paymentStatus)) {
+            return;
+        }
         if (order.paymentStatus !== "paid") {
             await createProductOrderTransactions(order);
         }
@@ -317,7 +366,7 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     }
 
     if (["CANCELLED", "EXPIRED"].includes(normalizedStatus)) {
-        if (order.paymentStatus !== "paid") {
+        if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
             order.paymentStatus = "cancelled";
         }
         if (order.status !== "delivered") {
@@ -328,13 +377,13 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     }
 
     if (normalizedStatus === "PENDING") {
-        if (order.paymentStatus !== "paid") {
+        if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
             order.paymentStatus = "pending";
         }
         return;
     }
 
-    if (order.paymentStatus !== "paid") {
+    if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
         order.paymentStatus = "failed";
     }
 };
@@ -911,7 +960,9 @@ router.patch("/provider/orders/:id/status", verifyToken, ensureProviderFullyAppr
         order.updatedAt = Date.now();
 
         if (status === "cancelled") {
-            if (order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+            if (order.paymentStatus === "paid") {
+                await markPaidProductOrderRefundPending(order, "provider");
+            } else if (order.paymentMethod === "PAYOS") {
                 order.paymentStatus = "cancelled";
             }
             await restoreInventory(order);
@@ -981,7 +1032,9 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
         }
 
         order.status = "cancelled";
-        if (order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+        if (order.paymentStatus === "paid") {
+            await markPaidProductOrderRefundPending(order, "customer");
+        } else if (order.paymentMethod === "PAYOS") {
             order.paymentStatus = "cancelled";
         }
         order.updatedAt = Date.now();
@@ -1052,6 +1105,17 @@ router.put("/:id/status", verifyToken, async (req, res) => {
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
+        }
+
+        if (status === "cancelled") {
+            if (order.paymentStatus === "paid") {
+                await markPaidProductOrderRefundPending(order, "admin");
+            } else if (order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+                order.paymentStatus = "cancelled";
+            }
+            await restoreInventory(order);
+            order.updatedAt = Date.now();
+            await order.save();
         }
 
         res.status(200).json({ message: "Order status updated", order });

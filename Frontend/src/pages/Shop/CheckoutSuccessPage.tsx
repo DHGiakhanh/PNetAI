@@ -48,7 +48,7 @@ export default function CheckoutSuccess() {
           className="flex flex-col md:flex-row items-center justify-center gap-4"
         >
           <Link 
-            to="/purchased-products" 
+            to="/my-orders"
             className="bg-ink text-white px-10 py-5 rounded-full text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-caramel transition-all shadow-xl flex items-center gap-3"
           >
             Xem đơn hàng <ArrowRight className="w-4 h-4" />
