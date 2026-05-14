@@ -19,7 +19,7 @@ const orderSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        enum: ["pending", "processing", "shipped", "delivered", "cancelled", "return_requested"],
         default: "pending"
     },
     paymentMethod: {
@@ -29,7 +29,7 @@ const orderSchema = new Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ["unpaid", "pending", "paid", "failed", "cancelled", "refunded"],
+        enum: ["unpaid", "pending", "paid", "failed", "cancelled", "refund_pending", "refunded"],
         default: "unpaid"
     },
     paidAt: { type: Date },

@@ -56,7 +56,7 @@ import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
 import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
 import RefundRequestsPage from "@/pages/Admin/RefundRequestsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
-import PurchasedProductsPage from "@/pages/Orders/PurchasedProductsPage";
+import MyOrdersPage from "@/pages/Orders/MyOrdersPage";
 import CheckoutPage from "@/pages/Shop/CheckoutPage";
 import CheckoutSuccessPage from "@/pages/Shop/CheckoutSuccessPage";
 import CheckoutCancelPage from "@/pages/Shop/CheckoutCancelPage";
@@ -128,7 +128,8 @@ export default function AppRoutes() {
           <Route path="profile" element={<UserProfile />} />
           <Route path="my-pets" element={<MyPetsPage />} />
           <Route path="my-bookings" element={<MyBookingsPage />} />
-          <Route path="purchased-products" element={<PurchasedProductsPage />} />
+          <Route path="my-orders" element={<MyOrdersPage />} />
+          <Route path="purchased-products" element={<Navigate to="/my-orders" replace />} />
           <Route path="my-blogs" element={<MyBlogsPage />} />
           <Route path="blogs/new" element={<BlogEditorPage />} />
           <Route path="blogs/edit/:id" element={<BlogEditorPage />} />

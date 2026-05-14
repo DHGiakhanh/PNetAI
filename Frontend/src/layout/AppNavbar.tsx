@@ -415,10 +415,10 @@ export function AppNavbar() {
                         My Booking
                       </Link>
                       <Link
-                        to="/purchased-products"
+                        to="/my-orders"
                         className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
                       >
-                        Purchased Products
+                        My Orders
                       </Link>
                       <Link
                         to="/my-blogs"
@@ -537,11 +537,11 @@ export function AppNavbar() {
                     My Booking
                   </Link>
                   <Link
-                    to="/purchased-products"
+                    to="/my-orders"
                     onClick={() => setMobileMenuOpen(false)}
                     className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
                   >
-                    Purchased Products
+                    My Orders
                   </Link>
                   <Link
                     to="/my-blogs"

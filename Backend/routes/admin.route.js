@@ -970,13 +970,14 @@ router.patch("/notifications/:id/read", verifyToken, isAdmin, async (req, res) =
                 // Check if it's an Order
                 const order = await db.Order.findById(notif.relatedId);
                 if (order) {
-                    order.status = "refunded";
+                    order.paymentStatus = "refunded";
+                    order.updatedAt = Date.now();
                     await order.save();
 
                     // Update the related transaction for product order
-                    await db.Transaction.findOneAndUpdate(
-                        { referenceId: order._id }, 
-                        { status: "refunded" }
+                    await db.Transaction.updateMany(
+                        { referenceId: order._id, type: "product_order" },
+                        { status: "refunded", updatedAt: Date.now() }
                     );
                 }
             }
