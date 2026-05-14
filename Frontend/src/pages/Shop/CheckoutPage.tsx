@@ -249,7 +249,7 @@ export default function CheckoutPage() {
             className="flex flex-col md:flex-row items-center justify-center gap-4"
           >
             <Link 
-              to="/my-bookings" 
+              to="/my-orders" 
               className="bg-ink text-white px-10 py-5 rounded-full text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-caramel transition-all shadow-xl"
             >
               Track Order History
