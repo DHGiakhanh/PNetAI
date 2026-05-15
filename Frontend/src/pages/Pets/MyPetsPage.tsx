@@ -37,6 +37,9 @@ type SelectOption = { value: string; label: string };
 const speciesOptions: SelectOption[] = [
   { value: "Dog", label: "Dog" },
   { value: "Cat", label: "Cat" },
+  { value: "Bird", label: "Bird" },
+  { value: "Rabbit", label: "Rabbit" },
+  { value: "Hamster", label: "Hamster" },
   { value: "Other", label: "Other" },
 ];
 
@@ -228,7 +231,8 @@ export default function MyPetsPage() {
                     <div>
                       <h2 className="font-serif text-4xl font-bold italic text-ink">{pet.name}</h2>
                       <p className="text-sm text-muted">
-                        {pet.breed || pet.species} • {pet.gender || "Unknown"} • {pet.age || 0} years
+                        <span className="block">Species: {pet.species} • Breed: {pet.breed || "None"}</span>
+                        <span className="block mt-1">Gender: {pet.gender || "Unknown"} • Age: {pet.age || 0} years</span>
                       </p>
                     </div>
 

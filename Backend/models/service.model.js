@@ -29,6 +29,7 @@ const serviceSchema = new Schema({
             end: { type: String }    // "17:00"
         }
     },
+    tags: { type: [String], default: [], index: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

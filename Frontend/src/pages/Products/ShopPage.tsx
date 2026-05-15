@@ -8,6 +8,10 @@ import {
   ToyBrick,
   UtensilsCrossed,
   Plus,
+  Sparkles,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +22,8 @@ import { cartService } from "../../services/cart.service";
 import Pagination from "@/components/common/Pagination";
 import { formatVnd } from "@/utils/currency";
 import { MarketplaceSearchBar } from "@/components/common/MarketplaceSearchBar";
+import { petService, Pet } from "@/services/pet.service";
+import { motion, AnimatePresence } from "framer-motion";
 
 type CategoryItem = {
   id: string;
@@ -55,6 +61,7 @@ type ShopItem = {
   imageUrl: string;
   href: string;
   addLabel: string;
+  tags: string[];
 };
 
 const SORT_OPTIONS = [
@@ -99,12 +106,22 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(parsePage(searchParams.get("page")));
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
+  const [userPets, setUserPets] = useState<Pet[]>([]);
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [recommendationIndex, setRecommendationIndex] = useState(0);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000000]);
   const requestIdRef = useRef(0);
+
+  const AVAILABLE_TAGS = [
+    "dog", "cat", "bird", "rabbit", "hamster", 
+    "food", "toys", "accessories", "medical", "grooming", "travel"
+  ];
   const pageSize = 8;
 
   useEffect(() => {
@@ -168,6 +185,44 @@ export default function ShopPage() {
   }, []);
 
   useEffect(() => {
+    const fetchUserPets = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const pets = await petService.getMyPets();
+        setUserPets(pets);
+      } catch (error) {
+        console.error("Error fetching user pets:", error);
+      }
+    };
+    fetchUserPets();
+  }, []);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (userPets.length === 0) {
+        setRecommendedProducts([]);
+        return;
+      }
+
+      try {
+        setLoadingRecommendations(true);
+        const speciesTags = Array.from(new Set(userPets.map(p => p.species.toLowerCase())));
+        const response = await productService.getProducts({
+          tags: speciesTags.join(","),
+          limit: 12
+        });
+        setRecommendedProducts(response.products);
+      } catch (error) {
+        console.error("Error fetching recommendations:", error);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+    fetchRecommendations();
+  }, [userPets]);
+
+  useEffect(() => {
     if (activeCategory === "all") return;
     if (categories.length === 0) return;
     if (!categories.some((category) => category.id === activeCategory)) {
@@ -194,22 +249,18 @@ export default function ShopPage() {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
-    const activeCategoryConfig = categories.find((category) => category.id === activeCategory);
-
     const fetchProducts = async () => {
       try {
-        if (hasFetchedOnce) {
-          setSearching(true);
-        } else {
-          setLoading(true);
-        }
-
+        setSearching(true);
         const response = await productService.getProducts({
-          search: searchQuery || undefined,
-          category: activeCategoryConfig?.apiValue,
-          sort: sortBy,
           page: currentPage,
           limit: pageSize,
+          search: searchQuery,
+          category: activeCategory === "all" ? undefined : activeCategory,
+          tags: selectedTags.length > 0 ? selectedTags.join(",") : undefined,
+          minPrice: priceRange[0],
+          maxPrice: priceRange[1],
+          sort: sortBy,
         });
 
         if (requestId !== requestIdRef.current) return;
@@ -227,34 +278,55 @@ export default function ShopPage() {
         if (requestId !== requestIdRef.current) return;
         setLoading(false);
         setSearching(false);
-        setHasFetchedOnce(true);
       }
     };
 
     fetchProducts();
-  }, [activeCategory, categories, currentPage, pageSize, searchQuery, sortBy]);
+  }, [activeCategory, categories, currentPage, pageSize, searchQuery, sortBy, selectedTags, priceRange]);
+
+  const mapToShopItem = (product: Product): ShopItem => {
+    const providerName =
+      typeof product.providerId === "string"
+        ? "Service Provider"
+        : product.providerId?.name || "Service Provider";
+
+    return {
+      id: product._id,
+      title: product.name,
+      subtitle: product.category,
+      providerName,
+      meta: formatVnd(product.price),
+      imageUrl: product.images[0] || "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop",
+      href: `/products/${product._id}`,
+      addLabel: "Add to cart",
+      tags: product.tags || [],
+    };
+  };
 
   const items = useMemo<ShopItem[]>(() => {
-    return products.map((product) => {
-      const providerName =
-        typeof product.providerId === "string"
-          ? "Service Provider"
-          : product.providerId?.name || "Service Provider";
-
-      return {
-        id: product._id,
-        title: product.name,
-        subtitle: product.category,
-        providerName,
-        meta: formatVnd(product.price),
-        imageUrl:
-          product.images[0] ||
-          "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop",
-        href: `/products/${product._id}`,
-        addLabel: `Add ${product.name} to cart`,
-      };
-    });
+    return products.map(mapToShopItem);
   }, [products]);
+
+  const recommendedItems = useMemo<ShopItem[]>(() => {
+    return recommendedProducts.map(mapToShopItem);
+  }, [recommendedProducts]);
+
+  const nextRecommendation = () => {
+    setRecommendationIndex((prev: number) => (prev + 1) % Math.max(1, recommendedItems.length));
+  };
+
+  const prevRecommendation = () => {
+    setRecommendationIndex((prev: number) => (prev - 1 + recommendedItems.length) % Math.max(1, recommendedItems.length));
+  };
+
+  const visibleRecommendations = useMemo(() => {
+    if (recommendedItems.length <= 4) return recommendedItems;
+    const result = [];
+    for (let i = 0; i < 4; i++) {
+      result.push(recommendedItems[(recommendationIndex + i) % recommendedItems.length]);
+    }
+    return result;
+  }, [recommendedItems, recommendationIndex]);
 
   const handleAddToCart = async (productId: string) => {
     const token = localStorage.getItem("token");
@@ -277,11 +349,29 @@ export default function ShopPage() {
     }
   };
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+    setCurrentPage(1);
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'min' | 'max') => {
+    const val = parseInt(e.target.value);
+    setPriceRange(prev => {
+      const next = [...prev] as [number, number];
+      if (type === 'min') next[0] = Math.min(val, next[1]);
+      else next[1] = Math.max(val, next[0]);
+      return next;
+    });
+    setCurrentPage(1);
+  };
+
   const activeCategoryLabel =
     activeCategory === "all"
       ? undefined
       : categories.find((category) => category.id === activeCategory)?.label;
-  const hasActiveFilters = Boolean(searchQuery) || activeCategory !== "all" || sortBy !== "newest";
+  const hasActiveFilters = Boolean(searchQuery) || activeCategory !== "all" || sortBy !== "newest" || selectedTags.length > 0 || priceRange[0] > 0 || priceRange[1] < 10000000;
   const hasCatalogData = totalItems > 0;
   const isSearchBusy = searching || searchInput.trim() !== searchQuery;
 
@@ -317,57 +407,285 @@ export default function ShopPage() {
           </div>
         </section>
 
-        <section className="mt-6">
-          <MarketplaceSearchBar
-            mode="products"
-            value={searchInput}
-            placeholder="Search food, toys, supplements, grooming essentials..."
-            loading={isSearchBusy}
-            resultCount={totalItems}
-            activeCategoryLabel={activeCategoryLabel}
-            hasResults={hasCatalogData}
-            onChange={setSearchInput}
-            onClear={() => {
-              setSearchInput("");
-              setSearchQuery("");
-              setCurrentPage(1);
-            }}
-          />
+        {/* Personalized Recommendations Section */}
+        <section className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-caramel fill-caramel/20" />
+              <h2 className="text-xl font-serif font-bold italic text-ink">Personalized Suggestions</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {userPets.length > 0 && (
+                <p className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-muted/40">
+                  Based on your {userPets.length} pet{userPets.length > 1 ? "s" : ""}
+                </p>
+              )}
+              {recommendedItems.length > 4 && (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={prevRecommendation}
+                    className="w-8 h-8 rounded-full border border-sand bg-white flex items-center justify-center text-ink hover:bg-warm transition shadow-sm"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={nextRecommendation}
+                    className="w-8 h-8 rounded-full border border-sand bg-white flex items-center justify-center text-ink hover:bg-warm transition shadow-sm"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {userPets.length === 0 ? (
+            <div className="bg-white/40 border border-sand border-dashed rounded-[2rem] p-8 flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-warm rounded-full flex items-center justify-center mb-4 ring-1 ring-sand">
+                <Dog className="w-6 h-6 text-caramel opacity-40" />
+              </div>
+              <h3 className="text-sm font-bold text-ink mb-1">Tailor your shop experience</h3>
+              <p className="text-xs text-muted mb-4 max-w-xs leading-relaxed">
+                You haven't added any pets yet. Add your companions to get personalized product recommendations!
+              </p>
+              <Link
+                to="/my-pets"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-ink text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-caramel transition shadow-lg shadow-ink/10"
+              >
+                Add Your First Pet
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="relative overflow-hidden py-2 px-1">
+              {loadingRecommendations ? (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="mb-4 aspect-[4/3] rounded-[22px] bg-sand" />
+                      <div className="mb-2 h-4 rounded bg-sand" />
+                      <div className="h-4 w-3/4 rounded bg-sand" />
+                    </div>
+                  ))}
+                </div>
+              ) : recommendedItems.length > 0 ? (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {visibleRecommendations.map((item, idx) => (
+                      <motion.div
+                        key={`${item.id}-${(recommendationIndex + idx) % recommendedItems.length}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      >
+                        <article
+                          className="group overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-sand transition-all hover:shadow-xl hover:-translate-y-1"
+                        >
+                          <Link to={item.href} className="block">
+                            <div className="relative aspect-[4/3] bg-warm">
+                              <img
+                                alt={item.title}
+                                src={item.imageUrl}
+                                className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                                loading="lazy"
+                              />
+                            </div>
+                          </Link>
+                          <div className="p-4">
+                            <p className="text-xs font-semibold text-muted">
+                              {item.subtitle}
+                            </p>
+                            <Link to={item.href} className="block">
+                              <h3 className="mt-1 line-clamp-1 text-sm font-extrabold text-ink hover:underline">
+                                {item.title}
+                              </h3>
+                            </Link>
+                            <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
+                              by {item.providerName}
+                            </p>
+                            {item.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {item.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="inline-flex items-center rounded-full bg-warm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center justify-between">
+                              <span className="text-sm font-extrabold text-ink">
+                                {item.meta}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddToCart(item.id)}
+                                disabled={addingId === item.id}
+                                className="grid h-9 w-9 place-items-center rounded-full bg-brown text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
+                                aria-label={item.addLabel}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="col-span-full py-10 text-center bg-warm/20 rounded-[22px] border border-sand/30">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-muted/30 italic">No specific products found for your pet's species yet.</p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
-        <section className="mt-6">
-          <div className="flex flex-wrap gap-3">
-            {categories.map((category) => {
-              const Icon = category.icon;
-              const tone = toneStyles[category.tone];
-              const active = category.id === activeCategory;
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveCategory(category.id);
-                    setCurrentPage(1);
-                  }}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 transition ${
-                    active
-                      ? "bg-brown text-white ring-brown"
-                      : "bg-white text-ink ring-sand hover:bg-warm"
-                  }`}
-                >
-                  <span
-                    className={`grid h-8 w-8 place-items-center rounded-full ${
-                      active ? "bg-white/15" : tone.bg
-                    }`}
-                  >
-                    <Icon
-                      className={`h-4 w-4 ${active ? "text-white" : tone.fg}`}
-                    />
-                  </span>
-                  {category.label}
-                </button>
-              );
-            })}
+        <section className="mt-10">
+          <div className="flex flex-col gap-6 p-6 bg-white rounded-[28px] border border-sand shadow-sm">
+            {/* Search Bar */}
+            <MarketplaceSearchBar
+              mode="products"
+              value={searchInput}
+              placeholder="Search food, toys, supplements, grooming essentials..."
+              loading={isSearchBusy}
+              resultCount={totalItems}
+              activeCategoryLabel={activeCategoryLabel}
+              hasResults={hasCatalogData}
+              onChange={setSearchInput}
+              onClear={() => {
+                setSearchInput("");
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+            />
+
+            {/* Category Filter */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-muted mb-4">Categories</p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => {
+                  const Icon = category.icon;
+                  const tone = toneStyles[category.tone];
+                  const active = category.id === activeCategory;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory(category.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm ring-1 transition ${
+                        active
+                          ? "bg-brown text-white ring-brown"
+                          : "bg-warm text-muted ring-sand hover:bg-white hover:text-ink"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-7 w-7 place-items-center rounded-full ${
+                          active ? "bg-white/15" : tone.bg
+                        }`}
+                      >
+                        <Icon
+                          className={`h-3.5 w-3.5 ${active ? "text-white" : tone.fg}`}
+                        />
+                      </span>
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tag Filters */}
+            <div className="pt-4 border-t border-sand/50">
+              <p className="text-xs font-black uppercase tracking-widest text-muted mb-4">Filter by Tags</p>
+              <div className="flex flex-wrap gap-2">
+                {AVAILABLE_TAGS.map(tag => {
+                  const active = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ring-1 ${
+                        active 
+                          ? "bg-caramel text-white ring-caramel shadow-md" 
+                          : "bg-warm text-muted ring-sand hover:bg-white hover:text-ink"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Price Slider */}
+            <div className="pt-4 border-t border-sand/50">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-xs font-black uppercase tracking-widest text-muted">Price Range</p>
+                <div className="flex items-center gap-2">
+                   <span className="px-3 py-1 bg-warm rounded-full text-[11px] font-bold text-ink ring-1 ring-sand">{formatVnd(priceRange[0])}</span>
+                   <span className="text-muted text-xs">—</span>
+                   <span className="px-3 py-1 bg-warm rounded-full text-[11px] font-bold text-ink ring-1 ring-sand">{formatVnd(priceRange[1])}</span>
+                </div>
+              </div>
+              
+              <div className="relative h-12 flex items-center">
+                <div className="absolute w-full h-1.5 bg-warm rounded-full overflow-hidden ring-1 ring-sand/30">
+                  <motion.div 
+                    className="absolute h-full bg-brown/20"
+                    style={{
+                      left: `${(priceRange[0] / 10000000) * 100}%`,
+                      right: `${100 - (priceRange[1] / 10000000) * 100}%`
+                    }}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10000000"
+                  step="50000"
+                  value={priceRange[0]}
+                  onChange={(e) => handlePriceChange(e, 'min')}
+                  className="absolute w-full appearance-none bg-transparent pointer-events-none cursor-pointer z-20 h-full [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:ring-4 [&::-webkit-slider-thumb]:ring-brown [&::-webkit-slider-thumb]:shadow-lg"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="10000000"
+                  step="50000"
+                  value={priceRange[1]}
+                  onChange={(e) => handlePriceChange(e, 'max')}
+                  className="absolute w-full appearance-none bg-transparent pointer-events-none cursor-pointer z-20 h-full [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:ring-4 [&::-webkit-slider-thumb]:ring-brown [&::-webkit-slider-thumb]:shadow-lg"
+                />
+              </div>
+              <div className="flex justify-between mt-2">
+                 <span className="text-[10px] font-bold text-muted/50 uppercase tracking-widest">Min (0đ)</span>
+                 <span className="text-[10px] font-bold text-muted/50 uppercase tracking-widest">Max (10M+)</span>
+              </div>
+            </div>
+
+            <div className="pt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                  setActiveCategory("all");
+                  setSelectedTags([]);
+                  setPriceRange([0, 10000000]);
+                  setCurrentPage(1);
+                }}
+                className="text-[10px] font-black uppercase tracking-widest text-muted hover:text-brown transition-colors"
+              >
+                Reset all filters
+              </button>
+            </div>
           </div>
         </section>
 
@@ -389,6 +707,8 @@ export default function ShopPage() {
                   setSearchInput("");
                   setSearchQuery("");
                   setActiveCategory("all");
+                  setSelectedTags([]);
+                  setPriceRange([0, 10000000]);
                   setSortBy("newest");
                   setCurrentPage(1);
                 }}
@@ -471,6 +791,18 @@ export default function ShopPage() {
                     <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
                       by {item.providerName}
                     </p>
+                    {item.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center rounded-full bg-warm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-sm font-extrabold text-ink">
                         {item.meta}

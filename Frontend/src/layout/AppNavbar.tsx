@@ -13,6 +13,7 @@ import {
   Users,
   LogIn,
   Trash2,
+  LayoutDashboard,
 } from "lucide-react";
 import { cartService, CartItem, CartProduct } from "../services/cart.service";
 import { productService } from "../services/product.service";
@@ -80,6 +81,14 @@ export function AppNavbar() {
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("");
   }, [userData]);
+
+  const dashboardLink = useMemo(() => {
+    if (!userData?.role) return null;
+    if (userData.role === "admin") return "/admin";
+    if (userData.role === "service_provider" || userData.role === "shop") return "/service-provider";
+    if (userData.role === "sale") return "/sale";
+    return null;
+  }, [userData?.role]);
 
   const syncCart = async () => {
     if (!isLoggedIn) {
@@ -334,15 +343,15 @@ export function AppNavbar() {
               <Users className="h-4 w-4" />
               Blog
             </Link>
-            {isLoggedIn && userData?.role === "sale" ? (
+            {isLoggedIn && dashboardLink && (
               <Link
-                to="/sale/providers"
-                className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/sale/providers") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+                to={dashboardLink}
+                className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, dashboardLink) ? "text-brown" : "text-gray-600 hover:text-brown"}`}
               >
-                <Users className="h-4 w-4" />
-                Provider Approvals
+                <LayoutDashboard className="h-4 w-4" />
+                {userData?.role === "admin" ? "Admin Console" : "Dashboard"}
               </Link>
-            ) : null}
+            )}
           </nav>
 
           <div className="relative flex items-center gap-3">
@@ -401,7 +410,16 @@ export function AppNavbar() {
                   </button>
 
                   {accountOpen ? (
-                    <div className="absolute right-0 top-12 z-[60] w-44 rounded-2xl border border-sand bg-white p-2 shadow-xl">
+                    <div className="absolute right-0 top-12 z-[60] w-52 rounded-2xl border border-sand bg-white p-2 shadow-xl">
+                      {dashboardLink && (
+                        <Link
+                          to={dashboardLink}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-caramel hover:bg-warm border-b border-sand/30 mb-1"
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          Management Console
+                        </Link>
+                      )}
                       <Link
                         to="/profile"
                         className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
@@ -508,15 +526,16 @@ export function AppNavbar() {
               >
                 Blog
               </Link>
-              {isLoggedIn && userData?.role === "sale" ? (
+              {isLoggedIn && dashboardLink && (
                 <Link
-                  to="/sale/providers"
+                  to={dashboardLink}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-caramel bg-warm/50 border border-sand/30"
                 >
-                  Provider Approvals
+                  <LayoutDashboard className="h-4 w-4" />
+                  Management Console
                 </Link>
-              ) : null}
+              )}
               {isLoggedIn ? (
                 <>
                   <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">

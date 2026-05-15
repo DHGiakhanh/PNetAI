@@ -15,7 +15,7 @@ const medicalHistoryRecordSchema = new Schema(
 const petSchema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
-    species: { type: String, enum: ["Dog", "Cat", "Other"], default: "Other" },
+    species: { type: String, enum: ["Dog", "Cat", "Bird", "Rabbit", "Hamster", "Other"], default: "Other" },
     breed: { type: String, trim: true, default: "" },
     gender: { type: String, enum: ["Male", "Female", "Unknown"], default: "Unknown" },
     age: { type: Number, min: 0, default: 0 },

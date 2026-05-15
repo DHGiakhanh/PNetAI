@@ -14,6 +14,7 @@ export interface Service {
   isAvailable: boolean;
   averageRating: number;
   totalReviews: number;
+  tags?: string[];
   providerId?: {
     _id: string;
     name: string;
@@ -46,6 +47,28 @@ export interface ServicesResponse {
     total: number;
     page: number;
     pages: number;
+  };
+}
+
+export interface AtelierDetail {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  description?: string;
+  avatarUrl?: string;
+  clinicImages: string[];
+  doctors: string[];
+  operatingHours?: { start: string; end: string };
+  subscriptionPlan?: string;
+  legalDocuments?: {
+    clinicName?: string | null;
+    clinicLicenseNumber?: string | null;
+    clinicLicenseUrl?: string | null;
+    businessLicenseUrl?: string | null;
+    doctorLicenseUrl?: string | null;
+    submittedAt?: string | null;
   };
 }
 
@@ -123,6 +146,12 @@ export const serviceService = {
     formData.append("image", file);
 
     const response = await apiClient.post("/services/upload-image", formData);
+    return response.data;
+  },
+
+  // Get full Atelier profile + their services
+  getAtelierById: async (providerId: string): Promise<{ atelier: AtelierDetail; services: Service[] }> => {
+    const response = await apiClient.get(`/services/atelier/${providerId}`);
     return response.data;
   }
 };

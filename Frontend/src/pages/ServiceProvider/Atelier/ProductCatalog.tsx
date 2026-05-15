@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
 const CATEGORIES = ["Food", "Accessories", "Health", "Toys", "Grooming", "Travel"];
+const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "medical", "grooming", "food", "toys", "accessories", "travel"];
 const PRODUCT_IMAGE_ASPECT = 4 / 3;
 const MAX_PRODUCT_IMAGES = 6;
 
@@ -47,7 +48,8 @@ export const ProductCatalog = () => {
     category: CATEGORIES[0],
     price: 0,
     stock: 0,
-    images: [] as string[]
+    images: [] as string[],
+    tags: [] as string[]
   });
   const [imgUploading, setImgUploading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -176,7 +178,7 @@ export const ProductCatalog = () => {
       setProducts(prev => [created, ...prev]);
       toast.success("Artifact stored in registry.");
       setIsAdding(false);
-      setNewItem({ name: "", description: "", category: CATEGORIES[0], price: 0, stock: 0, images: [] });
+      setNewItem({ name: "", description: "", category: CATEGORIES[0], price: 0, stock: 0, images: [], tags: [] });
     } catch {
       toast.error("Failed to authorize registry entry.");
     } finally {
@@ -263,6 +265,7 @@ export const ProductCatalog = () => {
         price: editingProduct.price,
         stock: editingProduct.stock,
         images: editingProduct.images,
+        tags: editingProduct.tags,
         status: editingProduct.status,
       });
       setProducts((prev) => prev.map((item) => (item._id === updated._id ? updated : item)));
@@ -358,6 +361,13 @@ export const ProductCatalog = () => {
                       <div>
                         <p className="text-sm font-bold text-ink mb-0.5">{p.name}</p>
                         <p className="text-[10px] font-bold text-muted uppercase tracking-tighter">ID: #{p._id.slice(-6).toUpperCase()}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(p.tags || []).map(tag => (
+                            <span key={tag} className="px-2 py-0.5 bg-ink/5 rounded-full text-[8px] font-bold text-ink/60 uppercase tracking-tighter">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -509,6 +519,32 @@ export const ProductCatalog = () => {
                           onChange={e => setNewItem(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
                           className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none font-bold text-ink" placeholder="0" 
                         />
+                     </div>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Tags (Select to categorize for pets)</label>
+                     <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
+                        {AVAILABLE_TAGS.map(tag => (
+                           <button
+                             key={tag}
+                             type="button"
+                             onClick={() => {
+                               setNewItem(prev => ({
+                                 ...prev,
+                                 tags: (prev.tags || []).includes(tag) 
+                                   ? (prev.tags || []).filter(t => t !== tag) 
+                                   : [...(prev.tags || []), tag]
+                               }));
+                             }}
+                             className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                               newItem.tags.includes(tag)
+                                 ? "bg-ink text-white shadow-md"
+                                 : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                             }`}
+                           >
+                             {tag}
+                           </button>
+                        ))}
                      </div>
                   </div>
                   <div className="space-y-3 rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
@@ -663,6 +699,32 @@ export const ProductCatalog = () => {
                       className="w-full rounded-2xl border border-sand bg-warm/30 px-5 py-3 font-bold text-ink outline-none focus:border-caramel"
                     />
                   </div>
+                </div>
+                <div>
+                   <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Tags</label>
+                   <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
+                      {AVAILABLE_TAGS.map(tag => (
+                         <button
+                           key={tag}
+                           type="button"
+                           onClick={() => {
+                             setEditingProduct(prev => prev ? ({
+                               ...prev,
+                               tags: (prev.tags || []).includes(tag) 
+                                 ? (prev.tags || []).filter(t => t !== tag) 
+                                 : [...(prev.tags || []), tag]
+                             }) : prev);
+                           }}
+                           className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                             (editingProduct.tags || []).includes(tag)
+                               ? "bg-ink text-white shadow-md"
+                               : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                           }`}
+                         >
+                           {tag}
+                         </button>
+                      ))}
+                   </div>
                 </div>
                 <div className="rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
                   <div className="mb-2 flex items-center justify-between gap-3">

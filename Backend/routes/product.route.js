@@ -68,7 +68,7 @@ const canManageProduct = (product, userId, role) => {
 // Get all products with filters and search
 router.get('/', async (req, res) => {
     try {
-        const { search, category, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
+        const { search, category, tags, minPrice, maxPrice, sort, providerId, page = 1, limit = 12 } = req.query;
         
         const queryFilters = [ACTIVE_PRODUCT_FILTER];
         const numericPage = Math.max(Number(page) || 1, 1);
@@ -81,6 +81,11 @@ router.get('/', async (req, res) => {
         
         if (category) {
             queryFilters.push({ category });
+        }
+
+        if (tags) {
+            const tagArray = tags.split(',').map(t => t.trim());
+            queryFilters.push({ tags: { $in: tagArray } });
         }
 
         if (providerId) {

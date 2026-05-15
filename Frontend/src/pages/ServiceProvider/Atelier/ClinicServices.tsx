@@ -18,8 +18,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/booking.service";
 import { serviceService, Service } from "@/services/service.service";
 import { authService } from "@/services/auth.service";
+import { petService } from "@/services/pet.service";
 import { toast } from "react-hot-toast";
 import { formatVnd } from "@/utils/currency";
+const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "medical", "grooming", "food", "toys", "accessories", "travel"];
 
 type SubTab = 'bookings' | 'catalog' | 'config';
 
@@ -34,6 +36,9 @@ export const ClinicServices = () => {
    const [isAdding, setIsAdding] = useState(false);
    const [editingService, setEditingService] = useState<Service | null>(null);
    const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+   const [completionBooking, setCompletionBooking] = useState<any | null>(null);
+   const [sessionNote, setSessionNote] = useState("");
+   const [isFinalizing, setIsFinalizing] = useState(false);
 
    // Config state
    const [capacity, setCapacity] = useState(4);
@@ -47,7 +52,8 @@ export const ClinicServices = () => {
       duration: 60,
       description: "",
       features: [],
-      images: []
+      images: [],
+      tags: []
    });
 
    const fetchData = useCallback(async () => {
@@ -97,7 +103,7 @@ export const ClinicServices = () => {
          await serviceService.createService(newService);
          toast.success("Service officially registered.", { id: 'svc' });
          setIsAdding(false);
-         setNewService({ title: "", category: "Medical Clinic", basePrice: 0, duration: 60, description: "", features: [], images: [] });
+         setNewService({ title: "", category: "Medical Clinic", basePrice: 0, duration: 60, description: "", features: [], images: [], tags: [] });
          fetchData();
       } catch (error: any) {
          toast.error(error.response?.data?.message || "Registry failed.", { id: 'svc' });
@@ -155,6 +161,42 @@ export const ClinicServices = () => {
          toast.success(`Session ${status}.`);
       } catch (error: any) {
          toast.error(error.response?.data?.message || "Status synchronization failed.");
+      }
+   };
+
+   const handleFinalizeSession = async () => {
+      if (!completionBooking) return;
+      
+      const note = sessionNote.trim();
+      if (!note) {
+         toast.error("A clinical note is required to finalize.");
+         return;
+      }
+
+      try {
+         setIsFinalizing(true);
+         toast.loading("Archiving session data...", { id: 'finalize' });
+
+         // 1. Update Booking Status
+         await bookingService.updateBookingStatus(completionBooking._id, 'completed');
+
+         // 2. Save clinical note to pet's medical history
+         const petId = completionBooking.pet?._id;
+         if (petId) {
+            await petService.addMedicalHistoryNote(petId, { 
+               note, 
+               bookingId: completionBooking._id 
+            });
+         }
+
+         setBookings(prev => prev.map(b => b._id === completionBooking._id ? { ...b, status: 'completed' } : b));
+         toast.success("Session finalized and clinical note archived.", { id: 'finalize' });
+         setCompletionBooking(null);
+         setSessionNote("");
+      } catch (error: any) {
+         toast.error(error.response?.data?.message || "Finalization failed.", { id: 'finalize' });
+      } finally {
+         setIsFinalizing(false);
       }
    };
 
@@ -305,6 +347,33 @@ export const ClinicServices = () => {
                               </div>
                            </div>
 
+                           <div className="space-y-3">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
+                               <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
+                                  {AVAILABLE_TAGS.map(tag => (
+                                     <button
+                                       key={tag}
+                                       type="button"
+                                       onClick={() => {
+                                         setEditingService(prev => prev ? ({
+                                           ...prev,
+                                           tags: (prev.tags || []).includes(tag) 
+                                             ? (prev.tags || []).filter(t => t !== tag) 
+                                             : [...(prev.tags || []), tag]
+                                         }) : prev);
+                                       }}
+                                       className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                         (editingService.tags || []).includes(tag)
+                                           ? "bg-ink text-white shadow-md"
+                                           : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                                       }`}
+                                     >
+                                       {tag}
+                                     </button>
+                                  ))}
+                               </div>
+                            </div>
+
                            <div className="pt-10 flex gap-4">
                               <button onClick={handleUpdateService} className="flex-[2] py-6 rounded-full bg-ink text-white font-black text-xs uppercase tracking-[0.4em] hover:bg-caramel transition shadow-2xl">Commit Protocol</button>
                               <button onClick={() => setEditingService(null)} className="flex-1 py-6 rounded-full border border-sand font-black text-xs uppercase tracking-[0.4em] text-muted hover:bg-warm transition">Abort</button>
@@ -326,87 +395,107 @@ export const ClinicServices = () => {
                   <motion.div
                      initial={{ opacity: 0, y: 20, scale: 0.96 }}
                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                     className="relative w-full max-w-2xl rounded-[2.5rem] border border-sand bg-[#FBF9F2] p-8 shadow-2xl"
+                     className="relative w-full max-w-4xl rounded-[3.5rem] border border-sand bg-[#FBF9F2] p-10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                   >
                      <button
                         onClick={() => setSelectedBooking(null)}
-                        className="absolute right-6 top-6 rounded-full border border-sand bg-white p-2 text-muted hover:text-ink"
+                        className="absolute right-8 top-8 rounded-full border border-sand bg-white p-3 text-muted hover:text-ink transition-all hover:rotate-90 z-10"
                      >
-                        <X className="h-4 w-4" />
+                        <X className="h-5 w-5" />
                      </button>
-                     <h3 className="text-3xl font-serif font-bold italic text-ink">Pet Profile</h3>
-                     <p className="mt-1 text-xs font-black uppercase tracking-widest text-caramel">
-                        Booking {formatDateBadge(selectedBooking.bookingDate)} · {normalizeTimeRange(selectedBooking.bookingTime)}
-                     </p>
 
-                     <div className="mt-6 flex items-center gap-4 rounded-2xl border border-sand bg-white p-4">
-                        <div className="h-16 w-16 overflow-hidden rounded-2xl border border-sand bg-warm">
-                           {selectedBooking.pet?.avatarUrl ? (
-                              <img src={selectedBooking.pet.avatarUrl} alt={selectedBooking.pet?.name || "Pet"} className="h-full w-full object-cover" />
-                           ) : (
-                              <div className="grid h-full w-full place-items-center text-xs font-bold text-muted">No Photo</div>
-                           )}
-                        </div>
-                        <div>
-                           <p className="text-xl font-bold text-ink">{selectedBooking.pet?.name || "Unknown Pet"}</p>
-                           <p className="text-xs font-bold uppercase tracking-widest text-muted">
-                              {selectedBooking.pet?.species || "Unknown"} {selectedBooking.pet?.breed ? `• ${selectedBooking.pet.breed}` : ""}
-                           </p>
-                        </div>
-                     </div>
-
-                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Gender</p>
-                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.gender || "Unknown"}</p>
-                        </div>
-                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Age / Weight</p>
-                           <p className="mt-1 text-sm font-bold text-ink">
-                              {selectedBooking.pet?.age ?? "N/A"} yrs · {selectedBooking.pet?.weightKg ?? "N/A"} kg
-                           </p>
-                        </div>
-                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Health Status</p>
-                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.healthStatus || "No data"}</p>
-                        </div>
-                        <div className="rounded-2xl border border-sand/70 bg-white p-4">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Allergies</p>
-                           <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.allergies || "No data"}</p>
-                        </div>
-                     </div>
-
-                     <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Medical History</p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-ink">
-                           {selectedBooking.pet?.medicalHistory || "No history recorded yet."}
+                     <div className="mb-8">
+                        <h3 className="text-4xl font-serif font-bold italic text-ink">Pet Profile</h3>
+                        <p className="mt-1 text-xs font-black uppercase tracking-widest text-caramel">
+                           Booking {formatDateBadge(selectedBooking.bookingDate)} · {normalizeTimeRange(selectedBooking.bookingTime)}
                         </p>
                      </div>
 
-                     {selectedBooking.pet?.medicalHistoryRecords?.length > 0 && (
-                        <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-muted">Clinic Note Timeline</p>
-                           <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
-                              {selectedBooking.pet.medicalHistoryRecords
-                                 .slice()
-                                 .reverse()
-                                 .map((record: any, idx: number) => (
-                                    <div key={record._id || `${record.createdAt}-${idx}`} className="rounded-xl border border-sand/50 bg-warm/20 p-3">
-                                       <p className="text-sm font-semibold text-ink">{record.note}</p>
-                                       <p className="mt-1 text-[11px] text-muted">
-                                          {record.providerName || "Clinic"} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : ""}
+                     <div className="overflow-y-auto pr-4 custom-scrollbar flex-1">
+                        <div className="grid md:grid-cols-2 gap-10">
+                           {/* Left Column: Basic Info & Health */}
+                           <div className="space-y-6">
+                              <div className="flex items-center gap-6 rounded-[2rem] border border-sand bg-white p-6 shadow-sm">
+                                 <div className="h-24 w-24 overflow-hidden rounded-[1.5rem] border border-sand bg-warm shrink-0">
+                                    {selectedBooking.pet?.avatarUrl ? (
+                                       <img src={selectedBooking.pet.avatarUrl} alt={selectedBooking.pet?.name || "Pet"} className="h-full w-full object-cover" />
+                                    ) : (
+                                       <div className="grid h-full w-full place-items-center text-xs font-bold text-muted">No Photo</div>
+                                    )}
+                                 </div>
+                                 <div>
+                                    <p className="text-2xl font-bold text-ink mb-1">{selectedBooking.pet?.name || "Unknown Pet"}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted/60">
+                                       {selectedBooking.pet?.species || "Unknown"} {selectedBooking.pet?.breed ? `• ${selectedBooking.pet.breed}` : ""}
+                                    </p>
+                                 </div>
+                              </div>
+
+                              <div className="grid gap-3 grid-cols-2">
+                                 <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Gender</p>
+                                    <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.gender || "Unknown"}</p>
+                                 </div>
+                                 <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Age / Weight</p>
+                                    <p className="mt-1 text-sm font-bold text-ink">
+                                       {selectedBooking.pet?.age ?? "N/A"} yrs · {selectedBooking.pet?.weightKg ?? "N/A"} kg
+                                    </p>
+                                 </div>
+                                 <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Health Status</p>
+                                    <p className="mt-1 text-sm font-bold text-ink">{selectedBooking.pet?.healthStatus || "Healthy"}</p>
+                                 </div>
+                                 <div className="rounded-2xl border border-sand/70 bg-white p-4">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Allergies</p>
+                                    <p className="mt-1 text-sm font-bold text-ink truncate">{selectedBooking.pet?.allergies || "None"}</p>
+                                 </div>
+                              </div>
+
+                              <div className="rounded-[2rem] border border-sand/70 bg-white p-6">
+                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-4">Patient Notes</p>
+                                 <p className="text-sm font-medium text-ink leading-relaxed italic opacity-70">
+                                    {selectedBooking.pet?.notes || "No specific instructions recorded for this patient."}
+                                 </p>
+                              </div>
+                           </div>
+
+                           {/* Right Column: Medical History & Timeline */}
+                           <div className="space-y-6">
+                              <div className="rounded-[2.5rem] border border-sand/70 bg-white p-8">
+                                 <p className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-6 border-b border-sand pb-4">Professional History</p>
+                                 
+                                 <div className="space-y-6">
+                                    <div>
+                                       <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-2">Summary</p>
+                                       <p className="text-sm font-medium text-ink whitespace-pre-wrap leading-relaxed">
+                                          {selectedBooking.pet?.medicalHistory || "Clean medical slate."}
                                        </p>
                                     </div>
-                                 ))}
+
+                                    {selectedBooking.pet?.medicalHistoryRecords?.length > 0 && (
+                                       <div>
+                                          <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-4">Session Timeline</p>
+                                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                             {selectedBooking.pet.medicalHistoryRecords
+                                                .slice()
+                                                .reverse()
+                                                .map((record: any, idx: number) => (
+                                                   <div key={record._id || `${record.createdAt}-${idx}`} className="rounded-2xl border border-sand/40 bg-warm/20 p-4 transition-all hover:bg-warm/40">
+                                                      <p className="text-[13px] font-medium text-ink leading-relaxed italic font-serif">"{record.note}"</p>
+                                                      <div className="mt-2 flex items-center justify-between">
+                                                         <p className="text-[9px] font-black uppercase tracking-widest text-caramel/60">{record.providerName || "Clinic"}</p>
+                                                         <p className="text-[9px] font-bold text-muted/40">{record.createdAt ? new Date(record.createdAt).toLocaleDateString() : ""}</p>
+                                                      </div>
+                                                   </div>
+                                                ))}
+                                          </div>
+                                       </div>
+                                    )}
+                                 </div>
+                              </div>
                            </div>
                         </div>
-                     )}
-
-                     <div className="mt-4 rounded-2xl border border-sand/70 bg-white p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Additional Notes</p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-ink">
-                           {selectedBooking.pet?.notes || "No additional note."}
-                        </p>
                      </div>
                   </motion.div>
                </div>
@@ -457,11 +546,20 @@ export const ClinicServices = () => {
                                              <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'cancelled'); }} className="p-3 rounded-full border border-sand text-muted hover:bg-rose-50 hover:text-rose-600 transition"><Trash2 className="w-4 h-4" /></button>
                                           </div>
                                        ) : booking.status === 'confirmed' ? (
-                                          <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'completed'); }} className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5">
+                                          <button 
+                                            onClick={(event) => { 
+                                              event.stopPropagation(); 
+                                              setCompletionBooking(booking);
+                                              setSessionNote("");
+                                            }} 
+                                            className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5"
+                                          >
                                              <CheckCircle2 className="w-4 h-4" /> Finalize Session
                                           </button>
                                        ) : (
-                                          <span className="px-6 py-2.5 rounded-full bg-warm text-[10px] font-black uppercase tracking-widest text-muted/40 italic border border-sand/30">{booking.status}</span>
+                                           <div className="flex flex-col items-end gap-2">
+                                              <span className="px-6 py-2.5 rounded-full bg-warm text-[10px] font-black uppercase tracking-widest text-muted/40 italic border border-sand/30">{booking.status}</span>
+                                           </div>
                                        )}
                                     </AnimatePresence>
                                     <button onClick={(event) => event.stopPropagation()} className="p-4 rounded-full hover:bg-warm text-muted transition border border-transparent hover:border-sand group-hover:rotate-90">
@@ -659,6 +757,33 @@ export const ClinicServices = () => {
                                  </div>
                               </div>
 
+                               <div className="space-y-3">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
+                                  <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
+                                     {AVAILABLE_TAGS.map(tag => (
+                                        <button
+                                          key={tag}
+                                          type="button"
+                                          onClick={() => {
+                                            setNewService(prev => ({
+                                              ...prev,
+                                              tags: (prev.tags || []).includes(tag) 
+                                                ? (prev.tags || []).filter(t => t !== tag) 
+                                                : [...(prev.tags || []), tag]
+                                            }));
+                                          }}
+                                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                            (newService.tags || []).includes(tag)
+                                              ? "bg-ink text-white shadow-md"
+                                              : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                                          }`}
+                                        >
+                                          {tag}
+                                        </button>
+                                     ))}
+                                  </div>
+                               </div>
+
                               <div className="flex gap-4 pt-10">
                                  <button onClick={handleCreateService} className="flex-[2] py-6 rounded-full bg-ink text-white font-black text-xs uppercase tracking-[0.3em] hover:bg-caramel transition shadow-2xl">Authorize Entry</button>
                                  <button onClick={() => setIsAdding(false)} className="flex-1 py-6 rounded-full border border-sand font-black text-xs uppercase tracking-[0.3em] text-muted hover:bg-warm transition">Discard Draft</button>
@@ -680,6 +805,13 @@ export const ClinicServices = () => {
                               <div className="absolute bottom-6 left-8 right-8">
                                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-caramel mb-1 italic">{s.category}</p>
                                  <h4 className="text-2xl font-serif font-bold italic text-white leading-tight">{s.title}</h4>
+                                 <div className="flex flex-wrap gap-1 mt-2">
+                                    {(s.tags || []).map(tag => (
+                                       <span key={tag} className="px-2 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-[8px] font-bold text-white uppercase tracking-tighter">
+                                          {tag}
+                                       </span>
+                                    ))}
+                                 </div>
                               </div>
                            </div>
                            <div className="p-8 flex-1 flex flex-col">
@@ -785,6 +917,74 @@ export const ClinicServices = () => {
                </div>
             )}
          </div>
+
+         {completionBooking && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center px-6">
+               <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 bg-ink/70 backdrop-blur-md"
+                  onClick={() => !isFinalizing && setCompletionBooking(null)}
+               />
+               <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="relative w-full max-w-2xl rounded-[3.5rem] border border-white/20 bg-[#FBF9F2] p-10 shadow-2xl"
+               >
+                  <div className="flex items-start justify-between mb-8">
+                     <div>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-caramel mb-2">
+                           <Sparkles className="w-3.5 h-3.5" />
+                           Clinical Review
+                        </div>
+                        <h3 className="text-3xl font-serif font-bold italic text-ink">Finalize Service</h3>
+                        <p className="text-xs font-medium text-muted mt-2">Patient: <span className="font-bold text-ink">{completionBooking.pet?.name}</span> · Date: {formatDateBadge(completionBooking.bookingDate)}</p>
+                     </div>
+                     <button
+                        disabled={isFinalizing}
+                        onClick={() => setCompletionBooking(null)}
+                        className="p-3 rounded-full hover:bg-warm text-muted transition"
+                     >
+                        <X className="w-5 h-5" />
+                     </button>
+                  </div>
+
+                  <div className="space-y-6">
+                     <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-4 block">Professional Observations</label>
+                        <textarea
+                           value={sessionNote}
+                           onChange={(e) => setSessionNote(e.target.value)}
+                           placeholder="Detail relevant medical history, treatment provided, or follow-up instructions..."
+                           className="w-full bg-white border border-sand px-8 py-6 rounded-[2rem] outline-none text-base font-medium focus:border-caramel/40 transition-all resize-none italic font-serif min-h-[200px]"
+                        />
+                     </div>
+
+                     <div className="pt-8 flex gap-4">
+                        <button
+                           disabled={isFinalizing}
+                           onClick={handleFinalizeSession}
+                           className="flex-[2] py-5 rounded-full bg-ink text-white text-[11px] font-black uppercase tracking-[0.3em] hover:bg-emerald-600 transition shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3"
+                        >
+                           {isFinalizing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                           ) : (
+                              <CheckCircle2 className="w-4 h-4" />
+                           )}
+                           Archive & Complete Session
+                        </button>
+                        <button
+                           disabled={isFinalizing}
+                           onClick={() => setCompletionBooking(null)}
+                           className="flex-1 py-5 rounded-full border border-sand text-[11px] font-black uppercase tracking-[0.3em] text-muted hover:bg-warm transition disabled:opacity-50"
+                        >
+                           Cancel
+                        </button>
+                     </div>
+                  </div>
+               </motion.div>
+            </div>
+         )}
       </div>
    );
 };

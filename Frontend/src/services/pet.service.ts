@@ -12,7 +12,7 @@ export type MedicalHistoryRecord = {
 export type Pet = {
   _id: string;
   name: string;
-  species: "Dog" | "Cat" | "Other";
+  species: "Dog" | "Cat" | "Bird" | "Rabbit" | "Hamster" | "Other";
   breed?: string;
   gender?: "Male" | "Female" | "Unknown";
   age?: number;
@@ -32,7 +32,7 @@ export type Pet = {
 
 export type PetPayload = {
   name: string;
-  species: "Dog" | "Cat" | "Other";
+  species: "Dog" | "Cat" | "Bird" | "Rabbit" | "Hamster" | "Other";
   breed?: string;
   gender?: "Male" | "Female" | "Unknown";
   age?: number;
@@ -87,7 +87,7 @@ export const petService = {
 
   addMedicalHistoryNote: async (
     petId: string,
-    payload: { note: string; bookingId?: string }
+    payload: { note?: string; notes?: string[]; bookingId?: string }
   ): Promise<Pet> => {
     const response = await apiClient.post(`/pets/${petId}/medical-history-note`, payload);
     return response.data?.pet;

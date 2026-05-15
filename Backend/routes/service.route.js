@@ -43,14 +43,12 @@ const upload = multer({
 
 const toServiceResponse = (serviceDoc) => {
     const service = serviceDoc?.toObject ? serviceDoc.toObject() : serviceDoc;
-    const provider = service?.providerId && typeof service.providerId === "object" ? service.providerId : null;
-    
-    // Ensure we have a valid name to display, falling back to email or generic label
-    const displayName = provider?.name || provider?.email || "Service Provider";
+    const p = service?.providerId && typeof service.providerId === "object" ? service.providerId : null;
     
     return {
         ...service,
-        providerName: displayName
+        providerName: p?.legalDocuments?.clinicName || p?.name || p?.email || "Service Provider",
+        providerAddress: p?.address || service?.location?.address || ""
     };
 };
 
@@ -96,7 +94,7 @@ router.get('/', async (req, res) => {
         const services = await db.Service.find(query)
             .populate({
                 path: 'providerId',
-                select: 'name email address legalDocuments status providerOnboardingStatus'
+                select: 'name email phone address description avatarUrl clinicImages legalDocuments status providerOnboardingStatus'
             })
             .sort(sortOption);
             
@@ -106,7 +104,12 @@ router.get('/', async (req, res) => {
             return {
                 ...doc,
                 providerName: p?.legalDocuments?.clinicName || p?.name || p?.email || "Service Provider",
-                providerAddress: p?.address || doc?.location?.address || ""
+                providerAddress: p?.address || doc?.location?.address || "",
+                providerPhone: p?.phone || "",
+                providerEmail: p?.email || "",
+                providerDescription: p?.description || "",
+                providerAvatarUrl: p?.avatarUrl || "",
+                providerClinicImages: p?.clinicImages || []
             };
         };
 
@@ -138,6 +141,8 @@ router.get('/', async (req, res) => {
                 if (!providerMap.has(pId)) {
                     providerMap.set(pId, {
                         ...processed,
+                        // Expose the provider's user ID clearly for routing
+                        providerUserId: pId,
                         categories: [processed.category]
                     });
                 } else {
@@ -148,6 +153,7 @@ router.get('/', async (req, res) => {
                     if (processed.isAvailable && !existing.isAvailable) {
                         providerMap.set(pId, {
                             ...processed,
+                            providerUserId: pId,
                             categories: existing.categories
                         });
                     }
@@ -167,6 +173,55 @@ router.get('/', async (req, res) => {
                 page: Number(page),
                 pages
             }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get Atelier detail + all its services by provider user ID
+router.get('/atelier/:providerId', async (req, res) => {
+    try {
+        const { providerId } = req.params;
+
+        // Get provider user profile (Atelier)
+        const provider = await db.User.findById(providerId)
+            .select('name email phone address description avatarUrl legalDocuments operatingHours clinicImages doctors subscriptionPlan providerOnboardingStatus status');
+
+        if (!provider) {
+            return res.status(404).json({ message: 'Atelier not found' });
+        }
+
+        // Get all services belonging to this provider
+        const services = await db.Service.find({ providerId })
+            .select('_id title description category basePrice duration images features isPopular isAvailable averageRating totalReviews tags location')
+            .sort({ isAvailable: -1, isPopular: -1, createdAt: -1 });
+
+        const atelier = provider.toObject();
+
+        res.status(200).json({
+            atelier: {
+                _id: atelier._id,
+                name: atelier.legalDocuments?.clinicName || atelier.name,
+                email: atelier.email,
+                phone: atelier.phone,
+                address: atelier.address,
+                description: atelier.description,
+                avatarUrl: atelier.avatarUrl,
+                clinicImages: atelier.clinicImages || [],
+                doctors: atelier.doctors || [],
+                operatingHours: atelier.operatingHours,
+                subscriptionPlan: atelier.subscriptionPlan,
+                legalDocuments: {
+                    clinicName: atelier.legalDocuments?.clinicName || null,
+                    clinicLicenseNumber: atelier.legalDocuments?.clinicLicenseNumber || null,
+                    clinicLicenseUrl: atelier.legalDocuments?.clinicLicenseUrl || null,
+                    businessLicenseUrl: atelier.legalDocuments?.businessLicenseUrl || null,
+                    doctorLicenseUrl: atelier.legalDocuments?.doctorLicenseUrl || null,
+                    submittedAt: atelier.legalDocuments?.submittedAt || null
+                }
+            },
+            services
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -256,7 +311,7 @@ router.post('/upload-image', verifyToken, upload.single("image"), async (req, re
 router.get('/:id', async (req, res) => {
     try {
         const service = await db.Service.findById(req.params.id)
-            .populate('providerId', 'name email phone operatingHours');
+            .populate('providerId', 'name email phone address legalDocuments operatingHours description avatarUrl');
         
         if (!service) {
             return res.status(404).json({ message: "Service not found" });

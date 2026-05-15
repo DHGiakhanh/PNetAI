@@ -308,11 +308,27 @@ router.get("/my", verifyToken, async (req, res) => {
                     select: 'name'
                 }
             })
-            .populate('pet', 'name avatarUrl species breed')
+            .populate('pet', 'name avatarUrl species breed medicalHistoryRecords')
             .sort({ bookingDate: -1 });
 
         // Filter out bookings where service or pet might have been deleted
-        const bookings = rawBookings.filter(b => b.service && b.pet);
+        // And augment with session notes from medicalHistoryRecords
+        const bookings = rawBookings
+            .filter(b => b.service && b.pet)
+            .map(b => {
+                const bookingObj = b.toObject();
+                if (bookingObj.pet && Array.isArray(bookingObj.pet.medicalHistoryRecords)) {
+                    bookingObj.sessionNotes = bookingObj.pet.medicalHistoryRecords
+                        .filter(record => record.sourceBooking?.toString() === bookingObj._id.toString())
+                        .map(record => record.note);
+                    
+                    // Cleanup pet object to avoid sending the whole history if not needed
+                    delete bookingObj.pet.medicalHistoryRecords;
+                } else {
+                    bookingObj.sessionNotes = [];
+                }
+                return bookingObj;
+            });
 
         res.status(200).json({ bookings });
     } catch (error) {
@@ -326,11 +342,23 @@ router.get("/provider", verifyToken, async (req, res) => {
         const myServices = await db.Service.find({ providerId: req.userId }).select('_id');
         const serviceIds = myServices.map(s => s._id);
 
-        const bookings = await db.Booking.find({ service: { $in: serviceIds } })
+        const rawBookings = await db.Booking.find({ service: { $in: serviceIds } })
             .populate('service', 'title')
             .populate('user', 'name email phone')
             .populate('pet', 'name avatarUrl species breed gender age weightKg healthStatus allergies medicalHistory medicalHistoryRecords notes')
             .sort({ bookingDate: -1 });
+
+        const bookings = rawBookings.map(b => {
+            const bookingObj = b.toObject();
+            if (bookingObj.pet && Array.isArray(bookingObj.pet.medicalHistoryRecords)) {
+                bookingObj.sessionNotes = bookingObj.pet.medicalHistoryRecords
+                    .filter(record => record.sourceBooking?.toString() === bookingObj._id.toString())
+                    .map(record => record.note);
+            } else {
+                bookingObj.sessionNotes = [];
+            }
+            return bookingObj;
+        });
 
         res.status(200).json({ bookings });
     } catch (error) {
