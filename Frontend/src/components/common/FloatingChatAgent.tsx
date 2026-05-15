@@ -123,10 +123,19 @@ export default function FloatingChatAgent() {
       }
     } catch (error: any) {
       console.error("API call error:", error);
+      
+      let errorMsg = "Đã xảy ra lỗi không xác định khi kết nối với AI.";
+      
+      if (error.message === "Failed to fetch") {
+        errorMsg = "❌ Không thể kết nối tới máy chủ (Failed to fetch). Vui lòng kiểm tra:\n1. Máy chủ Backend có đang chạy không?\n2. Kết nối mạng của bạn có ổn định không?\n3. Cổng 9999 có đang bị chặn không?";
+      } else {
+        errorMsg = `❌ Lỗi hệ thống: ${error.message || "Máy chủ AI không phản hồi."}`;
+      }
+
       setMessages((prev) => [...prev, {
         id: `error-${Date.now()}`,
         role: "agent",
-        content: `❌ Lỗi: ${error.message || "Không thể kết nối tới máy chủ."}`
+        content: errorMsg
       }]);
     } finally {
       setIsTyping(false);
