@@ -66,7 +66,7 @@ export const AtelierProfile = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await authService.updateProfile({
+      const updatedUser = await authService.updateProfile({
         name: formData.name,
         phone: formData.phone,
         address: formData.address,
@@ -84,6 +84,7 @@ export const AtelierProfile = () => {
                 : (typeof user?.legalDocuments?.submittedAt === 'string' ? user.legalDocuments.submittedAt : undefined)
         }
       });
+      setUser(updatedUser); // Synchronize local user state
       toast.success("Facility profile successfully synchronized.");
     } catch {
       toast.error("Profile synchronization failed.");
@@ -96,18 +97,44 @@ export const AtelierProfile = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      setSaving(true); // Enable global saving state
       toast.loading("Securing media...", { id: 'upload' });
       const { url } = await authService.uploadImage(file);
+      
+      let newDocUrls = {
+        doctorLicenseUrl: formData.doctorLicenseUrl,
+        businessLicenseUrl: formData.businessLicenseUrl,
+        clinicLicenseUrl: formData.clinicLicenseUrl,
+      };
+
       if (type === 'doctor_license') {
-        setFormData(prev => ({ ...prev, doctorLicenseUrl: url }));
+        newDocUrls.doctorLicenseUrl = url;
       } else if (type === 'business_license') {
-        setFormData(prev => ({ ...prev, businessLicenseUrl: url }));
+        newDocUrls.businessLicenseUrl = url;
       } else if (type === 'clinic_license') {
-        setFormData(prev => ({ ...prev, clinicLicenseUrl: url }));
+        newDocUrls.clinicLicenseUrl = url;
       }
-      toast.success("Media captured successfully.", { id: 'upload' });
+
+      setFormData(prev => ({ ...prev, ...newDocUrls }));
+
+      // Automatically trigger update to save to database
+      toast.loading("Archiving credentials...", { id: 'upload' });
+      const updatedUser = await authService.updateProfile({
+        legalDocuments: {
+            clinicName: formData.clinicName,
+            clinicLicenseNumber: formData.clinicLicenseNumber,
+            ...newDocUrls,
+            submittedAt: (newDocUrls.businessLicenseUrl) ? new Date().toISOString() : undefined
+        }
+      });
+      setUser(updatedUser);
+      
+      toast.success("Certification synchronized and saved.", { id: 'upload' });
+      e.target.value = "";
     } catch {
       toast.error("Upload protocol failed.", { id: 'upload' });
+    } finally {
+      setSaving(false); // Disable global saving state
     }
   };
 

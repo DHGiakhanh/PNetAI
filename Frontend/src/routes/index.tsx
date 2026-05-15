@@ -31,9 +31,9 @@ import { ClinicServices as ServiceManagement } from "@/pages/ServiceProvider/Ate
 import { ServiceProviderOverview } from "@/pages/ServiceProvider/Atelier/Overview";
 import { CustomerDirectory as CustomerBookingsPage } from "@/pages/ServiceProvider/Atelier/CustomerDirectory";
 import { AtelierProfile as ServiceProviderProfilePage } from "@/pages/ServiceProvider/Atelier/AtelierProfile";
-import { Subscription as SubscriptionPage } from "@/pages/ServiceProvider/Atelier/Subscription";
-import { CheckoutSuccess as SubscriptionSuccessPage } from "@/pages/ServiceProvider/Atelier/CheckoutSuccess";
-import { CheckoutCancel as SubscriptionCancelPage } from "@/pages/ServiceProvider/Atelier/CheckoutCancel";
+// import { Subscription as SubscriptionPage } from "@/pages/ServiceProvider/Atelier/Subscription";
+// import { CheckoutSuccess as SubscriptionSuccessPage } from "@/pages/ServiceProvider/Atelier/CheckoutSuccess";
+// import { CheckoutCancel as SubscriptionCancelPage } from "@/pages/ServiceProvider/Atelier/CheckoutCancel";
 import { OrdersManagement as ServiceProviderOrdersPage } from "@/pages/ServiceProvider/Atelier/OrdersManagement";
 
 import { Login } from "@/pages/Auth/Login";
@@ -93,9 +93,11 @@ export default function AppRoutes() {
           <Route path="services" element={<ServiceManagement />} />
           <Route path="customers" element={<CustomerBookingsPage />} />
           <Route path="profile" element={<ServiceProviderProfilePage />} />
+{/* 
           <Route path="subscription" element={<SubscriptionPage />} />
           <Route path="subscription/success" element={<SubscriptionSuccessPage />} />
           <Route path="subscription/cancel" element={<SubscriptionCancelPage />} />
+*/}
         </Route>
       </Route>
 
