@@ -5,7 +5,7 @@ import {
   Boxes, 
   Users, 
   ShieldCheck, 
-  Crown, 
+//   Crown, 
   LogOut,
   ChevronRight,
   Bell,
@@ -69,7 +69,7 @@ export default function ServiceProviderLayout() {
     { to: "/service-provider/services", label: "Clinic Services", icon: Stethoscope, protected: true },
     { to: "/service-provider/customers", label: "Client Directory", icon: Users, protected: true },
     { to: "/service-provider/profile", label: "Atelier Profile", icon: ShieldCheck, protected: false },
-    { to: "/service-provider/subscription", label: "Subscription", icon: Crown, protected: false },
+    // { to: "/service-provider/subscription", label: "Subscription", icon: Crown, protected: false },
   ];
 
   const currentPath = navItems.find(item => item.to === location.pathname)?.label || "Atelier Panel";

@@ -230,11 +230,15 @@ router.put('/profile', verifyToken, async (req, res) => {
 
         // Legal information (if provided)
         if (legalDocuments) {
-            user.legalDocuments = {
-                ...user.legalDocuments,
-                ...legalDocuments
-            };
-
+            // Ensure we don't spread Mongoose internal state by using a clean merge
+            if (!user.legalDocuments) user.legalDocuments = {};
+            
+            Object.keys(legalDocuments).forEach(key => {
+                user.legalDocuments[key] = legalDocuments[key];
+            });
+            
+            user.markModified('legalDocuments');
+            
             // Auto-advance status if minimum required docs are present
             const legal = user.legalDocuments;
             if (user.providerOnboardingStatus === 'pending_legal_submission' && 

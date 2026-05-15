@@ -8,7 +8,7 @@ import {
   History, 
   StickyNote, 
   ChevronRight, 
-  Save,
+//   Save,
   Clock,
   Loader2
 } from "lucide-react";
@@ -247,6 +247,7 @@ export const CustomerDirectory = () => {
                             <StickyNote className="w-4 h-4 text-caramel" />
                             <h3 className="text-sm font-black uppercase tracking-widest text-muted">Atelier Clinical Notes</h3>
                          </div>
+{/* 
                          <textarea 
                            className="w-full h-40 bg-[#FBF9F2]/50 border border-sand/20 p-6 rounded-2xl text-[13px] font-medium text-ink leading-relaxed outline-none focus:border-caramel/30 transition-all resize-none italic font-serif"
                            value={currentNote}
@@ -260,6 +261,7 @@ export const CustomerDirectory = () => {
                          >
                             <Save className="w-4 h-4" /> Store Memorandum
                          </button>
+*/}
                          {(selectedPet?.medicalHistoryRecords?.length || 0) > 0 && (
                            <div className="mt-6 rounded-2xl border border-sand/30 bg-warm/20 p-4">
                              <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-muted">Recent Medical History</p>
