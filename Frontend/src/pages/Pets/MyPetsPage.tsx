@@ -1,16 +1,20 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Activity,
   CalendarDays,
   Edit3,
+  Eye,
   Heart,
   ImageUp,
   PawPrint,
   Plus,
+  ShieldCheck,
   Stethoscope,
   Trash2,
   Weight,
   X,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import Select, { StylesConfig } from "react-select";
 import toast from "react-hot-toast";
@@ -79,6 +83,7 @@ export default function MyPetsPage() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Pet | null>(null);
+  const [viewOnly, setViewOnly] = useState(false);
   const [form, setForm] = useState<PetPayload>(initialForm);
   const [saving, setSaving] = useState(false);
   const [deletingPet, setDeletingPet] = useState<Pet | null>(null);
@@ -110,6 +115,29 @@ export default function MyPetsPage() {
 
   const openEdit = (pet: Pet) => {
     setEditing(pet);
+    setViewOnly(false);
+    setForm({
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed || "",
+      gender: pet.gender || "Unknown",
+      age: pet.age ?? undefined,
+      weightKg: pet.weightKg ?? undefined,
+      isSpayed: Boolean(pet.isSpayed),
+      healthStatus: pet.healthStatus || "Healthy",
+      allergies: pet.allergies || "",
+      medicalHistory: pet.medicalHistory || "",
+      medicalHistoryRecords: pet.medicalHistoryRecords || [],
+      avatarUrl: pet.avatarUrl || "",
+      notes: pet.notes || "",
+      lastVisitDate: pet.lastVisitDate ? new Date(pet.lastVisitDate).toISOString().slice(0, 10) : "",
+    });
+    setModalOpen(true);
+  };
+
+  const openView = (pet: Pet) => {
+    setEditing(pet);
+    setViewOnly(true);
     setForm({
       name: pet.name,
       species: pet.species,
@@ -132,6 +160,7 @@ export default function MyPetsPage() {
   const closeModal = () => {
     setModalOpen(false);
     setEditing(null);
+    setViewOnly(false);
     setForm(initialForm);
   };
 
@@ -252,22 +281,28 @@ export default function MyPetsPage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        onClick={() => openView(pet)}
+                        className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-2 py-2 text-xs font-semibold text-ink hover:bg-warm"
+                      >
+                        <Eye className="h-4 w-4" /> View
+                      </button>
                       <button
                         onClick={() => openEdit(pet)}
-                        className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-3 py-2 text-sm font-semibold text-ink hover:bg-warm"
+                        className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-2 py-2 text-xs font-semibold text-ink hover:bg-warm"
                       >
                         <Edit3 className="h-4 w-4" /> Edit
                       </button>
                       <button
                         onClick={() => setDeletingPet(pet)}
-                        className="inline-flex items-center justify-center gap-1 rounded-full border border-rust/30 px-3 py-2 text-sm font-semibold text-rust hover:bg-[#fff1eb]"
+                        className="inline-flex items-center justify-center gap-1 rounded-full border border-rust/30 px-2 py-2 text-xs font-semibold text-rust hover:bg-[#fff1eb]"
                       >
-                        <Trash2 className="h-4 w-4" /> Delete
+                        <Trash2 className="h-4 w-4" /> Del
                       </button>
                       <Link
                         to="/services"
-                        className="inline-flex items-center justify-center rounded-full bg-brown px-3 py-2 text-sm font-semibold text-white hover:bg-brown-dark"
+                        className="inline-flex items-center justify-center rounded-full bg-brown px-2 py-2 text-xs font-semibold text-white hover:bg-brown-dark"
                       >
                         <Stethoscope className="h-4 w-4" />
                       </Link>
@@ -290,392 +325,555 @@ export default function MyPetsPage() {
             </button>
           ) : null}
         </div>
-      </div>
-
-      {modalOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/45 backdrop-blur-[2px] p-2 sm:p-4">
-          <form
-            onSubmit={handleSave}
-            className="relative max-h-[96vh] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-sand bg-[#FAF7F2] shadow-2xl"
-          >
-            <div className="sticky top-0 z-30 mb-4 border-b border-sand bg-[#FAF7F2] px-6 pb-3 pt-4 md:px-8 md:pt-5">
-              <div className="mb-1.5 flex items-start justify-between gap-4">
-                <h3 className="font-serif text-[2rem] font-bold italic leading-tight text-ink md:text-[1.85rem]">
-                  {editing ? "Edit" : "Create"} <span className="text-caramel">Pet Passport</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
-                  aria-label="Close modal"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-muted md:text-sm">
-                Keep your furry friend profile complete for faster booking.
-              </p>
-            </div>
-
-            <div className="grid gap-6 px-6 pb-6 md:px-8 md:pb-8 lg:grid-cols-[220px_1fr]">
-              <aside className="rounded-3xl border border-sand bg-white p-5">
-                <p className="font-serif text-2xl font-bold italic text-ink">Avatar</p>
-                <div className="mt-4 grid place-items-center rounded-2xl border border-dashed border-sand bg-warm/40 p-5">
-                  <div className="h-24 w-24 overflow-hidden rounded-full ring-2 ring-sand">
-                    <img
-                      src={
-                        form.avatarUrl ||
-                        "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"
-                      }
-                      alt={form.name || "Pet avatar"}
-                      crossOrigin="anonymous"
-                      className="h-full w-full object-cover"
-                    />
+      </div>      <AnimatePresence>
+        {modalOpen && (
+          <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/45 backdrop-blur-[2px] p-2 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative max-h-[96vh] w-full max-w-4xl overflow-y-auto rounded-[40px] border border-sand bg-[#FAF7F2] shadow-2xl"
+            >
+              {viewOnly ? (
+                <div className="relative">
+                  {/* View Only Layout */}
+                  <div className="relative h-48 overflow-hidden rounded-t-[40px] bg-ink">
+                    <div className="absolute inset-0 bg-gradient-to-r from-caramel/20 to-transparent" />
+                    <button
+                      onClick={closeModal}
+                      className="absolute right-6 top-6 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
                   </div>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                    Preview
-                  </p>
-                </div>
-                <input
-                  value={form.avatarUrl}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, avatarUrl: e.target.value }))
-                  }
-                  placeholder="Paste image URL"
-                  className="mt-4 w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                />
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-sand bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <ImageUp className="h-4 w-4 text-caramel" />
-                  {uploadingAvatar ? "Uploading..." : "Upload from device"}
-                </button>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
-                  Avatar URL
-                </p>
-              </aside>
 
-              <section className="rounded-3xl border border-sand bg-white p-5">
-                <div className="grid gap-5">
-                  <div>
-                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
-                      <PawPrint className="h-5 w-5 text-caramel" />
-                      Basic Information
-                    </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Pet Name
-                        </label>
-                        <input
-                          required
-                          value={form.name}
-                          onChange={(e) =>
-                            setForm((p) => ({ ...p, name: e.target.value }))
-                          }
-                          placeholder="Pet name"
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                  <div className="px-8 pb-10">
+                    <div className="-mt-24 relative z-10 flex flex-col items-center md:flex-row md:items-end md:gap-8">
+                      <div className="h-44 w-44 overflow-hidden rounded-[2.5rem] border-[6px] border-[#FAF7F2] bg-warm shadow-xl">
+                        <img
+                          src={form.avatarUrl || "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"}
+                          alt={form.name}
+                          className="h-full w-full object-cover"
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Species
-                        </label>
-                        <Select
-                          options={speciesOptions}
-                          value={
-                            speciesOptions.find(
-                              (opt) => opt.value === form.species,
-                            ) || speciesOptions[0]
-                          }
-                          onChange={(option) =>
-                            setForm((p) => ({
-                              ...p,
-                              species:
-                                (option?.value as PetPayload["species"]) ||
-                                "Dog",
-                            }))
-                          }
-                          styles={selectStyles}
-                          isSearchable={false}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Breed
-                        </label>
-                        <input
-                          value={form.breed}
-                          onChange={(e) =>
-                            setForm((p) => ({ ...p, breed: e.target.value }))
-                          }
-                          placeholder="Breed"
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Gender
-                        </label>
-                        <Select
-                          options={genderOptions}
-                          value={
-                            genderOptions.find(
-                              (opt) => opt.value === form.gender,
-                            ) || genderOptions[0]
-                          }
-                          onChange={(option) =>
-                            setForm((p) => ({
-                              ...p,
-                              gender:
-                                (option?.value as PetPayload["gender"]) ||
-                                "Unknown",
-                            }))
-                          }
-                          styles={selectStyles}
-                          isSearchable={false}
-                        />
+                      <div className="mt-6 flex-1 text-center md:mb-4 md:text-left">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-caramel/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-caramel ring-1 ring-caramel/20">
+                          <ShieldCheck className="h-3 w-3" /> {form.healthStatus || "Healthy"}
+                        </span>
+                        <h2 className="mt-2 font-serif text-6xl font-bold italic text-ink">{form.name}</h2>
+                        <p className="mt-1 text-lg font-medium text-muted">{form.species} • {form.breed || "Mixed Breed"}</p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="border-t border-sand pt-5">
-                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
-                      <Weight className="h-5 w-5 text-caramel" />
-                      Physical Status
-                    </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Age (Years)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={form.age ?? ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              age: e.target.value === "" ? undefined : Number(e.target.value),
-                            }))
-                          }
-                          placeholder="Age (years)"
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Weight (kg)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.1"
-                          value={form.weightKg ?? ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              weightKg: e.target.value === "" ? undefined : Number(e.target.value),
-                            }))
-                          }
-                          placeholder="Weight (kg)"
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Health Status
-                        </label>
-                        <input
-                          value={form.healthStatus}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              healthStatus: e.target.value,
-                            }))
-                          }
-                          placeholder="Health status"
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
-                      <div className="sm:col-span-3">
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Spayed?
-                        </label>
-                        <div className="grid grid-cols-2 rounded-xl border border-sand bg-warm/50 p-1">
-                          <button
-                            type="button"
-                            onClick={() => setForm((p) => ({ ...p, isSpayed: true }))}
-                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                              form.isSpayed
-                                ? "bg-brown text-white"
-                                : "text-muted hover:bg-white/70"
-                            }`}
-                          >
-                            Yes
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setForm((p) => ({ ...p, isSpayed: false }))}
-                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                              !form.isSpayed
-                                ? "bg-brown text-white"
-                                : "text-muted hover:bg-white/70"
-                            }`}
-                          >
-                            No
-                          </button>
+                    <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                      {[
+                        { label: "Gender", value: form.gender, icon: PawPrint },
+                        { label: "Age", value: `${form.age || 0} Years`, icon: CalendarDays },
+                        { label: "Weight", value: `${form.weightKg || 0} KG`, icon: Weight },
+                        { label: "Spayed", value: form.isSpayed ? "Yes" : "No", icon: Activity },
+                      ].map((stat, i) => (
+                        <div key={i} className="rounded-3xl border border-sand bg-white p-5 shadow-sm transition-transform hover:-translate-y-1">
+                          <stat.icon className="mb-3 h-5 w-5 text-caramel" />
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{stat.label}</p>
+                          <p className="mt-1 font-serif text-xl font-bold text-ink">{stat.value}</p>
                         </div>
-                      </div>
-                      <div className="sm:col-span-3">
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Last Visit Date
-                        </label>
-                        <input
-                          type="date"
-                          value={form.lastVisitDate || ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              lastVisitDate: e.target.value,
-                            }))
-                          }
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
+                      ))}
                     </div>
-                  </div>
 
-                  <div className="border-t border-sand pt-5">
-                    <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
-                      <Heart className="h-5 w-5 text-caramel" />
-                      Health & Notes
-                    </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Allergies
-                        </label>
-                        <input
-                          value={form.allergies || ""}
-                          onChange={(e) =>
-                            setForm((p) => ({ ...p, allergies: e.target.value }))
-                          }
-                          placeholder="Food, products, etc."
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                          Medical History / Medications
-                        </label>
-                        <input
-                          value={form.medicalHistory || ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              medicalHistory: e.target.value,
-                            }))
-                          }
-                          placeholder="Ear infection, Apoquel..."
-                          className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                        />
-                        {(form.medicalHistoryRecords?.length || 0) > 0 ? (
-                          <div className="mt-3 rounded-xl border border-sand bg-warm/30 p-3">
-                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                              Clinic Notes Timeline
-                            </p>
-                            <div className="max-h-32 space-y-2 overflow-y-auto pr-1">
-                              {form.medicalHistoryRecords?.map((record, index) => (
-                                <div key={record._id || `${record.createdAt}-${index}`} className="rounded-lg bg-white px-3 py-2 ring-1 ring-sand">
-                                  <p className="text-xs font-semibold text-ink">{record.note}</p>
-                                  <p className="mt-1 text-[11px] text-muted">
-                                    {(record.providerName || "Clinic")} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : "Unknown time"}
-                                  </p>
+                    <div className="mt-8 grid gap-8 lg:grid-cols-2">
+                      <div className="space-y-8">
+                        <section className="rounded-[2.5rem] border border-sand bg-white p-8 shadow-sm">
+                          <h3 className="flex items-center gap-3 font-serif text-2xl font-bold italic text-ink">
+                            <Stethoscope className="h-6 w-6 text-caramel" /> Professional History
+                          </h3>
+                          <div className="mt-6 space-y-6">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted/60">Medical Summary</p>
+                              <p className="mt-2 text-sm leading-relaxed text-ink italic opacity-80">
+                                {form.medicalHistory || "No professional history recorded."}
+                              </p>
+                            </div>
+                            
+                            {form.medicalHistoryRecords && form.medicalHistoryRecords.length > 0 && (
+                              <div>
+                                <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-muted/60">Clinic Timeline</p>
+                                <div className="max-h-64 space-y-3 overflow-y-auto pr-2">
+                                  {form.medicalHistoryRecords.slice().reverse().map((record, i) => (
+                                    <div key={i} className="rounded-2xl bg-warm/30 p-4 border border-sand/50">
+                                      <p className="text-sm font-medium italic text-ink">"{record.note}"</p>
+                                      <div className="mt-2 flex items-center justify-between text-[10px] font-bold">
+                                        <span className="text-caramel uppercase tracking-widest">{record.providerName || "Clinic"}</span>
+                                        <span className="text-muted">{record.createdAt ? new Date(record.createdAt).toLocaleDateString() : ""}</span>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
+                              </div>
+                            )}
+                          </div>
+                        </section>
+                      </div>
+
+                      <div className="space-y-8">
+                        <section className="rounded-[2.5rem] border border-sand bg-white p-8 shadow-sm">
+                          <h3 className="flex items-center gap-3 font-serif text-2xl font-bold italic text-ink">
+                            <Heart className="h-6 w-6 text-caramel" /> Health & Behavior
+                          </h3>
+                          <div className="mt-6 space-y-6">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted/60">Allergies</p>
+                              <p className="mt-2 text-sm font-bold text-ink">{form.allergies || "None identified."}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-muted/60">Special Instructions</p>
+                              <p className="mt-2 text-sm leading-relaxed text-ink opacity-80">
+                                {form.notes || "No special care instructions provided."}
+                              </p>
+                            </div>
+                            <div className="pt-4 border-t border-sand">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="grid h-10 w-10 place-items-center rounded-full bg-warm text-caramel">
+                                    <CalendarDays className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted/60">Last Professional Visit</p>
+                                    <p className="text-sm font-bold text-ink">{form.lastVisitDate || "No recorded visits"}</p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        ) : null}
+                        </section>
+
+                        <div className="flex justify-end gap-3">
+                           <button
+                             onClick={() => openEdit(editing!)}
+                             className="inline-flex items-center gap-2 rounded-full border border-sand bg-white px-8 py-3 text-sm font-bold text-ink hover:bg-warm shadow-sm transition-all"
+                           >
+                             <Edit3 className="h-4 w-4" /> Edit Passport
+                           </button>
+                           <button
+                             onClick={closeModal}
+                             className="rounded-full bg-ink px-10 py-3 text-sm font-bold text-white hover:bg-ink/90 shadow-xl transition-all"
+                           >
+                             Close
+                           </button>
+                        </div>
                       </div>
                     </div>
-                    <label className="mt-4 mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                      Notes For Staff
-                    </label>
-                    <textarea
-                      value={form.notes}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, notes: e.target.value }))
-                      }
-                      placeholder="Allergies, medications, personality notes for staff..."
-                      className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
-                      rows={4}
-                    />
                   </div>
                 </div>
-              </section>
-            </div>
+              ) : (
+                <form onSubmit={handleSave}>
+                  <div className="sticky top-0 z-30 mb-4 border-b border-sand bg-[#FAF7F2] px-6 pb-3 pt-4 md:px-8 md:pt-5">
+                    <div className="mb-1.5 flex items-start justify-between gap-4">
+                      <h3 className="font-serif text-[2rem] font-bold italic leading-tight text-ink md:text-[1.85rem]">
+                        {editing ? "Edit" : "Create"} <span className="text-caramel">Pet Passport</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
+                        aria-label="Close modal"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted md:text-sm">
+                      Keep your furry friend profile complete for faster booking.
+                    </p>
+                  </div>
 
-            <div className="mt-6 mb-6 flex justify-end gap-2 border-t border-sand pt-5">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-full border border-sand px-5 py-2 text-sm font-semibold text-ink hover:bg-warm"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-full bg-brown px-6 py-2 text-sm font-semibold text-white hover:bg-brown-dark disabled:opacity-60"
-              >
-                {saving
-                  ? "Saving..."
-                  : editing
-                    ? "Update Passport"
-                    : "Create Passport"}
-              </button>
-            </div>
-          </form>
-        </div>
-      ) : null}
+                  <div className="grid gap-6 px-6 pb-6 md:px-8 md:pb-8 lg:grid-cols-[220px_1fr]">
+                    <aside className="rounded-3xl border border-sand bg-white p-5">
+                      <p className="font-serif text-2xl font-bold italic text-ink">Avatar</p>
+                      <div className="mt-4 grid place-items-center rounded-2xl border border-dashed border-sand bg-warm/40 p-5">
+                        <div className="h-24 w-24 overflow-hidden rounded-full ring-2 ring-sand">
+                          <img
+                            src={
+                              form.avatarUrl ||
+                              "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=500&auto=format&fit=crop"
+                            }
+                            alt={form.name || "Pet avatar"}
+                            crossOrigin="anonymous"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                          Preview
+                        </p>
+                      </div>
+                      <input
+                        value={form.avatarUrl}
+                        readOnly={viewOnly}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, avatarUrl: e.target.value }))
+                        }
+                        placeholder="Paste image URL"
+                        className="mt-4 w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                      />
+                      {!viewOnly && (
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          disabled={uploadingAvatar}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-sand bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-warm disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <ImageUp className="h-4 w-4 text-caramel" />
+                          {uploadingAvatar ? "Uploading..." : "Upload from device"}
+                        </button>
+                      )}
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                        Avatar URL
+                      </p>
+                    </aside>
 
-      {deletingPet ? (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-3xl border border-sand bg-white p-6 shadow-2xl">
-            <h4 className="font-serif text-3xl font-bold italic text-ink">Delete Pet?</h4>
-            <p className="mt-2 text-sm text-muted">
-              This will remove <span className="font-semibold text-ink">{deletingPet.name}</span> from your pet library.
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingPet(null)}
-                className="rounded-full border border-sand px-4 py-2 text-sm font-semibold text-ink hover:bg-warm"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(deletingPet._id)}
-                className="rounded-full bg-rust px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-              >
-                Delete
-              </button>
-            </div>
+                    <section className="rounded-3xl border border-sand bg-white p-5">
+                      <div className="grid gap-5">
+                        <div>
+                          <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                            <PawPrint className="h-5 w-5 text-caramel" />
+                            Basic Information
+                          </p>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Pet Name
+                              </label>
+                              <input
+                                required
+                                value={form.name}
+                                readOnly={viewOnly}
+                                onChange={(e) =>
+                                  setForm((p) => ({ ...p, name: e.target.value }))
+                                }
+                                placeholder="Pet name"
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Species
+                              </label>
+                              <Select
+                                options={speciesOptions}
+                                isDisabled={viewOnly}
+                                value={
+                                  speciesOptions.find(
+                                    (opt) => opt.value === form.species,
+                                  ) || speciesOptions[0]
+                                }
+                                onChange={(option) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    species:
+                                      (option?.value as PetPayload["species"]) ||
+                                      "Dog",
+                                  }))
+                                }
+                                styles={selectStyles}
+                                isSearchable={false}
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Breed
+                              </label>
+                              <input
+                                value={form.breed}
+                                readOnly={viewOnly}
+                                onChange={(e) =>
+                                  setForm((p) => ({ ...p, breed: e.target.value }))
+                                }
+                                placeholder="Breed"
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Gender
+                              </label>
+                              <Select
+                                options={genderOptions}
+                                isDisabled={viewOnly}
+                                value={
+                                  genderOptions.find(
+                                    (opt) => opt.value === form.gender,
+                                  ) || genderOptions[0]
+                                }
+                                onChange={(option) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    gender:
+                                      (option?.value as PetPayload["gender"]) ||
+                                      "Unknown",
+                                  }))
+                                }
+                                styles={selectStyles}
+                                isSearchable={false}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-sand pt-5">
+                          <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                            <Weight className="h-5 w-5 text-caramel" />
+                            Physical Status
+                          </p>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Age (Years)
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                readOnly={viewOnly}
+                                value={form.age ?? ""}
+                                onChange={(e) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    age: e.target.value === "" ? undefined : Number(e.target.value),
+                                  }))
+                                }
+                                placeholder="Age (years)"
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Weight (kg)
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.1"
+                                readOnly={viewOnly}
+                                value={form.weightKg ?? ""}
+                                onChange={(e) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    weightKg: e.target.value === "" ? undefined : Number(e.target.value),
+                                  }))
+                                }
+                                placeholder="Weight (kg)"
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Health Status
+                              </label>
+                              <input
+                                value={form.healthStatus}
+                                readOnly={viewOnly}
+                                onChange={(e) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    healthStatus: e.target.value,
+                                  }))
+                                }
+                                placeholder="Health status"
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            <div className="sm:col-span-3">
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Spayed?
+                              </label>
+                              <div className="grid grid-cols-2 rounded-xl border border-sand bg-warm/50 p-1">
+                                <button
+                                  type="button"
+                                  disabled={viewOnly}
+                                  onClick={() => setForm((p) => ({ ...p, isSpayed: true }))}
+                                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                                    form.isSpayed
+                                      ? "bg-brown text-white"
+                                      : "text-muted hover:bg-white/70"
+                                  }`}
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={viewOnly}
+                                  onClick={() => setForm((p) => ({ ...p, isSpayed: false }))}
+                                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                                    !form.isSpayed
+                                      ? "bg-brown text-white"
+                                      : "text-muted hover:bg-white/70"
+                                  }`}
+                                >
+                                  No
+                                </button>
+                              </div>
+                            </div>
+                            <div className="sm:col-span-3">
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Last Visit Date
+                              </label>
+                              <input
+                                type="date"
+                                readOnly={viewOnly}
+                                value={form.lastVisitDate || ""}
+                                onChange={(e) =>
+                                  setForm((p) => ({
+                                    ...p,
+                                    lastVisitDate: e.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-sand pt-5">
+                          <p className="inline-flex items-center gap-2 font-serif text-3xl font-bold italic text-ink">
+                            <Heart className="h-5 w-5 text-caramel" />
+                            Health & Notes
+                          </p>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className={(editing && !viewOnly) ? "sm:col-span-2" : ""}>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                Allergies
+                              </label>
+                              <input
+                                value={form.allergies || ""}
+                                readOnly={viewOnly}
+                                onChange={(e) =>
+                                  setForm((p) => ({ ...p, allergies: e.target.value }))
+                                }
+                                placeholder="Food, products, etc."
+                                className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                              />
+                            </div>
+                            {(viewOnly || !editing) && (
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                                  Medical History / Medications
+                                </label>
+                                <input
+                                  value={form.medicalHistory || ""}
+                                  readOnly={viewOnly}
+                                  onChange={(e) =>
+                                    setForm((p) => ({
+                                      ...p,
+                                      medicalHistory: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Ear infection, Apoquel..."
+                                  className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                                />
+                                {(form.medicalHistoryRecords?.length || 0) > 0 ? (
+                                  <div className="mt-3 rounded-xl border border-sand bg-warm/30 p-3">
+                                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                                      Clinic Notes Timeline
+                                    </p>
+                                    <div className="max-h-32 space-y-2 overflow-y-auto pr-1">
+                                      {form.medicalHistoryRecords?.map((record, index) => (
+                                        <div key={record._id || `${record.createdAt}-${index}`} className="rounded-lg bg-white px-3 py-2 ring-1 ring-sand">
+                                          <p className="text-xs font-semibold text-ink">{record.note}</p>
+                                          <p className="mt-1 text-[11px] text-muted">
+                                            {(record.providerName || "Clinic")} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : "Unknown time"}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                          <label className="mt-4 mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                            Notes For Staff
+                          </label>
+                          <textarea
+                            value={form.notes}
+                            readOnly={viewOnly}
+                            onChange={(e) =>
+                              setForm((p) => ({ ...p, notes: e.target.value }))
+                            }
+                            placeholder="Special instructions, personality notes for staff..."
+                            className="w-full rounded-xl border border-sand bg-warm/50 p-3 text-sm outline-none focus:border-caramel"
+                            rows={4}
+                          />
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className="mt-6 mb-6 flex justify-end gap-2 border-t border-sand pt-5">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="rounded-full border border-sand px-5 py-2 text-sm font-semibold text-ink hover:bg-warm"
+                    >
+                      {viewOnly ? "Close" : "Cancel"}
+                    </button>
+                    {!viewOnly && (
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="rounded-full bg-brown px-6 py-2 text-sm font-semibold text-white hover:bg-brown-dark disabled:opacity-60"
+                      >
+                        {saving
+                          ? "Saving..."
+                          : editing
+                            ? "Update Passport"
+                            : "Create Passport"}
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </motion.div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingPet && (
+          <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="w-full max-w-sm rounded-3xl border border-sand bg-white p-6 shadow-2xl"
+            >
+              <h4 className="font-serif text-3xl font-bold italic text-ink">Delete Pet?</h4>
+              <p className="mt-2 text-sm text-muted">
+                This will remove <span className="font-semibold text-ink">{deletingPet.name}</span> from your pet library.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingPet(null)}
+                  className="rounded-full border border-sand px-4 py-2 text-sm font-semibold text-ink hover:bg-warm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(deletingPet._id)}
+                  className="rounded-full bg-rust px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
