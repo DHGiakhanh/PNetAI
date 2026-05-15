@@ -8,7 +8,8 @@ import {
   Loader2,
   TrendingUp,
   Clock,
-  Banknote
+  Banknote,
+  Heart
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -34,6 +35,7 @@ type DashboardStats = {
     gmv: number;
     pendingPosts: number;
     pendingLegal: number;
+    totalPets: number;
   };
   charts: {
     userGrowth: any[];
@@ -69,6 +71,7 @@ export const AdminDashboard = () => {
         { Metric: "Orders Today", Value: data.kpis.ordersToday },
         { Metric: "Pending Blog Posts", Value: data.kpis.pendingPosts },
         { Metric: "Pending Legal Reviews", Value: data.kpis.pendingLegal },
+        { Metric: "Total Pets", Value: data.kpis.totalPets },
       ];
       
       const csv = json2csv(exportData);
@@ -132,6 +135,15 @@ export const AdminDashboard = () => {
       bg: "bg-indigo-50",
       trend: "Action Required",
       isUp: false
+    },
+    { 
+      label: "Registered Pets", 
+      value: data?.kpis.totalPets || 0, 
+      icon: Heart, 
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      trend: "Healthy",
+      isUp: true
     },
   ];
 

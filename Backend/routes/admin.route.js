@@ -444,6 +444,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
         const totalOrders = await db.Order.countDocuments();
         const totalProducts = await db.Product.countDocuments();
         const totalBlogs = await db.Blog.countDocuments();
+        const totalPets = await db.Pet.countDocuments();
         
         // Recent users
         const recentUsers = await db.User.find()
@@ -462,6 +463,7 @@ router.get('/statistics', verifyToken, isAdmin, async (req, res) => {
             orders: totalOrders,
             products: totalProducts,
             blogs: totalBlogs,
+            pets: totalPets,
             recentUsers
         });
     } catch (error) {
@@ -612,6 +614,84 @@ router.post('/users/:userId/assign-sale', verifyToken, isAdmin, async (req, res)
                 managedBy: sale.name
             }
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// --- Pet Management (Admin) ---
+
+// Get all pets with filters
+router.get('/pets', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { search, species, page = 1, limit = 20 } = req.query;
+        let query = {};
+
+        if (species) {
+            query.species = species;
+        }
+
+        if (search) {
+            // Search by pet name or owner name/email
+            const users = await db.User.find({
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            }).select('_id');
+            const userIds = users.map(u => u._id);
+
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { user: { $in: userIds } }
+            ];
+        }
+
+        const skip = (page - 1) * limit;
+        
+        const pets = await db.Pet.find(query)
+            .populate('user', 'name email phone avatarUrl')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
+
+        const total = await db.Pet.countDocuments(query);
+
+        res.status(200).json({
+            pets,
+            pagination: {
+                total,
+                page: Number(page),
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get pet by ID
+router.get('/pets/:id', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const pet = await db.Pet.findById(req.params.id)
+            .populate('user', 'name email phone avatarUrl');
+        
+        if (!pet) {
+            return res.status(404).json({ message: "Pet not found" });
+        }
+        
+        res.status(200).json({ pet });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Delete Pet
+router.delete('/pets/:id', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const pet = await db.Pet.findByIdAndDelete(req.params.id);
+        if (!pet) return res.status(404).json({ message: "Pet not found" });
+        res.status(200).json({ message: "Pet deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -802,6 +882,7 @@ router.get('/statistics/dashboard', verifyToken, isAdmin, async (req, res) => {
             role: { $in: ["service_provider", "shop"] },
             providerOnboardingStatus: "pending_legal_approval"
         });
+        const totalPets = await db.Pet.countDocuments();
 
         // Growth Charts (last 6 months)
         const sixMonthsAgo = new Date();
@@ -833,7 +914,7 @@ router.get('/statistics/dashboard', verifyToken, isAdmin, async (req, res) => {
         ];
 
         res.status(200).json({
-            kpis: { ordersToday, gmv, pendingPosts, pendingLegal },
+            kpis: { ordersToday, gmv, pendingPosts, pendingLegal, totalPets },
             charts: { userGrowth, revenueTrend },
             recentLogs
         });
