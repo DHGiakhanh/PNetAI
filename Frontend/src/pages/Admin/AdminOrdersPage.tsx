@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 type Order = {
   _id: string;
   user: { name: string; email: string };
-  totalPrice: number;
+  totalAmount: number;
   status: string;
   paymentMethod: string;
   createdAt: string;
@@ -204,7 +204,7 @@ const AdminOrdersPage = () => {
                         </div>
                       </td>
                       <td className="px-10 py-8">
-                        <p className="text-sm font-black text-ink">{(order.totalPrice || 0).toLocaleString()} VND</p>
+                        <p className="text-sm font-black text-ink">{(order.totalAmount || 0).toLocaleString()} VND</p>
                         <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{order.paymentMethod || 'N/A'}</p>
                       </td>
                       <td className="px-10 py-8">

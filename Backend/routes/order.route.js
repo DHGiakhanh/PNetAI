@@ -12,6 +12,10 @@ const { removeMissingProductsFromCart } = require("../utils/cart");
 const router = express.Router();
 
 const toUpperText = (value) => (typeof value === "string" ? value.trim().toUpperCase() : "");
+const STANDARD_SHIPPING_FEE_VND = 12000;
+const EXPRESS_SHIPPING_FEE_VND = 25000;
+const FREE_SHIPPING_THRESHOLD_VND = 500000;
+const VALID_SHIPPING_METHODS = ["standard", "express"];
 
 const generateOrderCode = () => {
     const random = Math.floor(Math.random() * 900) + 100;
@@ -21,8 +25,11 @@ const generateOrderCode = () => {
 const generateUniqueOrderCode = async () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
         const orderCode = generateOrderCode();
-        const existingOrder = await db.Order.exists({ "payos.orderCode": orderCode });
-        if (!existingOrder) {
+        const [existingOrder, existingGroup] = await Promise.all([
+            db.Order.exists({ "payos.orderCode": orderCode }),
+            db.OrderGroup.exists({ "payos.orderCode": orderCode }),
+        ]);
+        if (!existingOrder && !existingGroup) {
             return orderCode;
         }
     }
@@ -70,12 +77,98 @@ const toOrderItemsFromCart = (cart) => {
     }));
 };
 
-const toPayOSItemsFromCart = (cart) => {
-    return cart.items.map((item) => ({
-        name: item.product.name.slice(0, 100),
-        quantity: item.quantity,
-        price: Math.round(item.price),
-    }));
+const normalizeShippingMethod = (value) => (
+    VALID_SHIPPING_METHODS.includes(value) ? value : "standard"
+);
+
+const calculateShippingFee = (subtotalAmount, shippingMethod = "standard") => {
+    if (shippingMethod === "express") {
+        return EXPRESS_SHIPPING_FEE_VND;
+    }
+    return subtotalAmount >= FREE_SHIPPING_THRESHOLD_VND ? 0 : STANDARD_SHIPPING_FEE_VND;
+};
+
+const normalizeSelectedProductIds = (selectedProductIds) => {
+    if (!Array.isArray(selectedProductIds) || selectedProductIds.length === 0) {
+        return null;
+    }
+
+    return new Set(
+        selectedProductIds
+            .map((id) => id?.toString())
+            .filter(Boolean)
+    );
+};
+
+const getCheckoutCartItems = (cart, selectedProductIds) => {
+    const selectedSet = normalizeSelectedProductIds(selectedProductIds);
+    if (!selectedSet) {
+        return cart.items;
+    }
+
+    return cart.items.filter((item) => selectedSet.has(item.product?._id?.toString() || item.product?.toString()));
+};
+
+const groupCartItemsByProvider = (items, shippingMethod = "standard") => {
+    const providerMap = new Map();
+
+    for (const item of items) {
+        const providerId = item.product?.providerId?.toString();
+        if (!providerId) {
+            return { error: `${item.product?.name || "Product"} is missing provider information` };
+        }
+
+        const existing = providerMap.get(providerId) || {
+            provider: providerId,
+            items: [],
+            subtotalAmount: 0,
+        };
+
+        const orderItem = {
+            product: item.product._id,
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.price,
+        };
+        existing.items.push(orderItem);
+        existing.subtotalAmount += Number(item.price || 0) * Number(item.quantity || 0);
+        providerMap.set(providerId, existing);
+    }
+
+    const groups = Array.from(providerMap.values()).map((group) => {
+        const shippingFee = calculateShippingFee(group.subtotalAmount, shippingMethod);
+        return {
+            ...group,
+            shippingFee,
+            totalAmount: group.subtotalAmount + shippingFee,
+        };
+    });
+
+    return { groups };
+};
+
+const toPayOSItemsFromProviderGroups = (groups) => {
+    const items = [];
+
+    for (const group of groups) {
+        for (const item of group.items) {
+            items.push({
+                name: item.name.slice(0, 100),
+                quantity: item.quantity,
+                price: Math.round(item.price),
+            });
+        }
+
+        if (group.shippingFee > 0) {
+            items.push({
+                name: "Local delivery fee",
+                quantity: 1,
+                price: Math.round(group.shippingFee),
+            });
+        }
+    }
+
+    return items;
 };
 
 const toPlainObject = (value) => {
@@ -109,9 +202,19 @@ const restoreInventory = async (order) => {
     order.inventoryReserved = false;
 };
 
-const clearCart = async (cart) => {
-    cart.items = [];
-    cart.totalAmount = 0;
+const recalculateCartTotal = (cart) => {
+    cart.totalAmount = cart.items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+};
+
+const clearCart = async (cart, selectedProductIds = null) => {
+    const selectedSet = normalizeSelectedProductIds(selectedProductIds);
+    if (selectedSet) {
+        cart.items = cart.items.filter((item) => !selectedSet.has(item.product?._id?.toString() || item.product?.toString()));
+        recalculateCartTotal(cart);
+    } else {
+        cart.items = [];
+        cart.totalAmount = 0;
+    }
     await cart.save();
 };
 
@@ -178,9 +281,12 @@ const serializeProviderOrder = (order, providerId) => {
     const rawOrder = typeof order.toObject === "function" ? order.toObject() : order;
     const providerIdStr = String(providerId);
     const allItems = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+    const orderProviderId = rawOrder.provider?._id || rawOrder.provider;
+    const isProviderOwnedOrder = orderProviderId && String(orderProviderId) === providerIdStr;
 
     const providerItems = allItems
         .filter((item) => {
+            if (isProviderOwnedOrder) return true;
             const productProviderId = item?.product?.providerId?._id || item?.product?.providerId;
             return productProviderId && String(productProviderId) === providerIdStr;
         })
@@ -195,17 +301,24 @@ const serializeProviderOrder = (order, providerId) => {
         }));
 
     const providerSubtotal = providerItems.reduce((sum, item) => sum + item.lineTotal, 0);
-    const hasForeignItems = allItems.some((item) => {
-        const productProviderId = item?.product?.providerId?._id || item?.product?.providerId;
-        return !productProviderId || String(productProviderId) !== providerIdStr;
-    });
+    const hasForeignItems = isProviderOwnedOrder
+        ? false
+        : allItems.some((item) => {
+            const productProviderId = item?.product?.providerId?._id || item?.product?.providerId;
+            return !productProviderId || String(productProviderId) !== providerIdStr;
+        });
 
     return {
         _id: rawOrder._id,
+        group: rawOrder.group,
+        provider: rawOrder.provider,
         status: rawOrder.status,
         paymentMethod: rawOrder.paymentMethod,
         paymentStatus: rawOrder.paymentStatus,
         totalAmount: rawOrder.totalAmount,
+        subtotalAmount: rawOrder.subtotalAmount || providerSubtotal,
+        shippingFee: rawOrder.shippingFee || 0,
+        shippingMethod: rawOrder.shippingMethod || "standard",
         providerSubtotal,
         providerItemCount: providerItems.reduce((sum, item) => sum + item.quantity, 0),
         providerItems,
@@ -225,7 +338,7 @@ const serializeProviderOrder = (order, providerId) => {
     };
 };
 
-const ensureCartAndStock = async (userId) => {
+const ensureCartAndStock = async (userId, selectedProductIds = null) => {
     let cart = await db.Cart.findOne({ user: userId }).populate("items.product");
     cart = await removeMissingProductsFromCart(cart);
 
@@ -233,7 +346,12 @@ const ensureCartAndStock = async (userId) => {
         return { error: "Cart is empty" };
     }
 
-    for (const item of cart.items) {
+    const checkoutItems = getCheckoutCartItems(cart, selectedProductIds);
+    if (checkoutItems.length === 0) {
+        return { error: "Selected checkout items are empty" };
+    }
+
+    for (const item of checkoutItems) {
         if (!item.product) {
             return { error: "Product in cart not found" };
         }
@@ -247,7 +365,7 @@ const ensureCartAndStock = async (userId) => {
         }
     }
 
-    return { cart };
+    return { cart, checkoutItems };
 };
 
 const createProductOrderTransactions = async (order) => {
@@ -259,23 +377,33 @@ const createProductOrderTransactions = async (order) => {
         return;
     }
 
-    const productIds = order.items.map((item) => item.product).filter(Boolean);
-    if (productIds.length === 0) {
-        return;
+    let payosOrderCode = order.payos?.orderCode ? String(order.payos.orderCode) : undefined;
+    if (!payosOrderCode && order.group) {
+        const orderGroup = await db.OrderGroup.findById(order.group).select("payos.orderCode");
+        payosOrderCode = orderGroup?.payos?.orderCode ? String(orderGroup.payos.orderCode) : undefined;
     }
 
-    const products = await db.Product.find({ _id: { $in: productIds } }).select("_id providerId");
-    const providerMap = new Map(
-        products.map((product) => [String(product._id), product.providerId ? String(product.providerId) : null])
-    );
-
     const providerRevenueMap = new Map();
-    for (const item of order.items) {
-        const providerId = providerMap.get(String(item.product));
-        if (!providerId) continue;
+    if (order.provider) {
+        providerRevenueMap.set(String(order.provider), Number(order.subtotalAmount || 0));
+    } else {
+        const productIds = order.items.map((item) => item.product).filter(Boolean);
+        if (productIds.length === 0) {
+            return;
+        }
 
-        const lineAmount = Number(item.price || 0) * Number(item.quantity || 0);
-        providerRevenueMap.set(providerId, (providerRevenueMap.get(providerId) || 0) + lineAmount);
+        const products = await db.Product.find({ _id: { $in: productIds } }).select("_id providerId");
+        const providerMap = new Map(
+            products.map((product) => [String(product._id), product.providerId ? String(product.providerId) : null])
+        );
+
+        for (const item of order.items) {
+            const providerId = providerMap.get(String(item.product));
+            if (!providerId) continue;
+
+            const lineAmount = Number(item.price || 0) * Number(item.quantity || 0);
+            providerRevenueMap.set(providerId, (providerRevenueMap.get(providerId) || 0) + lineAmount);
+        }
     }
 
     const payloads = Array.from(providerRevenueMap.entries())
@@ -287,7 +415,7 @@ const createProductOrderTransactions = async (order) => {
             amount,
             status: "success",
             paymentMethod: order.paymentMethod,
-            payosOrderCode: order.payos?.orderCode ? String(order.payos.orderCode) : undefined,
+            payosOrderCode,
             referenceId: order._id,
             note: "Product order payment",
         }));
@@ -343,6 +471,73 @@ const markPaidProductOrderRefundPending = async (order, cancelledBy = "system") 
     return true;
 };
 
+const createProviderOrdersForCheckout = async ({
+    userId,
+    providerGroups,
+    shippingAddress,
+    paymentMethod,
+    paymentStatus,
+    shippingMethod,
+    payos,
+}) => {
+    const subtotalAmount = providerGroups.reduce((sum, group) => sum + group.subtotalAmount, 0);
+    const shippingAmount = providerGroups.reduce((sum, group) => sum + group.shippingFee, 0);
+    const totalAmount = subtotalAmount + shippingAmount;
+
+    const orderGroup = new db.OrderGroup({
+        user: userId,
+        subtotalAmount,
+        shippingAmount,
+        totalAmount,
+        shippingMethod,
+        shippingAddress,
+        paymentMethod,
+        paymentStatus,
+        payos,
+    });
+    await orderGroup.save();
+
+    const orders = [];
+    for (const group of providerGroups) {
+        const childPayos = payos
+            ? {
+                paymentLinkId: payos.paymentLinkId,
+                checkoutUrl: payos.checkoutUrl,
+                qrCode: payos.qrCode,
+                status: payos.status,
+            }
+            : undefined;
+
+        const order = new db.Order({
+            user: userId,
+            provider: group.provider,
+            group: orderGroup._id,
+            items: group.items,
+            subtotalAmount: group.subtotalAmount,
+            shippingFee: group.shippingFee,
+            shippingMethod,
+            totalAmount: group.totalAmount,
+            shippingAddress,
+            paymentMethod,
+            paymentStatus,
+            payos: childPayos,
+        });
+
+        await order.save();
+        await reserveInventory(order.items);
+        order.inventoryReserved = true;
+        order.updatedAt = Date.now();
+        await order.save();
+        orders.push(order);
+    }
+
+    orderGroup.orders = orders.map((order) => order._id);
+    orderGroup.updatedAt = Date.now();
+    await orderGroup.save();
+
+    return { orderGroup, orders };
+};
+
 const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     const normalizedStatus = toUpperText(payOSStatus);
 
@@ -359,9 +554,6 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
         }
         order.paymentStatus = "paid";
         order.paidAt = order.paidAt || Date.now();
-        if (order.status === "pending") {
-            order.status = "processing";
-        }
         return;
     }
 
@@ -388,10 +580,98 @@ const syncOrderStatusWithPayOS = async (order, payOSStatus) => {
     }
 };
 
+const syncOrderGroupStatusWithPayOS = async (orderGroup, payOSStatus, payOSData = {}) => {
+    const normalizedStatus = toUpperText(payOSStatus);
+    if (!normalizedStatus) {
+        return;
+    }
+
+    const orders = await db.Order.find({ group: orderGroup._id });
+
+    if (normalizedStatus === "PAID") {
+        if (["refund_pending", "refunded"].includes(orderGroup.paymentStatus)) {
+            return;
+        }
+
+        orderGroup.paymentStatus = "paid";
+        orderGroup.paidAt = orderGroup.paidAt || Date.now();
+
+        for (const order of orders) {
+            if (!["refund_pending", "refunded"].includes(order.paymentStatus)) {
+                if (order.paymentStatus !== "paid") {
+                    await createProductOrderTransactions(order);
+                }
+                order.paymentStatus = "paid";
+                order.paidAt = order.paidAt || orderGroup.paidAt;
+                order.payos = {
+                    ...toPlainObject(order.payos),
+                    paymentLinkId: payOSData.paymentLinkId || orderGroup.payos?.paymentLinkId,
+                    status: normalizedStatus,
+                };
+                order.updatedAt = Date.now();
+                await order.save();
+            }
+        }
+        return;
+    }
+
+    if (["CANCELLED", "EXPIRED"].includes(normalizedStatus)) {
+        if (!["paid", "refund_pending", "refunded"].includes(orderGroup.paymentStatus)) {
+            orderGroup.paymentStatus = "cancelled";
+        }
+
+        for (const order of orders) {
+            if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
+                order.paymentStatus = "cancelled";
+                if (order.status !== "delivered") {
+                    order.status = "cancelled";
+                }
+                order.payos = {
+                    ...toPlainObject(order.payos),
+                    paymentLinkId: payOSData.paymentLinkId || orderGroup.payos?.paymentLinkId,
+                    status: normalizedStatus,
+                };
+                await restoreInventory(order);
+                order.updatedAt = Date.now();
+                await order.save();
+            }
+        }
+        return;
+    }
+
+    if (normalizedStatus === "PENDING") {
+        if (!["paid", "refund_pending", "refunded"].includes(orderGroup.paymentStatus)) {
+            orderGroup.paymentStatus = "pending";
+        }
+
+        for (const order of orders) {
+            if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
+                order.paymentStatus = "pending";
+                order.updatedAt = Date.now();
+                await order.save();
+            }
+        }
+        return;
+    }
+
+    if (!["paid", "refund_pending", "refunded"].includes(orderGroup.paymentStatus)) {
+        orderGroup.paymentStatus = "failed";
+    }
+
+    for (const order of orders) {
+        if (!["paid", "refund_pending", "refunded"].includes(order.paymentStatus)) {
+            order.paymentStatus = "failed";
+            order.updatedAt = Date.now();
+            await order.save();
+        }
+    }
+};
+
 // Create order (Checkout COD)
 router.post("/checkout", verifyToken, async (req, res) => {
     try {
-        const { shippingAddress, paymentMethod } = req.body;
+        const { shippingAddress, paymentMethod, selectedProductIds } = req.body;
+        const shippingMethod = normalizeShippingMethod(req.body.shippingMethod);
         const normalizedPaymentMethod = toUpperText(paymentMethod || "COD");
 
         if (normalizedPaymentMethod === "PAYOS") {
@@ -405,32 +685,32 @@ router.post("/checkout", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Invalid shipping address" });
         }
 
-        const { cart, error } = await ensureCartAndStock(req.userId);
+        const { cart, checkoutItems, error } = await ensureCartAndStock(req.userId, selectedProductIds);
         if (error) {
             return res.status(400).json({ message: error });
         }
 
-        const order = new db.Order({
-            user: req.userId,
-            items: toOrderItemsFromCart(cart),
-            totalAmount: cart.totalAmount,
+        const { groups: providerGroups, error: groupError } = groupCartItemsByProvider(checkoutItems, shippingMethod);
+        if (groupError) {
+            return res.status(400).json({ message: groupError });
+        }
+
+        const { orderGroup, orders } = await createProviderOrdersForCheckout({
+            userId: req.userId,
+            providerGroups,
             shippingAddress: normalizedShippingAddress,
             paymentMethod: "COD",
             paymentStatus: "unpaid",
+            shippingMethod,
         });
 
-        await order.save();
-
-        await reserveInventory(order.items);
-        order.inventoryReserved = true;
-        order.updatedAt = Date.now();
-        await order.save();
-
-        await clearCart(cart);
+        await clearCart(cart, selectedProductIds);
 
         res.status(201).json({
             message: "Order created successfully",
-            order,
+            order: orders[0],
+            orders,
+            orderGroup,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -445,7 +725,9 @@ router.post("/checkout/payos", verifyToken, async (req, res) => {
             returnUrl,
             cancelUrl,
             description,
+            selectedProductIds,
         } = req.body;
+        const shippingMethod = normalizeShippingMethod(req.body.shippingMethod);
 
         const normalizedShippingAddress = normalizeShippingAddress(shippingAddress);
         if (!isShippingAddressValid(normalizedShippingAddress)) {
@@ -460,13 +742,18 @@ router.post("/checkout/payos", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Invalid returnUrl or cancelUrl" });
         }
 
-        const { cart, error } = await ensureCartAndStock(req.userId);
+        const { cart, checkoutItems, error } = await ensureCartAndStock(req.userId, selectedProductIds);
         if (error) {
             return res.status(400).json({ message: error });
         }
 
+        const { groups: providerGroups, error: groupError } = groupCartItemsByProvider(checkoutItems, shippingMethod);
+        if (groupError) {
+            return res.status(400).json({ message: groupError });
+        }
+
         const orderCode = await generateUniqueOrderCode();
-        const payOSItems = toPayOSItemsFromCart(cart);
+        const payOSItems = toPayOSItemsFromProviderGroups(providerGroups);
         const amount = payOSItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
         if (!Number.isInteger(amount) || amount <= 0) {
@@ -493,34 +780,31 @@ router.post("/checkout/payos", verifyToken, async (req, res) => {
             });
         }
 
-        const order = new db.Order({
-            user: req.userId,
-            items: toOrderItemsFromCart(cart),
-            totalAmount: amount,
+        const payos = {
+            orderCode,
+            paymentLinkId: payOSResponse.data.paymentLinkId,
+            checkoutUrl: payOSResponse.data.checkoutUrl,
+            qrCode: payOSResponse.data.qrCode,
+            status: payOSResponse.data.status || "PENDING",
+        };
+
+        const { orderGroup, orders } = await createProviderOrdersForCheckout({
+            userId: req.userId,
+            providerGroups,
             shippingAddress: normalizedShippingAddress,
             paymentMethod: "PAYOS",
             paymentStatus: "pending",
-            payos: {
-                orderCode,
-                paymentLinkId: payOSResponse.data.paymentLinkId,
-                checkoutUrl: payOSResponse.data.checkoutUrl,
-                qrCode: payOSResponse.data.qrCode,
-                status: payOSResponse.data.status || "PENDING",
-            },
+            shippingMethod,
+            payos,
         });
 
-        await order.save();
-
-        await reserveInventory(order.items);
-        order.inventoryReserved = true;
-        order.updatedAt = Date.now();
-        await order.save();
-
-        await clearCart(cart);
+        await clearCart(cart, selectedProductIds);
 
         res.status(201).json({
             message: "PayOS payment link created successfully",
-            order,
+            order: orders[0],
+            orders,
+            orderGroup,
             payment: {
                 orderCode,
                 paymentLinkId: payOSResponse.data.paymentLinkId,
@@ -558,13 +842,14 @@ router.post("/payos/webhook", async (req, res) => {
             return res.status(400).json({ message: "Invalid orderCode from webhook" });
         }
 
-        const order = await db.Order.findOne({ "payos.orderCode": orderCode });
+        const orderGroup = await db.OrderGroup.findOne({ "payos.orderCode": orderCode });
+        const order = orderGroup ? null : await db.Order.findOne({ "payos.orderCode": orderCode });
         
         const inferredStatus =
             toUpperText(data.status) ||
             (success === true && data.code === "00" ? "PAID" : "CANCELLED");
 
-        if (!order) {
+        if (!orderGroup && !order) {
             // Check if it's a subscription or booking transaction
             const transaction = await db.Transaction.findOne({ payosOrderCode: String(orderCode) });
             if (transaction) {
@@ -645,6 +930,20 @@ router.post("/payos/webhook", async (req, res) => {
             return res.status(200).json({ message: "Webhook received but order/transaction not found" });
         }
 
+        if (orderGroup) {
+            await syncOrderGroupStatusWithPayOS(orderGroup, inferredStatus, data);
+
+            orderGroup.payos = {
+                ...toPlainObject(orderGroup.payos),
+                paymentLinkId: data.paymentLinkId || orderGroup.payos?.paymentLinkId,
+                status: inferredStatus,
+                lastWebhookData: data,
+            };
+            orderGroup.updatedAt = Date.now();
+            await orderGroup.save();
+
+            return res.status(200).json({ message: "Webhook processed for order group" });
+        }
 
         await syncOrderStatusWithPayOS(order, inferredStatus);
 
@@ -671,13 +970,15 @@ router.get("/payos/:orderCode", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Invalid orderCode" });
         }
 
-        const order = await db.Order.findOne({ "payos.orderCode": orderCode });
+        const orderGroup = await db.OrderGroup.findOne({ "payos.orderCode": orderCode }).populate("orders");
+        const order = orderGroup ? null : await db.Order.findOne({ "payos.orderCode": orderCode });
 
-        if (!order) {
+        if (!orderGroup && !order) {
             return res.status(404).json({ message: "Order not found" });
         }
 
-        if (order.user.toString() !== req.userId && req.role !== "admin") {
+        const ownerId = orderGroup?.user || order?.user;
+        if (ownerId.toString() !== req.userId && req.role !== "admin") {
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -685,19 +986,33 @@ router.get("/payos/:orderCode", verifyToken, async (req, res) => {
         if (payOSResponse?.code === "00" && payOSResponse?.data) {
             const payOSStatus = payOSResponse.data.status;
 
-            await syncOrderStatusWithPayOS(order, payOSStatus);
+            if (orderGroup) {
+                await syncOrderGroupStatusWithPayOS(orderGroup, payOSStatus, payOSResponse.data);
 
-            order.payos = {
-                ...toPlainObject(order.payos),
-                paymentLinkId: payOSResponse.data.id || order.payos?.paymentLinkId,
-                status: payOSStatus,
-            };
-            order.updatedAt = Date.now();
-            await order.save();
+                orderGroup.payos = {
+                    ...toPlainObject(orderGroup.payos),
+                    paymentLinkId: payOSResponse.data.id || orderGroup.payos?.paymentLinkId,
+                    status: payOSStatus,
+                };
+                orderGroup.updatedAt = Date.now();
+                await orderGroup.save();
+            } else {
+                await syncOrderStatusWithPayOS(order, payOSStatus);
+
+                order.payos = {
+                    ...toPlainObject(order.payos),
+                    paymentLinkId: payOSResponse.data.id || order.payos?.paymentLinkId,
+                    status: payOSStatus,
+                };
+                order.updatedAt = Date.now();
+                await order.save();
+            }
         }
 
         return res.status(200).json({
-            order,
+            order: order || orderGroup?.orders?.[0] || null,
+            orders: orderGroup?.orders,
+            orderGroup,
             payos: payOSResponse,
         });
     } catch (error) {
@@ -713,6 +1028,7 @@ router.get("/history", verifyToken, async (req, res) => {
     try {
         const orders = await db.Order.find({ user: req.userId })
             .sort({ createdAt: -1 })
+            .populate("provider", "name email")
             .populate("items.product");
 
         res.status(200).json({ orders });
@@ -825,20 +1141,11 @@ router.get("/provider/orders", verifyToken, ensureProviderFullyApproved, async (
         const providerProducts = await db.Product.find({ providerId: req.userId }).select("_id");
         const productIds = providerProducts.map((item) => item._id);
 
-        if (productIds.length === 0) {
-            return res.status(200).json({
-                orders: [],
-                pagination: {
-                    total: 0,
-                    page,
-                    pages: 0,
-                    limit,
-                },
-            });
-        }
-
         const query = {
-            "items.product": { $in: productIds },
+            $or: [
+                { provider: req.userId },
+                { "items.product": { $in: productIds } },
+            ],
         };
 
         if (status) {
@@ -855,6 +1162,7 @@ router.get("/provider/orders", verifyToken, ensureProviderFullyApproved, async (
         const [orders, total] = await Promise.all([
             db.Order.find(query)
                 .populate("user", "name email phone")
+                .populate("provider", "name email")
                 .populate("items.product", "name images category providerId")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -883,6 +1191,7 @@ router.get("/provider/orders/:id", verifyToken, ensureProviderFullyApproved, asy
     try {
         const order = await db.Order.findById(req.params.id)
             .populate("user", "name email phone")
+            .populate("provider", "name email")
             .populate("items.product", "name images category providerId");
 
         if (!order) {
@@ -919,6 +1228,7 @@ router.patch("/provider/orders/:id/status", verifyToken, ensureProviderFullyAppr
 
         const order = await db.Order.findById(req.params.id)
             .populate("user", "name email phone")
+            .populate("provider", "name email")
             .populate("items.product", "name images category providerId");
 
         if (!order) {
@@ -930,10 +1240,10 @@ router.patch("/provider/orders/:id/status", verifyToken, ensureProviderFullyAppr
             return res.status(404).json({ message: "Order not found for this provider" });
         }
 
-        if (!normalizedOrder.canManageStatus) {
+        if (order.paymentMethod === "PAYOS" && order.paymentStatus === "pending") {
             return res.status(409).json({
-                message: "This order contains products from multiple providers, so only admins can update its global status.",
-                code: "MULTI_PROVIDER_ORDER",
+                message: "This PayOS order is still awaiting payment. Wait for payment confirmation before changing fulfillment status.",
+                code: "PAYMENT_PENDING",
             });
         }
 
@@ -1019,6 +1329,43 @@ router.put("/:id/cancel", verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Cannot cancel delivered order" });
         }
 
+        if (order.group && order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+            const orderGroup = await db.OrderGroup.findById(order.group);
+            const childOrders = await db.Order.find({ group: order.group });
+
+            if (orderGroup?.payos?.orderCode) {
+                try {
+                    const payOSCancelResponse = await cancelPaymentLink(orderGroup.payos.orderCode, "Cancelled by customer");
+                    orderGroup.payos = {
+                        ...toPlainObject(orderGroup.payos),
+                        status: payOSCancelResponse?.data?.status || "CANCELLED",
+                    };
+                } catch (error) {
+                    // Continue local cancellation flow even if PayOS cancel call fails
+                }
+            }
+
+            if (orderGroup) {
+                orderGroup.paymentStatus = "cancelled";
+                orderGroup.updatedAt = Date.now();
+                await orderGroup.save();
+            }
+
+            for (const childOrder of childOrders) {
+                childOrder.status = "cancelled";
+                childOrder.paymentStatus = "cancelled";
+                childOrder.updatedAt = Date.now();
+                await restoreInventory(childOrder);
+                await childOrder.save();
+            }
+
+            return res.status(200).json({
+                message: "Checkout payment and related orders cancelled successfully",
+                orderGroup,
+                orders: childOrders,
+            });
+        }
+
         if (order.paymentMethod === "PAYOS" && order.payos?.orderCode && order.paymentStatus !== "paid") {
             try {
                 const payOSCancelResponse = await cancelPaymentLink(order.payos.orderCode, "Cancelled by customer");
@@ -1075,11 +1422,12 @@ router.post("/:id/return-request", verifyToken, async (req, res) => {
 
         // Create Admin Notification
         await db.Notification.create({
-            user: "admin",
+            user: null,
             type: "refund_request",
             title: "Product Return Request",
-            message: `User requested a return for order ORD-${order._id.slice(-6).toUpperCase()}. Value: ${order.totalPrice.toLocaleString()} VND`,
+            message: `User requested a return for order ORD-${order._id.toString().slice(-6).toUpperCase()}. Value: ${Number(order.totalAmount || 0).toLocaleString()} VND`,
             relatedId: order._id,
+            isAdmin: true,
         });
 
         res.status(200).json({ message: "Return request submitted successfully", order });
