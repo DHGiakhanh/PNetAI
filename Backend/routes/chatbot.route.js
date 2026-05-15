@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const db = require('../models');
 const verifyToken = require('../middlewares/verifyToken');
-const { GoogleGenAI } = require("@google/genai");
 
-const AI_API_KEY = process.env.AI_API_KEY;
-const AI_MODEL = process.env.AI_MODEL || 'gemini-2.5-flash';
+const AI_API_KEY = process.env.AI_API_KEY;           // OpenRouter API key
+const AI_MODEL = process.env.AI_MODEL || 'google/gemini-2.5-flash-preview';
+const AI_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // Helper function to build the data context
 async function getRealtimeContext(userId) {
@@ -55,24 +56,34 @@ router.post('/chat', verifyToken, async (req, res) => {
         if (!message) return res.status(400).json({ error: 'Message is required' });
         if (!AI_API_KEY) return res.status(500).json({ error: 'AI API Key is not configured' });
 
-        const ai = new GoogleGenAI({ apiKey: AI_API_KEY });
-
         const dataContext = await getRealtimeContext(req.userId);
         const lastHistory = await db.AIHistory.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(3).select('question answer');
         const historyContext = lastHistory.reverse().map(h => `User: ${h.question}\nAI: ${h.answer}`).join('\n\n');
 
-        const finalPrompt = `${dataContext}\n\nLỊCH SỬ:\n${historyContext || "Bắt đầu"}\n\nCÂU HỎI:\n${message}`;
+        const systemPrompt = `${dataContext}\n\nLỊCH SỬ:\n${historyContext || "Bắt đầu"}`;
 
-        const response = await ai.models.generateContent({
-            model: AI_MODEL,
-            contents: finalPrompt,
-            config: {
-                maxOutputTokens: 800,
+        const response = await axios.post(
+            `${AI_BASE_URL}/chat/completions`,
+            {
+                model: AI_MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: message },
+                ],
+                max_tokens: 800,
                 temperature: 0.7,
             },
-        });
+            {
+                headers: {
+                    'Authorization': `Bearer ${AI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
+                    'X-Title': 'PNetAI Assistant',
+                },
+            }
+        );
 
-        const answer = response.text;
+        const answer = response.data.choices?.[0]?.message?.content || 'Không có phản hồi từ AI.';
 
         const chatHistory = new db.AIHistory({
             userId: req.userId,
@@ -86,8 +97,9 @@ router.post('/chat', verifyToken, async (req, res) => {
         res.json({ answer });
 
     } catch (error) {
-        console.error('Gemini Error:', error.message);
-        res.status(500).json({ error: `AI Error: ${error.message}` });
+        console.error('AI Error:', error.response?.data || error.message);
+        const errMsg = error.response?.data?.error?.message || error.message;
+        res.status(500).json({ error: `AI Error: ${errMsg}` });
     }
 });
 
