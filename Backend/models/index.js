@@ -13,6 +13,7 @@ const Transaction = require("./transaction.model");
 const Payout = require("./payout.model");
 const Booking = require("./booking.model");
 const Notification = require("./notification.model");
+const AIHistory = require("./ai_history.model");
 
 const db = {}
 
@@ -31,6 +32,7 @@ db.Transaction = Transaction;
 db.Payout = Payout;
 db.Booking = Booking;
 db.Notification = Notification;
+db.AIHistory = AIHistory;
 
 
 module.exports = db;
