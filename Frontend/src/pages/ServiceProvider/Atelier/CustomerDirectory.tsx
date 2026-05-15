@@ -23,7 +23,7 @@ export const CustomerDirectory = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [selectedCustomerPets, setSelectedCustomerPets] = useState<any[]>([]);
-  const [currentNote, setCurrentNote] = useState("");
+//   const [currentNote, setCurrentNote] = useState("");
   const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
@@ -80,6 +80,7 @@ export const CustomerDirectory = () => {
     c.phone?.includes(search)
   );
 
+/*
   const handleStoreMemorandum = async () => {
     if (!selectedPetId) {
       toast.error("Please select a pet profile first.");
@@ -103,6 +104,7 @@ export const CustomerDirectory = () => {
       toast.error(error?.response?.data?.message || "Failed to store memorandum.");
     }
   };
+*/
 
   if (loading) return (
     <div className="h-96 flex items-center justify-center">
