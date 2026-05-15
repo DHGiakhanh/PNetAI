@@ -3,6 +3,7 @@ import { Bot, MessageCircle, Send, X, Loader2, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/utils/cn";
 import { AIMessageRenderer } from "./AIMessageRenderer";
+import apiClient from "@/utils/api.service";
 
 type ChatRole = "user" | "agent";
 
@@ -48,15 +49,11 @@ export default function FloatingChatAgent() {
       if (!token) return;
 
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:9999'}/chatbot/history`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
+        const response = await apiClient.get("/chatbot/history");
 
-        if (response.ok) {
-          const history = await response.json();
-          if (history.length > 0) {
+        if (response.status === 200) {
+          const history = response.data;
+          if (history && history.length > 0) {
             const historyMessages: ChatMessage[] = [];
             history.reverse().forEach((item: any) => {
               historyMessages.push({
@@ -95,24 +92,11 @@ export default function FloatingChatAgent() {
     setIsTyping(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:9999'}/chatbot/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          message: text,
-        }),
+      const response = await apiClient.post("/chatbot/chat", {
+        message: text,
       });
 
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Could not connect to the Backend.");
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       if (data.answer) {
         setMessages((prev) => [...prev, {
@@ -126,10 +110,11 @@ export default function FloatingChatAgent() {
       
       let errorMsg = "Đã xảy ra lỗi không xác định khi kết nối với AI.";
       
-      if (error.message === "Failed to fetch") {
-        errorMsg = "❌ Không thể kết nối tới máy chủ (Failed to fetch). Vui lòng kiểm tra:\n1. Máy chủ Backend có đang chạy không?\n2. Kết nối mạng của bạn có ổn định không?\n3. Cổng 9999 có đang bị chặn không?";
+      if (error.code === "ERR_NETWORK") {
+        errorMsg = "❌ Không thể kết nối tới máy chủ (Network Error). Vui lòng kiểm tra:\n1. Máy chủ Backend có đang chạy không?\n2. URL Backend (VITE_API_BASE_URL) trên Vercel đã đúng chưa?\n3. Cổng 9999 hoặc domain backend có đang bị chặn không?";
       } else {
-        errorMsg = `❌ Lỗi hệ thống: ${error.message || "Máy chủ AI không phản hồi."}`;
+        const serverMsg = error.response?.data?.error || error.message;
+        errorMsg = `❌ Lỗi hệ thống: ${serverMsg || "Máy chủ AI không phản hồi."}`;
       }
 
       setMessages((prev) => [...prev, {
