@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const verifyToken = require('../middlewares/verifyToken');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 
 const AI_API_KEY = process.env.AI_API_KEY;
-const AI_MODEL = process.env.AI_MODEL || 'gemini-1.5-flash';
+const AI_MODEL = process.env.AI_MODEL || 'gemini-2.5-flash';
 
 // Helper function to build the data context
 async function getRealtimeContext(userId) {
@@ -55,15 +55,7 @@ router.post('/chat', verifyToken, async (req, res) => {
         if (!message) return res.status(400).json({ error: 'Message is required' });
         if (!AI_API_KEY) return res.status(500).json({ error: 'AI API Key is not configured' });
 
-        const genAI = new GoogleGenerativeAI(AI_API_KEY);
-        // Set generation config for conciseness
-        const model = genAI.getGenerativeModel({ 
-            model: AI_MODEL,
-            generationConfig: {
-                maxOutputTokens: 800,
-                temperature: 0.7,
-            }
-        });
+        const ai = new GoogleGenAI({ apiKey: AI_API_KEY });
 
         const dataContext = await getRealtimeContext(req.userId);
         const lastHistory = await db.AIHistory.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(3).select('question answer');
@@ -71,9 +63,16 @@ router.post('/chat', verifyToken, async (req, res) => {
 
         const finalPrompt = `${dataContext}\n\nLỊCH SỬ:\n${historyContext || "Bắt đầu"}\n\nCÂU HỎI:\n${message}`;
 
-        const result = await model.generateContent(finalPrompt);
-        const response = await result.response;
-        const answer = response.text();
+        const response = await ai.models.generateContent({
+            model: AI_MODEL,
+            contents: finalPrompt,
+            config: {
+                maxOutputTokens: 800,
+                temperature: 0.7,
+            },
+        });
+
+        const answer = response.text;
 
         const chatHistory = new db.AIHistory({
             userId: req.userId,
