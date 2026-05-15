@@ -18,6 +18,7 @@ export interface Product {
   deletedAt?: string | null;
   isHot: boolean;
   isRecommended: boolean;
+  tags: string[];
   averageRating: number;
   totalReviews: number;
   createdAt: string;
@@ -42,6 +43,7 @@ export interface ProductFilters {
   sort?: 'price-asc' | 'price-desc' | 'newest' | 'popular';
   page?: number;
   limit?: number;
+  tags?: string;
 }
 
 export const productService = {

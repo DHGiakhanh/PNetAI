@@ -373,6 +373,19 @@ export default function ProductDetailPage() {
             </h1>
             <p className="mt-1 text-xs font-semibold text-brown">Provided by {providerName}</p>
 
+            {product.tags && product.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {product.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full bg-warm px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-extrabold text-amber-700 ring-1 ring-amber-200">
@@ -680,6 +693,18 @@ export default function ProductDetailPage() {
                 <p className="mt-1 line-clamp-1 text-xs font-semibold text-brown">
                   by {getProductProviderName(relatedProduct)}
                 </p>
+                {relatedProduct.tags && relatedProduct.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {relatedProduct.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-full bg-warm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-extrabold text-ink">
                     {formatVnd(relatedProduct.price)}

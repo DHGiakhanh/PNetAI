@@ -48,6 +48,7 @@ import ServiceBookingPage from "@/pages/Services/ServiceBookingPage";
 import BookingSuccess from "@/pages/Services/BookingSuccess";
 import BookingCancel from "@/pages/Services/BookingCancel";
 import ServicesPage from "@/pages/Services/ServicesPage";
+import AtelierDetailPage from "@/pages/Services/AtelierDetailPage";
 import BlogsPage from "@/pages/Blogs/BlogsPage";
 import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsPage";
 import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
@@ -152,6 +153,7 @@ export default function AppRoutes() {
       {/* Services booking */}
       <Route path="services" element={<ServiceBookingLayout />}>
         <Route index element={<ServicesPage />} />
+        <Route path="atelier/:providerId" element={<AtelierDetailPage />} />
         <Route path=":serviceId" element={<ServiceBookingPage />} />
         <Route path=":serviceId/booking/success" element={<BookingSuccess />} />
         <Route path=":serviceId/booking/cancel" element={<BookingCancel />} />

@@ -18,12 +18,15 @@ type Booking = {
     avatarUrl?: string;
     species: string;
     breed?: string;
+    gender?: string;
+    age?: number;
   };
   bookingDate: string;
   bookingTime: string;
   totalAmount: number;
   status: "pending" | "confirmed" | "completed" | "cancelled";
   paymentMethod?: string;
+  sessionNotes?: string[];
 };
 
 const statusTone: Record<Booking["status"], string> = {
@@ -150,9 +153,27 @@ export default function MyBookingsPage() {
                        </div>
                        <div>
                           <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
-                          <p className="text-[10px] font-medium text-muted">{booking.pet.breed || booking.pet.species}</p>
+                          <p className="text-[10px] font-medium text-muted">Species: {booking.pet.species} • Breed: {booking.pet.breed || "None"}</p>
+                          <p className="text-[9px] font-medium text-muted/60 mt-0.5">Gender: {booking.pet.gender || "Unknown"} • Age: {booking.pet.age || 0} years</p>
                        </div>
                     </div>
+
+                    {booking.status === "completed" && booking.sessionNotes && booking.sessionNotes.length > 0 && (
+                      <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 italic">Atelier Clinical Observations</p>
+                        </div>
+                        <div className="space-y-3">
+                          {booking.sessionNotes.map((note, idx) => (
+                            <div key={idx} className="flex gap-3 items-start">
+                               <div className="h-5 w-5 rounded-full bg-white border border-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-600 shrink-0">{idx + 1}</div>
+                               <p className="text-xs font-medium text-emerald-800 leading-relaxed italic font-serif">"{note}"</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </article>
               );

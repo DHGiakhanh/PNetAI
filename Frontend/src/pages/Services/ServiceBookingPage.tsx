@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { 
   MapPin, 
-  ChevronRight, 
+  ChevronRight,   
   Loader2, 
   ChevronLeft,
   Check,
@@ -33,7 +33,7 @@ import { motion, AnimatePresence } from "framer-motion";
 type BookingStep = 1 | 2 | 3 | 4;
 type AddPetForm = {
   name: string;
-  species: "Dog" | "Cat" | "Other";
+  species: "Dog" | "Cat" | "Bird" | "Rabbit" | "Hamster" | "Other";
   breed: string;
   gender: "Male" | "Female" | "Unknown";
   age?: number;
@@ -70,7 +70,6 @@ export default function ServiceBookingPage() {
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"info" | "wizard">("info");
-  const [activeTab, setActiveTab] = useState<"info" | "service">("info");
   
   // Wizard State
   const [step, setStep] = useState<BookingStep>(1);
@@ -174,6 +173,7 @@ export default function ServiceBookingPage() {
   };
 
   const isSlotInPast = (date: Date, slot: string) => {
+    if (isBefore(date, startOfToday())) return true;
     if (!isSameDay(date, currentTime)) return false;
     const slotStart = getSlotStartDate(date, slot);
     if (!slotStart) return false;
@@ -268,38 +268,18 @@ export default function ServiceBookingPage() {
                </div>
             </div>
             <div className="flex-1 min-w-0">
-               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-caramel mb-4 italic">Certified Healthcare Provider</p>
+               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-caramel mb-4 italic">
+                  {service.providerName} • Certified Provider
+               </p>
                <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-ink mb-6 tracking-tighter leading-none">
-                  {service.providerName || service.title}
+                  {service.title}
                </h1>
                <div className="flex flex-wrap items-center gap-4">
                   <button className="flex items-center gap-2.5 px-8 py-3 bg-warm text-ink rounded-full text-[11px] font-black uppercase tracking-widest border border-sand hover:bg-caramel hover:text-white transition-all">
-                     <MapPin className="w-4 h-4" /> {service.location?.city || "Accredited Location"}
+                     <MapPin className="w-4 h-4" /> {(service as any).providerAddress || service.location?.address || "Accredited Location"}
                   </button>
-                  <div className="px-8 py-3 border border-sand/30 text-muted/40 rounded-full text-[11px] font-black uppercase tracking-widest italic">
-                     {service.title}
-                  </div>
                </div>
             </div>
-         </div>
-
-         {/* Facility Navigation */}
-         <div className="max-w-7xl mx-auto px-6 border-t border-sand/20 flex gap-14">
-            {[
-               { id: "info", l: "Information" },
-               { id: "service", l: "Services" }
-            ].map(t => {
-               const active = activeTab === t.id;
-               return (
-                 <button 
-                   key={t.id}
-                   onClick={() => setActiveTab(t.id as any)}
-                   className={`py-6 text-[11px] font-black uppercase tracking-[0.3em] transition-all border-b-4 ${active ? "border-caramel text-ink" : "border-transparent text-muted/30 hover:text-ink"}`}
-                 >
-                   {t.l}
-                 </button>
-               )
-            })}
          </div>
       </div>
 
@@ -322,24 +302,70 @@ export default function ServiceBookingPage() {
 
          <div className="grid md:grid-cols-2 gap-24">
             <section>
-               <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/30 mb-8 italic">PNetAI Practitioner Intro</h3>
+               <div className="flex items-center gap-6 mb-8">
+                  {typeof service.providerId === 'object' && (service.providerId as any).avatarUrl && (
+                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-sand/50 shadow-sm">
+                        <img src={(service.providerId as any).avatarUrl} alt="" className="w-full h-full object-cover" />
+                     </div>
+                  )}
+                  <div>
+                    <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/30 italic">Official Provider</h3>
+                    <p className="text-xs font-bold text-ink uppercase tracking-widest mt-1">{service.providerName}</p>
+                  </div>
+               </div>
                <p className="text-xl font-serif font-bold italic text-ink leading-[1.7] opacity-80">
-                  {service.description || "A premier healthcare facility certified under the PNetAI global excellence standards for high-performance pet care."}
+                  {typeof service.providerId === 'object' && (service.providerId as any).description 
+                    ? (service.providerId as any).description 
+                    : service.description || "A premier healthcare facility certified under the PNetAI global excellence standards."}
                </p>
             </section>
             
-            <section className="bg-white rounded-[3.5rem] p-12 border border-sand/30 shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-40 h-40 bg-caramel/5 rounded-full blur-3xl -translate-y-20 translate-x-20" />
-               <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/20 mb-10 italic underline underline-offset-8">Operational Schedule</h3>
-               <div className="grid gap-4">
-                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                    <div key={day} className="flex justify-between items-center py-3 border-b border-sand/10 group cursor-default">
-                       <span className="text-[11px] font-black uppercase tracking-widest text-muted/40 group-hover:text-caramel transition-colors">{day}</span>
-                       <span className="text-xs font-bold text-ink tracking-tight">08:00 AM — 08:00 PM</span>
-                    </div>
-                  ))}
-               </div>
-            </section>
+             <section className="bg-white rounded-[3.5rem] p-12 border border-sand/30 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-caramel/5 rounded-full blur-3xl -translate-y-20 translate-x-20" />
+                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/20 mb-10 italic underline underline-offset-8">Provider Credentials</h3>
+                <div className="grid gap-6">
+                   <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
+                      <MapPin className="w-5 h-5 text-caramel shrink-0 mt-0.5" />
+                      <div>
+                         <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Full Address</p>
+                         <p className="text-sm font-bold text-ink">{(service as any).providerAddress || "Address not specified"}</p>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
+                         <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                            <Check className="w-4 h-4 text-caramel" />
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Contact Phone</p>
+                            <p className="text-sm font-bold text-ink">{typeof service.providerId === 'object' ? service.providerId?.phone || "Not provided" : "Verified Partner"}</p>
+                         </div>
+                      </div>
+                      <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
+                         <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-4 h-4 text-caramel" />
+                         </div>
+                         <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Email Registry</p>
+                            <p className="text-sm font-bold text-ink truncate max-w-[150px]">{typeof service.providerId === 'object' ? service.providerId?.email : "service@pnetai.com"}</p>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="mt-4 pt-6 border-t border-sand/10">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted/30 mb-4">Operational Schedule</h4>
+                      <div className="grid gap-3">
+                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
+                          <div key={day} className="flex justify-between items-center group cursor-default">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-muted/20 group-hover:text-caramel transition-colors">{day}</span>
+                             <span className="text-[11px] font-bold text-ink tracking-tight">08:00 AM — 08:00 PM</span>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
+                </div>
+             </section>
          </div>
       </div>
     </div>
@@ -495,7 +521,7 @@ export default function ServiceBookingPage() {
 
                              return (
                                <>
-                                 {morning.length > 0 && (
+                                  {morning.length > 0 && (
                                    <div>
                                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/20 mb-4 flex items-center gap-2 italic">
                                          <span className="w-8 h-px bg-sand/30" /> Morning sessions
@@ -506,15 +532,20 @@ export default function ServiceBookingPage() {
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
-                                              className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                              className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-warm/30 border-sand/20 text-muted/30 cursor-not-allowed"
+                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
                                               }`}
                                             >
                                                {slot}
+                                               {unavailable && (
+                                                  <div className="absolute top-1.5 right-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                  </div>
+                                                )}
                                             </button>
                                          ))}
                                       </div>
@@ -531,15 +562,20 @@ export default function ServiceBookingPage() {
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
-                                              className={`py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                              className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-warm/30 border-sand/20 text-muted/30 cursor-not-allowed"
+                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
                                               }`}
                                             >
                                                {slot}
+                                               {unavailable && (
+                                                  <div className="absolute top-1.5 right-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                  </div>
+                                                )}
                                             </button>
                                          ))}
                                       </div>
@@ -556,8 +592,8 @@ export default function ServiceBookingPage() {
                              );
                           })()}
                        </div>
-                    </div>
-                 )}
+                     </div>
+                  )}
 
                  {step === 4 && (
                     <div className="space-y-6">
@@ -576,7 +612,8 @@ export default function ServiceBookingPage() {
                                   </div>
                                   <div className="flex-1 min-w-0 pt-0.5">
                                      <p className="text-base font-bold text-ink mb-0.5 truncate">{pet.name}</p>
-                                     <p className="text-[8px] font-black uppercase tracking-[0.1em] text-muted/30">{pet.breed || "Vanguard Profile"}</p>
+                                     <p className="text-[8px] font-black uppercase tracking-[0.1em] text-muted/30">Species: {pet.species} • Breed: {pet.breed || "None"}</p>
+                                     <p className="text-[7px] font-bold uppercase tracking-widest text-muted/20 mt-0.5">Gender: {pet.gender || "Unknown"} • Age: {pet.age || 0}y</p>
                                   </div>
                                   {sel && <div className="h-2 w-2 rounded-full bg-caramel mt-2 shadow-md" />}
                                </button>
@@ -720,6 +757,9 @@ export default function ServiceBookingPage() {
                 >
                   <option value="Dog">Dog</option>
                   <option value="Cat">Cat</option>
+                  <option value="Bird">Bird</option>
+                  <option value="Rabbit">Rabbit</option>
+                  <option value="Hamster">Hamster</option>
                   <option value="Other">Other</option>
                 </select>
               </div>

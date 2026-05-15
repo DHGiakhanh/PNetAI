@@ -175,11 +175,16 @@ router.post("/:id/medical-history-note", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const note = typeof req.body?.note === "string" ? req.body.note.trim() : "";
+        const rawNotes = req.body?.notes;
+        const notes = Array.isArray(rawNotes) ? rawNotes : [req.body?.note];
+        const validNotes = notes
+            .map(n => typeof n === "string" ? n.trim() : "")
+            .filter(n => n !== "");
+
         const bookingId = req.body?.bookingId;
 
-        if (!note) {
-            return res.status(400).json({ message: "Note is required" });
+        if (validNotes.length === 0) {
+            return res.status(400).json({ message: "At least one note is required" });
         }
 
         const pet = await db.Pet.findById(req.params.id);
@@ -210,30 +215,33 @@ router.post("/:id/medical-history-note", verifyToken, async (req, res) => {
         const providerName = provider?.name || "Clinic";
         const createdAt = new Date();
 
-        const historyRecord = {
+        const historyRecords = validNotes.map(note => ({
             note,
             provider: req.userId,
             providerName,
             sourceBooking: bookingId || undefined,
             createdAt,
-        };
+        }));
 
-        const recordLine = `[${createdAt.toISOString().slice(0, 10)} ${providerName}] ${note}`;
+        const recordLines = validNotes.map(note => `[${createdAt.toISOString().slice(0, 10)} ${providerName}] ${note}`);
 
         const nextRecords = Array.isArray(pet.medicalHistoryRecords)
-            ? [...pet.medicalHistoryRecords, historyRecord]
-            : [historyRecord];
+            ? [...pet.medicalHistoryRecords, ...historyRecords]
+            : historyRecords;
 
         pet.medicalHistoryRecords = nextRecords;
+
+        const newLines = recordLines.join("\n");
         pet.medicalHistory = pet.medicalHistory
-            ? `${pet.medicalHistory}\n${recordLine}`
-            : recordLine;
+            ? `${pet.medicalHistory}\n${newLines}`
+            : newLines;
+
         pet.updatedAt = Date.now();
 
         await pet.save();
 
         res.status(200).json({
-            message: "Medical note stored successfully",
+            message: "Medical notes stored successfully",
             pet,
         });
     } catch (error) {
@@ -259,7 +267,7 @@ router.get("/user/:userId", verifyToken, async (req, res) => {
         if (req.role === 'user' && req.userId !== req.params.userId) {
             return res.status(403).json({ message: "Access denied" });
         }
-        
+
         const pets = await db.Pet.find({ user: req.params.userId }).sort({ createdAt: -1 });
         res.status(200).json({ pets });
     } catch (error) {

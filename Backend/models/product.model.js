@@ -14,6 +14,7 @@ const productSchema = new Schema({
     deletedAt: { type: Date, default: null },
     isHot: { type: Boolean, default: false },
     isRecommended: { type: Boolean, default: false },
+    tags: { type: [String], default: [], index: true },
     averageRating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now },
