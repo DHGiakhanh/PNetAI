@@ -18,6 +18,9 @@ export interface ProviderOrder {
   paymentMethod: "COD" | "PAYOS";
   paymentStatus: string;
   totalAmount: number;
+  subtotalAmount?: number;
+  shippingFee?: number;
+  shippingMethod?: string;
   providerSubtotal: number;
   providerItemCount: number;
   providerItems: ProviderOrderItem[];

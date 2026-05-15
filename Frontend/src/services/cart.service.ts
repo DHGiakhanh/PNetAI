@@ -4,6 +4,7 @@ export type CartProduct = {
   _id: string;
   name: string;
   price: number;
+  providerId?: string | { _id?: string; name?: string };
   images?: string[];
   stock?: number;
 };

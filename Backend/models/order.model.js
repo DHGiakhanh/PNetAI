@@ -10,7 +10,16 @@ const orderItemSchema = new Schema({
 
 const orderSchema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    provider: { type: Schema.Types.ObjectId, ref: "User", index: true },
+    group: { type: Schema.Types.ObjectId, ref: "OrderGroup", index: true },
     items: [orderItemSchema],
+    subtotalAmount: { type: Number, required: true, default: 0 },
+    shippingFee: { type: Number, required: true, default: 0 },
+    shippingMethod: {
+        type: String,
+        enum: ["standard", "express"],
+        default: "standard"
+    },
     totalAmount: { type: Number, required: true },
     shippingAddress: {
         name: { type: String, required: true },

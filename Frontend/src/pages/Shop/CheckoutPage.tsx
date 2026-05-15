@@ -32,6 +32,7 @@ type PaymentMethod = "cod" | "qr";
 
 interface CheckoutItem {
   id: string;
+  providerId?: string;
   name: string;
   price: number;
   qty: number;
@@ -74,6 +75,7 @@ export default function CheckoutPage() {
           const product = item.product as CartProduct;
           return {
             id: product?._id ?? "",
+            providerId: typeof product?.providerId === "object" ? product.providerId?._id : product?.providerId,
             name: product?.name ?? "Unknown Treasure",
             price: item.price,
             qty: item.quantity,
@@ -105,12 +107,19 @@ export default function CheckoutPage() {
 
   // Calculations
   const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0), [cartItems]);
-  const shippingFee =
-    shippingMethod === "express"
-      ? EXPRESS_SHIPPING_FEE_VND
-      : subtotal >= FREE_SHIPPING_THRESHOLD_VND
-        ? 0
-        : STANDARD_SHIPPING_FEE_VND;
+  const packageSubtotals = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of cartItems) {
+      const providerKey = item.providerId || item.id;
+      map.set(providerKey, (map.get(providerKey) || 0) + item.price * item.qty);
+    }
+    return Array.from(map.values());
+  }, [cartItems]);
+  const packageCount = packageSubtotals.length;
+  const shippingFee = packageSubtotals.reduce((sum, packageSubtotal) => {
+    if (shippingMethod === "express") return sum + EXPRESS_SHIPPING_FEE_VND;
+    return sum + (packageSubtotal >= FREE_SHIPPING_THRESHOLD_VND ? 0 : STANDARD_SHIPPING_FEE_VND);
+  }, 0);
   const total = subtotal + shippingFee - discount;
 
   // Actions
@@ -166,6 +175,8 @@ export default function CheckoutPage() {
         // PayOS payment flow
         const { data } = await apiClient.post("/orders/checkout/payos", {
           shippingAddress,
+          selectedProductIds: cartItems.map((item) => item.id),
+          shippingMethod,
           description: `DH PNETAI`,
         });
         if (data?.payment?.checkoutUrl) {
@@ -178,6 +189,8 @@ export default function CheckoutPage() {
         await apiClient.post("/orders/checkout", {
           shippingAddress,
           paymentMethod: "COD",
+          selectedProductIds: cartItems.map((item) => item.id),
+          shippingMethod,
         });
         setStep("success");
         window.scrollTo(0, 0);
@@ -348,7 +361,11 @@ export default function CheckoutPage() {
                     }`}>
                       <Truck className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">Free</span>
+                    <span className="text-sm font-bold text-ink">
+                      {packageSubtotals.every((amount) => amount >= FREE_SHIPPING_THRESHOLD_VND)
+                        ? "Free"
+                        : `${formatVnd(STANDARD_SHIPPING_FEE_VND)} / pkg`}
+                    </span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Standard Delivery</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">3-5 business days across the territory.</p>
@@ -373,7 +390,7 @@ export default function CheckoutPage() {
                     }`}>
                       <Zap className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)}</span>
+                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)} / pkg</span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Express Manifest</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">Next-day delivery with premium handling.</p>
@@ -510,7 +527,7 @@ export default function CheckoutPage() {
                   <span className="font-bold text-ink">{formatVnd(subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-serif italic text-muted">Shipping cadence</span>
+                  <span className="font-serif italic text-muted">Shipping cadence ({packageCount} package{packageCount === 1 ? "" : "s"})</span>
                   <span className="font-bold text-ink">{formatVnd(shippingFee)}</span>
                 </div>
                 {discount > 0 && (
