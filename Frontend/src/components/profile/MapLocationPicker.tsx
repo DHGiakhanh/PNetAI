@@ -112,7 +112,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({ initialVal
   // Map Click Handler Component
   const MapEvents = () => {
     useMapEvents({
-      click(e) {
+      click(e: L.LeafletMouseEvent) {
         const newPos: [number, number] = [e.latlng.lat, e.latlng.lng];
         setPos(newPos);
         reverseGeocode(newPos[0], newPos[1]);
