@@ -21,7 +21,7 @@ import { authService } from "@/services/auth.service";
 import { petService } from "@/services/pet.service";
 import { toast } from "react-hot-toast";
 import { formatVnd } from "@/utils/currency";
-const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "medical", "grooming", "food", "toys", "accessories", "travel"];
+const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "other", "medical", "grooming", "food", "toys", "accessories", "travel"];
 
 type SubTab = 'bookings' | 'catalog' | 'config';
 
