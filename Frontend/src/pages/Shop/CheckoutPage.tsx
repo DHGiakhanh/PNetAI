@@ -32,7 +32,6 @@ type PaymentMethod = "cod" | "qr";
 
 interface CheckoutItem {
   id: string;
-  providerId?: string;
   name: string;
   price: number;
   qty: number;
@@ -75,7 +74,6 @@ export default function CheckoutPage() {
           const product = item.product as CartProduct;
           return {
             id: product?._id ?? "",
-            providerId: typeof product?.providerId === "object" ? product.providerId?._id : product?.providerId,
             name: product?.name ?? "Unknown Treasure",
             price: item.price,
             qty: item.quantity,
@@ -107,19 +105,12 @@ export default function CheckoutPage() {
 
   // Calculations
   const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0), [cartItems]);
-  const packageSubtotals = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const item of cartItems) {
-      const providerKey = item.providerId || item.id;
-      map.set(providerKey, (map.get(providerKey) || 0) + item.price * item.qty);
-    }
-    return Array.from(map.values());
-  }, [cartItems]);
-  const packageCount = packageSubtotals.length;
-  const shippingFee = packageSubtotals.reduce((sum, packageSubtotal) => {
-    if (shippingMethod === "express") return sum + EXPRESS_SHIPPING_FEE_VND;
-    return sum + (packageSubtotal >= FREE_SHIPPING_THRESHOLD_VND ? 0 : STANDARD_SHIPPING_FEE_VND);
-  }, 0);
+  const shippingFee =
+    shippingMethod === "express"
+      ? EXPRESS_SHIPPING_FEE_VND
+      : subtotal >= FREE_SHIPPING_THRESHOLD_VND
+        ? 0
+        : STANDARD_SHIPPING_FEE_VND;
   const total = subtotal + shippingFee - discount;
 
   // Actions
@@ -175,8 +166,6 @@ export default function CheckoutPage() {
         // PayOS payment flow
         const { data } = await apiClient.post("/orders/checkout/payos", {
           shippingAddress,
-          selectedProductIds: cartItems.map((item) => item.id),
-          shippingMethod,
           description: `DH PNETAI`,
         });
         if (data?.payment?.checkoutUrl) {
@@ -189,8 +178,6 @@ export default function CheckoutPage() {
         await apiClient.post("/orders/checkout", {
           shippingAddress,
           paymentMethod: "COD",
-          selectedProductIds: cartItems.map((item) => item.id),
-          shippingMethod,
         });
         setStep("success");
         window.scrollTo(0, 0);
@@ -265,7 +252,7 @@ export default function CheckoutPage() {
               to="/my-orders" 
               className="bg-ink text-white px-10 py-5 rounded-full text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-caramel transition-all shadow-xl"
             >
-              Track Order History
+              View Order History
             </Link>
             <Link 
               to="/products"
@@ -312,24 +299,48 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="bg-white border border-sand/30 rounded-[2.5rem] p-8 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex gap-6">
-                    <div className="w-14 h-14 bg-sand/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-6 h-6 text-caramel/60" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-ink mb-1 uppercase tracking-wider">{userData?.name || "Pet Parent"}</p>
-                      <p className="text-[13px] text-muted leading-relaxed max-w-sm">
-                        {userData?.address || "No nesting address set in your profile yet."}
-                      </p>
-                      <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-caramel/5 rounded-full">
-                        <span className="w-1 h-1 bg-caramel rounded-full animate-pulse" />
-                        <span className="text-[9px] font-bold uppercase text-caramel tracking-widest">Selected Nest</span>
+              <div className="bg-white border border-sand/30 rounded-[2.5rem] p-10 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex flex-col gap-8">
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-6 items-center">
+                      <div className="w-14 h-14 bg-sand/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-6 h-6 text-caramel/60" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1 italic">Authorized Recipient</p>
+                        <p className="text-xl font-serif font-bold italic text-ink">{userData?.name || "Missing Identity"}</p>
                       </div>
                     </div>
+                    <Link to="/profile" className="text-[10px] font-black uppercase tracking-widest text-caramel hover:underline">Verify Profile</Link>
                   </div>
-                  <Link to="/profile" className="text-[10px] font-bold uppercase tracking-widest text-caramel hover:underline">Change</Link>
+
+                  <div className="grid md:grid-cols-2 gap-6 pt-8 border-t border-dashed border-sand/30">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Email Registry</p>
+                      <p className="text-sm font-bold text-ink">{userData?.email || "No email linked"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Contact Hotline</p>
+                      <p className={`text-sm font-bold ${userData?.phone ? "text-ink" : "text-rose-500 italic"}`}>
+                        {userData?.phone || "Phone number required"}
+                      </p>
+                    </div>
+                    <div className="md:col-span-2 space-y-1">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted/40">Permanent Nesting Address</p>
+                      <p className={`text-sm font-bold ${userData?.address ? "text-ink" : "text-rose-500 italic"}`}>
+                        {userData?.address || "Delivery address required for manifest"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(!userData?.phone || !userData?.address || !userData?.name) && (
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3">
+                       <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+                       <p className="text-[10px] font-bold text-rose-600 uppercase tracking-tight">
+                         Required: Please complete your profile records in settings to authorize shipping.
+                       </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -361,11 +372,7 @@ export default function CheckoutPage() {
                     }`}>
                       <Truck className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">
-                      {packageSubtotals.every((amount) => amount >= FREE_SHIPPING_THRESHOLD_VND)
-                        ? "Free"
-                        : `${formatVnd(STANDARD_SHIPPING_FEE_VND)} / pkg`}
-                    </span>
+                    <span className="text-sm font-bold text-ink">Free</span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Standard Delivery</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">3-5 business days across the territory.</p>
@@ -390,7 +397,7 @@ export default function CheckoutPage() {
                     }`}>
                       <Zap className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)} / pkg</span>
+                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)}</span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Express Manifest</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">Next-day delivery with premium handling.</p>
@@ -527,7 +534,7 @@ export default function CheckoutPage() {
                   <span className="font-bold text-ink">{formatVnd(subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-serif italic text-muted">Shipping cadence ({packageCount} package{packageCount === 1 ? "" : "s"})</span>
+                  <span className="font-serif italic text-muted">Shipping cadence</span>
                   <span className="font-bold text-ink">{formatVnd(shippingFee)}</span>
                 </div>
                 {discount > 0 && (
@@ -556,7 +563,12 @@ export default function CheckoutPage() {
 
               <button 
                 onClick={handlePlaceOrder}
-                disabled={processing}
+                disabled={
+                  processing || 
+                  !userData?.phone || 
+                  !userData?.address || 
+                  !userData?.name
+                }
                 className="w-full bg-ink text-white py-6 rounded-full text-[11px] font-bold uppercase tracking-[0.25em] mt-12 hover:bg-caramel transition-all duration-500 shadow-2xl relative overflow-hidden group disabled:opacity-50"
               >
                 {processing ? (

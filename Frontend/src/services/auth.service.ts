@@ -52,6 +52,11 @@ export interface UserProfile {
   operatingHours?: { start: string; end: string };
   bookingCapacity?: number;
   doctors?: string[];
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+    addressName?: string;
+  };
   createdAt: string;
 }
 
@@ -135,6 +140,7 @@ export const authService = {
       clinicImages: user.clinicImages,
       operatingHours: user.operatingHours,
       doctors: user.doctors,
+      location: user.location,
       createdAt: user.createdAt ?? "",
     };
   },

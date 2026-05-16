@@ -8,12 +8,14 @@ const serviceBookingSchema = new Schema({
     bookingDate: { type: Date, required: true },
     bookingTime: { type: String, required: true },
     totalAmount: { type: Number, required: true },
-    status: { 
-        type: String, 
+    status: {
+        type: String,
         enum: ["pending", "confirmed", "completed", "cancelled", "refunded"],
         default: "pending"
     },
     paymentMethod: { type: String, default: "PayOS" },
+    note: { type: String, default: "" },
+    petNote: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

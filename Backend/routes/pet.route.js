@@ -175,16 +175,10 @@ router.post("/:id/medical-history-note", verifyToken, async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const rawNotes = req.body?.notes;
-        const notes = Array.isArray(rawNotes) ? rawNotes : [req.body?.note];
-        const validNotes = notes
-            .map(n => typeof n === "string" ? n.trim() : "")
-            .filter(n => n !== "");
-
-        const bookingId = req.body?.bookingId;
-
-        if (validNotes.length === 0) {
-            return res.status(400).json({ message: "At least one note is required" });
+        const { recordNote, historySummary, bookingId } = req.body;
+        
+        if (!recordNote?.trim() && !historySummary?.trim()) {
+            return res.status(400).json({ message: "At least one note type is required" });
         }
 
         const pet = await db.Pet.findById(req.params.id);
@@ -215,26 +209,29 @@ router.post("/:id/medical-history-note", verifyToken, async (req, res) => {
         const providerName = provider?.name || "Clinic";
         const createdAt = new Date();
 
-        const historyRecords = validNotes.map(note => ({
-            note,
-            provider: req.userId,
-            providerName,
-            sourceBooking: bookingId || undefined,
-            createdAt,
-        }));
+        // 1. Handle clinical timeline record
+        if (recordNote?.trim()) {
+            const newRecord = {
+                note: recordNote.trim(),
+                provider: req.userId,
+                providerName,
+                sourceBooking: bookingId || undefined,
+                createdAt,
+            };
+            
+            if (!Array.isArray(pet.medicalHistoryRecords)) {
+                pet.medicalHistoryRecords = [];
+            }
+            pet.medicalHistoryRecords.push(newRecord);
+        }
 
-        const recordLines = validNotes.map(note => `[${createdAt.toISOString().slice(0, 10)} ${providerName}] ${note}`);
-
-        const nextRecords = Array.isArray(pet.medicalHistoryRecords)
-            ? [...pet.medicalHistoryRecords, ...historyRecords]
-            : historyRecords;
-
-        pet.medicalHistoryRecords = nextRecords;
-
-        const newLines = recordLines.join("\n");
-        pet.medicalHistory = pet.medicalHistory
-            ? `${pet.medicalHistory}\n${newLines}`
-            : newLines;
+        // 2. Handle general history summary update
+        if (historySummary?.trim()) {
+            const summaryLine = `[${createdAt.toISOString().slice(0, 10)} ${providerName}] ${historySummary.trim()}`;
+            pet.medicalHistory = pet.medicalHistory
+                ? `${pet.medicalHistory}\n${summaryLine}`
+                : summaryLine;
+        }
 
         pet.updatedAt = Date.now();
 

@@ -65,8 +65,23 @@ const userSchema = new Schema({
         end: { type: String, default: "18:00" },
     },
     bookingCapacity: { type: Number, default: 4 },
+    location: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            default: [106.660172, 10.762622] // Mặc định tọa độ TP.HCM nếu không chọn
+        },
+        addressName: { type: String }
+    },
     createdAt: { type: Date, default: Date.now },
 });
+
+// Tạo index để hỗ trợ tìm kiếm theo khoảng cách địa lý (đo khoảng cách từ User đến Atelier)
+userSchema.index({ location: "2dsphere" });
 
 const User = mongoose.model("User", userSchema);
 

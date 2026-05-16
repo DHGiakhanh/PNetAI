@@ -19,7 +19,7 @@ import {
 import { authService, UserProfile as UserProfileData } from "../../services/auth.service";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { VNAddressPicker } from "../../components/profile/VNAddressPicker";
+import { MapLocationPicker } from "../../components/profile/MapLocationPicker";
 import { toast } from "react-hot-toast";
 import { Pet, petService } from "@/services/pet.service";
 
@@ -107,6 +107,8 @@ export default function UserProfile() {
   const [prefs, setPrefs] = useState({ zalo: true, journal: true, deals: false, sms: true });
   const [passData, setPassData] = useState({ current: "", new: "", confirm: "" });
   const [passUpdating, setPassUpdating] = useState(false);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [tempLocation, setTempLocation] = useState<{ lat: number, lng: number, address: string } | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -168,7 +170,8 @@ export default function UserProfile() {
         name: profile.name, 
         phone: profile.phone, 
         address: profile.address,
-        avatarUrl: profile.avatarUrl
+        avatarUrl: profile.avatarUrl,
+        location: profile.location
       });
       
       // Update local state and persistence
@@ -293,17 +296,64 @@ export default function UserProfile() {
                   onChange={(v) => handleUpdate("phone", v)}
                 />
 
-                {/* Residence Location Card - Redesigned Sample Mode */}
+                {/* Residence Location Card */}
                 <div className="col-span-full bg-white border border-sand/50 p-6 rounded-[2rem]">
                   <div className="flex items-center justify-between mb-6">
                     <label className="text-[10px] font-bold text-muted/60 uppercase tracking-[0.2em] flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-caramel/70" /> Residence Location
                     </label>
+                    <button 
+                      onClick={() => setIsEditingLocation(!isEditingLocation)}
+                      className="text-[10px] font-black uppercase text-caramel hover:underline"
+                    >
+                      {isEditingLocation ? "Cancel Mapping" : "Change Location"}
+                    </button>
                   </div>
-                  <VNAddressPicker
-                    initialValue={profile.address}
-                    onChange={(v) => handleUpdate("address", v)}
-                  />
+                  
+                  {isEditingLocation ? (
+                    <div className="space-y-6">
+                      <div className="h-[400px] rounded-[2rem] overflow-hidden border border-sand shadow-inner">
+                        <MapLocationPicker
+                          initialCoords={profile.location?.coordinates}
+                          onChange={(loc) => setTempLocation(loc)}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => {
+                            if (tempLocation) {
+                              setProfile(p => ({ 
+                                ...p, 
+                                address: tempLocation.address,
+                                location: {
+                                  type: "Point",
+                                  coordinates: [tempLocation.lng, tempLocation.lat],
+                                  addressName: tempLocation.address
+                                }
+                              }));
+                              setHasChanges(true);
+                            }
+                            setIsEditingLocation(false);
+                          }}
+                          className="px-8 py-3 bg-ink text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl"
+                        >
+                          Confirm Mapping
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 p-6 bg-warm/20 rounded-[1.5rem] border border-sand/30">
+                       <div className="h-12 w-12 bg-white rounded-2xl flex items-center justify-center text-caramel shrink-0 shadow-sm">
+                          <MapPin className="w-6 h-6" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <p className="text-lg font-bold text-ink truncate leading-tight">
+                            {profile.address || "No address synchronized"}
+                          </p>
+                          <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">Global Registry Verified</p>
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
