@@ -15,7 +15,6 @@ import {
 import { serviceService, Service } from "../../services/service.service";
 import { petService, Pet } from "@/services/pet.service";
 import { formatVnd } from "@/utils/currency";
-import { authService, UserProfile } from "../../services/auth.service";
 import { bookingService } from "@/services/booking.service";
 import { toast } from "react-hot-toast";
 import {
@@ -78,7 +77,6 @@ export default function ServiceBookingPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(addDays(startOfToday(), 1));
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [petNote, setPetNote] = useState<string>("");
   const [bookingNote, setBookingNote] = useState<string>("");
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [pets, setPets] = useState<Pet[]>([]);
@@ -96,7 +94,6 @@ export default function ServiceBookingPage() {
   });
 
   const [providerServices, setProviderServices] = useState<Service[]>([]);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const bookablePets = useMemo(
     () => pets.filter((pet) => pet.moderationStatus !== "disabled"),
@@ -116,7 +113,6 @@ export default function ServiceBookingPage() {
   useEffect(() => {
     if (isLoggedIn && view === "wizard") {
       petService.getMyPets().then(setPets).catch(() => setPets([]));
-      authService.getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
     }
   }, [isLoggedIn, view]);
 
@@ -255,7 +251,6 @@ export default function ServiceBookingPage() {
         bookingTime: selectedTime,
         totalAmount: service.basePrice,
         note: bookingNote,
-        petNote: petNote,
         returnUrl: `${window.location.origin}/services/${service._id}/booking/success`,
         cancelUrl: `${window.location.origin}/services/${service._id}/booking/cancel`,
       };
@@ -684,8 +679,8 @@ export default function ServiceBookingPage() {
                           <textarea 
                             className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
                             placeholder="Detail relevant medical history..."
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                            value={bookingNote}
+                            onChange={(e) => setBookingNote(e.target.value)}
                           />
                        </div>
                     </div>
