@@ -37,7 +37,8 @@ export const ClinicServices = () => {
    const [editingService, setEditingService] = useState<Service | null>(null);
    const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
    const [completionBooking, setCompletionBooking] = useState<any | null>(null);
-   const [sessionNote, setSessionNote] = useState("");
+   const [recordNote, setRecordNote] = useState("");
+   const [historyNote, setHistoryNote] = useState("");
    const [isFinalizing, setIsFinalizing] = useState(false);
 
    // Config state
@@ -167,9 +168,11 @@ export const ClinicServices = () => {
    const handleFinalizeSession = async () => {
       if (!completionBooking) return;
       
-      const note = sessionNote.trim();
-      if (!note) {
-         toast.error("A clinical note is required to finalize.");
+      const rNote = recordNote.trim();
+      const hNote = historyNote.trim();
+      
+      if (!rNote && !hNote) {
+         toast.error("Please provide at least one clinical note or history update.");
          return;
       }
 
@@ -180,19 +183,21 @@ export const ClinicServices = () => {
          // 1. Update Booking Status
          await bookingService.updateBookingStatus(completionBooking._id, 'completed');
 
-         // 2. Save clinical note to pet's medical history
+         // 2. Save clinical records and history summary
          const petId = completionBooking.pet?._id;
          if (petId) {
             await petService.addMedicalHistoryNote(petId, { 
-               note, 
+               recordNote: rNote,
+               historySummary: hNote,
                bookingId: completionBooking._id 
             });
          }
 
          setBookings(prev => prev.map(b => b._id === completionBooking._id ? { ...b, status: 'completed' } : b));
-         toast.success("Session finalized and clinical note archived.", { id: 'finalize' });
+         toast.success("Session finalized and pet records updated.", { id: 'finalize' });
          setCompletionBooking(null);
-         setSessionNote("");
+         setRecordNote("");
+         setHistoryNote("");
       } catch (error: any) {
          toast.error(error.response?.data?.message || "Finalization failed.", { id: 'finalize' });
       } finally {
@@ -550,7 +555,8 @@ export const ClinicServices = () => {
                                             onClick={(event) => { 
                                               event.stopPropagation(); 
                                               setCompletionBooking(booking);
-                                              setSessionNote("");
+                                              setRecordNote("");
+                                              setHistoryNote("");
                                             }} 
                                             className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5"
                                           >
@@ -951,12 +957,22 @@ export const ClinicServices = () => {
 
                   <div className="space-y-6">
                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-4 block">Professional Observations</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-4 block">Session Clinical Detail (Timeline)</label>
                         <textarea
-                           value={sessionNote}
-                           onChange={(e) => setSessionNote(e.target.value)}
-                           placeholder="Detail relevant medical history, treatment provided, or follow-up instructions..."
-                           className="w-full bg-white border border-sand px-8 py-6 rounded-[2rem] outline-none text-base font-medium focus:border-caramel/40 transition-all resize-none italic font-serif min-h-[200px]"
+                           value={recordNote}
+                           onChange={(e) => setRecordNote(e.target.value)}
+                           placeholder="Specific actions taken today (e.g., 'Administered vaccine', 'Cleaned ears')..."
+                           className="w-full bg-white border border-sand px-8 py-5 rounded-[2rem] outline-none text-base font-medium focus:border-caramel/40 transition-all resize-none italic font-serif min-h-[140px]"
+                        />
+                     </div>
+
+                     <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted italic pl-4 block">General History Update (Summary)</label>
+                        <textarea
+                           value={historyNote}
+                           onChange={(e) => setHistoryNote(e.target.value)}
+                           placeholder="Update the pet's general medical summary (e.g., 'Now allergic to penicillin')..."
+                           className="w-full bg-white border border-sand px-8 py-5 rounded-[2rem] outline-none text-base font-medium focus:border-caramel/40 transition-all resize-none italic font-serif min-h-[100px]"
                         />
                      </div>
 

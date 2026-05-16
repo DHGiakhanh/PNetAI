@@ -14,6 +14,7 @@ import {
 import { serviceService, Service } from "../../services/service.service";
 import { petService, Pet } from "@/services/pet.service";
 import { formatVnd } from "@/utils/currency";
+import { authService, UserProfile } from "../../services/auth.service";
 import { bookingService } from "@/services/booking.service";
 import { toast } from "react-hot-toast";
 import {
@@ -76,8 +77,9 @@ export default function ServiceBookingPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(addDays(startOfToday(), 1));
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [petNote, setPetNote] = useState<string>("");
+  const [bookingNote, setBookingNote] = useState<string>("");
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
   const [pets, setPets] = useState<Pet[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [occupiedSlots, setOccupiedSlots] = useState<Record<string, Set<string>>>({});
@@ -93,6 +95,7 @@ export default function ServiceBookingPage() {
   });
 
   const [providerServices, setProviderServices] = useState<Service[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
 
   useEffect(() => {
@@ -104,6 +107,7 @@ export default function ServiceBookingPage() {
   useEffect(() => {
     if (isLoggedIn && view === "wizard") {
       petService.getMyPets().then(setPets).catch(() => setPets([]));
+      authService.getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
     }
   }, [isLoggedIn, view]);
 
@@ -236,7 +240,10 @@ export default function ServiceBookingPage() {
         bookingDate: format(selectedDate, 'yyyy-MM-dd'),
         bookingTime: selectedTime,
         totalAmount: service.basePrice,
-        note: description
+        note: bookingNote,
+        petNote: petNote,
+        returnUrl: `${window.location.origin}/services/${service._id}/booking/success`,
+        cancelUrl: `${window.location.origin}/services/${service._id}/booking/cancel`,
       };
       const result = await bookingService.confirmBookingPayOS(payload);
       if (result?.payment?.checkoutUrl) {
@@ -502,11 +509,13 @@ export default function ServiceBookingPage() {
                              const hours = provider?.operatingHours || { start: "08:00", end: "18:00" };
                              const allSlots = generateTimeSlots(hours.start, hours.end, 30);
                              const slotsWithState = allSlots.map((slot) => {
-                               const blockedByTime = isSlotInPast(selectedDate, slot);
-                               const blockedByBooking = isSlotOccupied(selectedDate, slot);
+                               const inPast = isSlotInPast(selectedDate, slot);
+                               const occupied = isSlotOccupied(selectedDate, slot);
                                return {
                                  slot,
-                                 unavailable: blockedByTime || blockedByBooking,
+                                 inPast,
+                                 occupied,
+                                 unavailable: inPast || occupied,
                                };
                              });
 
@@ -527,14 +536,16 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Morning sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {morning.map(({ slot, unavailable }) => (
+                                         {morning.map(({ slot, unavailable, inPast }) => (
                                             <button
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
                                               className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                  ? inPast 
+                                                    ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                    : "bg-amber-50 border-amber-200 text-amber-600 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
@@ -543,7 +554,7 @@ export default function ServiceBookingPage() {
                                                {slot}
                                                {unavailable && (
                                                   <div className="absolute top-1.5 right-1.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${inPast ? "bg-rose-500" : "bg-amber-500"}`} />
                                                   </div>
                                                 )}
                                             </button>
@@ -557,14 +568,16 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Afternoon sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {afternoon.map(({ slot, unavailable }) => (
+                                         {afternoon.map(({ slot, unavailable, inPast }) => (
                                             <button
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
                                               className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                  ? inPast 
+                                                    ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                    : "bg-amber-50 border-amber-200 text-amber-600 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
@@ -573,7 +586,7 @@ export default function ServiceBookingPage() {
                                                {slot}
                                                {unavailable && (
                                                   <div className="absolute top-1.5 right-1.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${inPast ? "bg-rose-500" : "bg-amber-500"}`} />
                                                   </div>
                                                 )}
                                             </button>
@@ -631,14 +644,57 @@ export default function ServiceBookingPage() {
                           </button>
                        </div>
 
-                       <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Consultation Notes (Optional)</label>
-                          <textarea 
-                            className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
-                            placeholder="Detail relevant medical history..."
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                          />
+                       <div className="space-y-6">
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Companion Symptoms & History</label>
+                             <textarea 
+                               className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
+                               placeholder="Describe your pet's current health status or symptoms..."
+                               value={petNote}
+                               onChange={(e) => setPetNote(e.target.value)}
+                             />
+                          </div>
+                          
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Service Request Notes</label>
+                             <textarea 
+                               className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
+                               placeholder="Special requests for the facility (parking, arrival instructions, etc.)..."
+                               value={bookingNote}
+                               onChange={(e) => setBookingNote(e.target.value)}
+                             />
+                          </div>
+                       </div>
+
+                       <div className="pt-8 border-t border-sand/30">
+                          <h3 className="text-xl font-serif font-bold italic text-ink mb-6">Personal Information</h3>
+                          <div className="grid md:grid-cols-2 gap-4">
+                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Full Name</p>
+                                <p className="text-sm font-bold text-ink">{currentUser?.name || "Missing Name"}</p>
+                             </div>
+                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Email Registry</p>
+                                <p className="text-sm font-bold text-ink">{currentUser?.email || "Missing Email"}</p>
+                             </div>
+                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Phone Number</p>
+                                <p className={`text-sm font-bold ${currentUser?.phone ? "text-ink" : "text-rose-500"}`}>
+                                   {currentUser?.phone || "Phone required"}
+                                </p>
+                             </div>
+                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Permanent Address</p>
+                                <p className={`text-sm font-bold ${currentUser?.address ? "text-ink" : "text-rose-500"}`}>
+                                   {currentUser?.address || "Address required"}
+                                </p>
+                             </div>
+                          </div>
+                          {(!currentUser?.phone || !currentUser?.address || !currentUser?.name) && (
+                             <p className="mt-4 text-[10px] font-bold text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100 italic">
+                                * Attention: You must complete your profile (Phone & Address) in settings before placing an order.
+                             </p>
+                          )}
                        </div>
                     </div>
                  )}
@@ -654,10 +710,21 @@ export default function ServiceBookingPage() {
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                    </button>
                  ) : (
-                   <button onClick={handleConfirm} disabled={!isLoggedIn || !selectedPetId || isProcessing} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
-                      {isProcessing ? "Processing..." : "Thanh toán PayOS"}
-                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-                   </button>
+                    <button 
+                      onClick={handleConfirm} 
+                      disabled={
+                        !isLoggedIn || 
+                        !selectedPetId || 
+                        isProcessing || 
+                        !currentUser?.phone || 
+                        !currentUser?.address || 
+                        !currentUser?.name
+                      } 
+                      className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl"
+                    >
+                       {isProcessing ? "Processing..." : "Thanh toán PayOS"}
+                       {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+                    </button>
                  )}
               </div>
            </div>

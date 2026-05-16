@@ -98,7 +98,7 @@ const validateBookingSlot = async ({ serviceId, bookingDate, bookingTime }) => {
 // Create a new service booking (Manual/Test)
 router.post("/confirm", verifyToken, async (req, res) => {
     try {
-        const { serviceId, petId, bookingDate, bookingTime, totalAmount, paymentMethod } = req.body;
+        const { serviceId, petId, bookingDate, bookingTime, totalAmount, paymentMethod, note, petNote } = req.body;
 
         if (!serviceId || !petId || !bookingDate || !bookingTime || !totalAmount) {
             return res.status(400).json({ message: "Missing required booking details." });
@@ -126,6 +126,8 @@ router.post("/confirm", verifyToken, async (req, res) => {
             bookingTime,
             totalAmount,
             paymentMethod: paymentMethod || "Manual",
+            note: note || "",
+            petNote: petNote || "",
             status: "pending"
         });
 
@@ -141,7 +143,8 @@ router.post("/confirm", verifyToken, async (req, res) => {
                 petName: pet.name,
                 date: dateStr,
                 time: bookingTime,
-                totalAmount
+                totalAmount,
+                petNote: petNote || ""
             });
         }
 
@@ -158,7 +161,7 @@ router.post("/confirm", verifyToken, async (req, res) => {
 // Create booking with PayOS payment
 router.post("/confirm/payos", verifyToken, async (req, res) => {
     try {
-        const { serviceId, petId, bookingDate, bookingTime, totalAmount, note, returnUrl, cancelUrl } = req.body;
+        const { serviceId, petId, bookingDate, bookingTime, totalAmount, note, petNote, returnUrl, cancelUrl } = req.body;
 
         if (!serviceId || !petId || !bookingDate || !bookingTime || !totalAmount) {
             return res.status(400).json({ message: "Missing required booking details." });
@@ -200,6 +203,8 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
             bookingTime,
             totalAmount: amount,
             paymentMethod: "PayOS",
+            note: note || "",
+            petNote: petNote || "",
             status: "pending"
         });
         await newBooking.save();
@@ -321,7 +326,7 @@ router.get("/my", verifyToken, async (req, res) => {
                     bookingObj.sessionNotes = bookingObj.pet.medicalHistoryRecords
                         .filter(record => record.sourceBooking?.toString() === bookingObj._id.toString())
                         .map(record => record.note);
-                    
+
                     // Cleanup pet object to avoid sending the whole history if not needed
                     delete bookingObj.pet.medicalHistoryRecords;
                 } else {
@@ -371,7 +376,7 @@ router.patch("/status/:id", verifyToken, async (req, res) => {
     try {
         const { status } = req.body;
         const validStatuses = ["pending", "confirmed", "completed", "cancelled"];
-        
+
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ message: "Invalid status." });
         }
@@ -402,10 +407,10 @@ router.patch("/status/:id", verifyToken, async (req, res) => {
         booking.updatedAt = Date.now();
         await booking.save();
 
-        const { 
-            sendBookingConfirmationEmail, 
-            sendBookingCancellationEmailToUser, 
-            sendRefundRequestToAdmin 
+        const {
+            sendBookingConfirmationEmail,
+            sendBookingCancellationEmailToUser,
+            sendRefundRequestToAdmin
         } = require("../config/emailService");
 
         // Send email to USER if confirmed

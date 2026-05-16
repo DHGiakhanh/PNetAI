@@ -94,7 +94,7 @@ router.get('/', async (req, res) => {
         const services = await db.Service.find(query)
             .populate({
                 path: 'providerId',
-                select: 'name email phone address description avatarUrl clinicImages legalDocuments status providerOnboardingStatus'
+                select: 'name email phone address description avatarUrl clinicImages legalDocuments status providerOnboardingStatus location'
             })
             .sort(sortOption);
             
@@ -109,7 +109,8 @@ router.get('/', async (req, res) => {
                 providerEmail: p?.email || "",
                 providerDescription: p?.description || "",
                 providerAvatarUrl: p?.avatarUrl || "",
-                providerClinicImages: p?.clinicImages || []
+                providerClinicImages: p?.clinicImages || [],
+                providerLocation: p?.location || null
             };
         };
 

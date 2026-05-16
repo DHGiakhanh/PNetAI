@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { authService, UserProfile } from "@/services/auth.service";
-import { VNAddressPicker } from "@/components/profile/VNAddressPicker";
+import { MapLocationPicker } from "@/components/profile/MapLocationPicker";
 import { toast } from "react-hot-toast";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
@@ -29,12 +29,16 @@ export const AtelierProfile = () => {
     businessLicenseUrl: "",
     clinicLicenseUrl: "",
     clinicLicenseNumber: "",
+    location: null as UserProfile['location'] | null,
   });
 
   const [cropper, setCropper] = useState<{ image: string; open: boolean }>({
     image: "",
     open: false,
   });
+
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [locationChanged, setLocationChanged] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -53,6 +57,7 @@ export const AtelierProfile = () => {
           businessLicenseUrl: data.legalDocuments?.businessLicenseUrl || "",
           clinicLicenseUrl: data.legalDocuments?.clinicLicenseUrl || "",
           clinicLicenseNumber: data.legalDocuments?.clinicLicenseNumber || "",
+          location: data.location || null,
         });
       } catch (err) {
         toast.error("Atelier credentials could not be retrieved.");
@@ -69,10 +74,11 @@ export const AtelierProfile = () => {
       const updatedUser = await authService.updateProfile({
         name: formData.name,
         phone: formData.phone,
+        operatingHours: formData.operatingHours,
         address: formData.address,
         avatarUrl: formData.avatarUrl,
         description: formData.description,
-        operatingHours: formData.operatingHours,
+        location: formData.location || undefined,
         legalDocuments: {
             clinicName: formData.clinicName,
             clinicLicenseNumber: formData.clinicLicenseNumber,
@@ -86,8 +92,28 @@ export const AtelierProfile = () => {
       });
       setUser(updatedUser); // Synchronize local user state
       toast.success("Facility profile successfully synchronized.");
+      setIsEditingLocation(false);
+      setLocationChanged(false);
     } catch {
       toast.error("Profile synchronization failed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    try {
+      setSaving(true);
+      const updatedUser = await authService.updateProfile({
+        address: formData.address,
+        location: formData.location || undefined,
+      });
+      setUser(updatedUser);
+      toast.success("Location updated successfully.");
+      setIsEditingLocation(false);
+      setLocationChanged(false);
+    } catch {
+      toast.error("Failed to update location.");
     } finally {
       setSaving(false);
     }
@@ -267,13 +293,85 @@ export const AtelierProfile = () => {
                        className="w-full bg-gray-50/50 border border-gray-100 px-8 py-6 rounded-[2.5rem] outline-none font-medium text-[15px] text-gray-700 focus:border-blue-300 transition-all resize-none shadow-inner" 
                      />
                   </div>
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 pl-1">Registered Address</label>
-                     <VNAddressPicker 
-                        initialValue={formData.address}
-                        onChange={val => setFormData(p => ({ ...p, address: val }))}
-                     />
-                  </div>
+                   <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 pl-1">Facility Location</label>
+                        {!isEditingLocation && (
+                           <button 
+                             onClick={() => setIsEditingLocation(true)}
+                             className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                           >
+                             Change Location
+                           </button>
+                        )}
+                      </div>
+                      
+                      {!isEditingLocation ? (
+                         <div className="bg-gray-50/50 border border-gray-100 px-8 py-6 rounded-[2.5rem] flex items-start gap-4 shadow-inner">
+                            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                               <Building2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-gray-900 leading-relaxed">
+                                  {formData.address || "No address set yet."}
+                               </p>
+                               {formData.location && (
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">
+                                     Coordinates: {formData.location.coordinates[1].toFixed(6)}, {formData.location.coordinates[0].toFixed(6)}
+                                  </p>
+                               )}
+                            </div>
+                         </div>
+                      ) : (
+                         <div className="space-y-6">
+                            <MapLocationPicker 
+                               initialValue={formData.address}
+                               initialCoords={formData.location?.coordinates}
+                               onChange={(data) => {
+                                  setFormData(p => ({ 
+                                     ...p, 
+                                     address: data.address,
+                                     location: {
+                                        type: "Point",
+                                        coordinates: [data.lng, data.lat],
+                                        addressName: data.address
+                                     }
+                                  }));
+                                  setLocationChanged(true);
+                               }}
+                            />
+                            
+                            <div className="flex gap-4">
+                               {locationChanged && (
+                                  <button 
+                                    onClick={handleSaveLocation}
+                                    disabled={saving}
+                                    className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95"
+                                  >
+                                     {saving ? "Saving..." : "Save New Location"}
+                                  </button>
+                               )}
+                               <button 
+                                 onClick={() => {
+                                    setIsEditingLocation(false);
+                                    setLocationChanged(false);
+                                    // Revert to original user location if cancelled
+                                    if (user) {
+                                       setFormData(p => ({
+                                          ...p,
+                                          address: user.address || "",
+                                          location: user.location || null
+                                       }));
+                                    }
+                                 }}
+                                 className="px-8 bg-gray-100 text-gray-600 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                               >
+                                  Cancel
+                               </button>
+                            </div>
+                         </div>
+                      )}
+                   </div>
                </div>
             </div>
          </div>
