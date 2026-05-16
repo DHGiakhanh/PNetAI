@@ -12,6 +12,26 @@ const medicalHistoryRecordSchema = new Schema(
     { _id: true }
 );
 
+const normalizeMedicalHistoryRecords = (records) => {
+    if (!Array.isArray(records)) return [];
+
+    return records
+        .map((record) => {
+            const note = typeof record?.note === "string" ? record.note.trim() : "";
+            if (!note) return null;
+
+            return {
+                _id: record._id,
+                note,
+                provider: record.provider,
+                providerName: record.providerName || "",
+                sourceBooking: record.sourceBooking,
+                createdAt: record.createdAt || new Date(),
+            };
+        })
+        .filter(Boolean);
+};
+
 const petSchema = new Schema({
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
@@ -31,6 +51,11 @@ const petSchema = new Schema({
     notes: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+});
+
+petSchema.pre("validate", function (next) {
+    this.medicalHistoryRecords = normalizeMedicalHistoryRecords(this.medicalHistoryRecords);
+    next();
 });
 
 petSchema.pre("save", function (next) {
