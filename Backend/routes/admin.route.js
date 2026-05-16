@@ -31,6 +31,8 @@ const canProviderOperate = (user) =>
     user.isVerified &&
     getProviderOnboardingStatus(user) === "approved";
 
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const ensureProviderFullyApproved = async (req, res, next) => {
     try {
         const provider = await db.User.findById(req.userId).select("role isVerified providerOnboardingStatus");
@@ -195,7 +197,7 @@ router.get('/users', verifyToken, isAdmin, async (req, res) => {
                         { $group: { _id: null, total: { $sum: "$amount" } } }
                     ]);
                     
-                    const petCount = await db.Pet.countDocuments({ owner: user._id });
+                    const petCount = await db.Pet.countDocuments({ user: user._id });
                     
                     userObj.totalSpent = spendingResult.length > 0 ? spendingResult[0].total : 0;
                     userObj.petCount = petCount;
@@ -212,6 +214,173 @@ router.get('/users', verifyToken, isAdmin, async (req, res) => {
                 page: Number(page),
                 pages: Math.ceil(total / limit)
             }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// --- Pet Moderation (Admin) ---
+
+router.get("/pets", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 20,
+            search = "",
+            species = "",
+            healthStatus = "",
+            moderationStatus = "",
+        } = req.query;
+
+        const numericLimit = Math.min(Number(limit) || 20, 100);
+        const numericPage = Math.max(Number(page) || 1, 1);
+        const skip = (numericPage - 1) * numericLimit;
+        const query = {};
+
+        if (species) query.species = species;
+        if (healthStatus) query.healthStatus = { $regex: escapeRegex(String(healthStatus)), $options: "i" };
+        if (moderationStatus) {
+            query.moderationStatus = moderationStatus === "active"
+                ? { $nin: ["flagged", "disabled"] }
+                : moderationStatus;
+        }
+
+        const trimmedSearch = String(search || "").trim();
+        if (trimmedSearch) {
+            const safeSearch = escapeRegex(trimmedSearch);
+            const matchingOwners = await db.User.find({
+                $or: [
+                    { name: { $regex: safeSearch, $options: "i" } },
+                    { email: { $regex: safeSearch, $options: "i" } },
+                    { phone: { $regex: safeSearch, $options: "i" } },
+                ],
+            }).select("_id");
+
+            query.$or = [
+                { name: { $regex: safeSearch, $options: "i" } },
+                { breed: { $regex: safeSearch, $options: "i" } },
+                { healthStatus: { $regex: safeSearch, $options: "i" } },
+                { user: { $in: matchingOwners.map((owner) => owner._id) } },
+            ];
+        }
+
+        const [pets, total, moderationSummary] = await Promise.all([
+            db.Pet.find(query)
+                .populate("user", "name email phone avatarUrl")
+                .populate("moderatedBy", "name email")
+                .sort({ updatedAt: -1, createdAt: -1 })
+                .skip(skip)
+                .limit(numericLimit),
+            db.Pet.countDocuments(query),
+            db.Pet.aggregate([
+                {
+                    $group: {
+                        _id: {
+                            $cond: [
+                                { $in: ["$moderationStatus", ["flagged", "disabled"]] },
+                                "$moderationStatus",
+                                "active",
+                            ],
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+        ]);
+
+        res.status(200).json({
+            pets,
+            pagination: {
+                total,
+                page: numericPage,
+                pages: Math.ceil(total / numericLimit) || 1,
+            },
+            moderationSummary: moderationSummary.reduce(
+                (acc, item) => ({
+                    ...acc,
+                    [item._id]: item.count,
+                }),
+                { active: 0, flagged: 0, disabled: 0 }
+            ),
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.patch("/pets/:id/moderation", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { moderationStatus, moderationReason = "", moderationNote = "" } = req.body;
+        const validStatuses = ["active", "flagged", "disabled"];
+
+        if (!validStatuses.includes(moderationStatus)) {
+            return res.status(400).json({ message: "Invalid moderation status." });
+        }
+
+        const pet = await db.Pet.findById(req.params.id);
+        if (!pet) return res.status(404).json({ message: "Pet not found." });
+
+        pet.moderationStatus = moderationStatus;
+        pet.moderationReason = moderationStatus === "active" ? "" : String(moderationReason || "").trim();
+        pet.moderationNote = moderationStatus === "active" ? "" : String(moderationNote || "").trim();
+        pet.moderatedBy = req.userId;
+        pet.moderatedAt = new Date();
+        pet.updatedAt = Date.now();
+
+        await pet.save();
+
+        const populatedPet = await db.Pet.findById(pet._id)
+            .populate("user", "name email phone avatarUrl")
+            .populate("moderatedBy", "name email");
+
+        res.status(200).json({
+            message: `Pet moderation status updated to ${moderationStatus}.`,
+            pet: populatedPet,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post("/pets/:id/request-correction", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const message = String(req.body?.message || "Please verify/update this pet information.").trim();
+        const pet = await db.Pet.findById(req.params.id).populate("user", "name email");
+
+        if (!pet) return res.status(404).json({ message: "Pet not found." });
+        if (!pet.user) return res.status(404).json({ message: "Pet owner not found." });
+
+        pet.correctionRequestedAt = new Date();
+        pet.correctionRequestMessage = message;
+        pet.updatedAt = Date.now();
+        await pet.save();
+
+        await db.Notification.create({
+            user: pet.user._id,
+            title: "Pet profile update requested",
+            message: `${pet.name}: ${message}`,
+            type: "pet_correction_request",
+            relatedId: pet._id,
+            isAdmin: false,
+        });
+
+        const { sendPetCorrectionRequestEmail } = require("../config/emailService");
+        if (pet.user.email) {
+            await sendPetCorrectionRequestEmail(pet.user.email, {
+                ownerName: pet.user.name,
+                petName: pet.name,
+                message,
+            });
+        }
+
+        const populatedPet = await db.Pet.findById(pet._id)
+            .populate("user", "name email phone avatarUrl")
+            .populate("moderatedBy", "name email");
+
+        res.status(200).json({
+            message: "Correction request sent to owner.",
+            pet: populatedPet,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -24,6 +24,7 @@ import SalesManagementPage from "@/pages/Admin/Users/SalesManagementPage";
 import ProvidersManagementPage from "@/pages/Admin/Users/ProvidersManagementPage";
 import OwnersManagementPage from "@/pages/Admin/Users/OwnersManagementPage";
 import FinanceTransactionsPage from "@/pages/Admin/Finance/FinanceTransactionsPage";
+import AdminPetsPage from "@/pages/Admin/AdminPetsPage";
 
 import { ProductCatalog as ProductManagement } from "@/pages/ServiceProvider/Atelier/ProductCatalog";
 import { ClinicServices as ServiceManagement } from "@/pages/ServiceProvider/Atelier/ClinicServices";
@@ -74,6 +75,7 @@ export default function AppRoutes() {
           <Route path="users/sales" element={<SalesManagementPage />} />
           <Route path="users/providers" element={<ProvidersManagementPage />} />
           <Route path="users/owners" element={<OwnersManagementPage />} />
+          <Route path="pets" element={<AdminPetsPage />} />
           <Route path="finance/transactions" element={<FinanceTransactionsPage />} />
           <Route path="finance/refunds" element={<RefundRequestsPage />} />
           <Route path="finance/payouts" element={<div className="p-20 text-center text-xs font-bold uppercase tracking-widest text-muted">Payout / Ledger Ledger Module Coming Soon</div>} />

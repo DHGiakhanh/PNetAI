@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   CalendarDays,
   Edit3,
   Heart,
@@ -77,6 +78,24 @@ const selectStyles: StylesConfig<SelectOption, false> = {
     color: "#2C2418",
   }),
   singleValue: (base) => ({ ...base, color: "#2C2418" }),
+};
+
+const getModerationCopy = (status?: Pet["moderationStatus"]) => {
+  if (status === "disabled") {
+    return {
+      label: "Booking Disabled",
+      className: "border-rose-200 bg-rose-50 text-rose-700",
+      message: "This pet profile is temporarily disabled for booking. Please review the requested corrections.",
+    };
+  }
+  if (status === "flagged") {
+    return {
+      label: "Needs Review",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+      message: "This pet profile has been flagged for review. Please verify that the information is accurate.",
+    };
+  }
+  return null;
 };
 
 export default function MyPetsPage() {
@@ -258,6 +277,12 @@ export default function MyPetsPage() {
                   className="group cursor-pointer overflow-hidden rounded-3xl border border-sand bg-white shadow-sm transition hover:-translate-y-1 hover:border-caramel/60 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-caramel/50"
                 >
                   <div className="relative bg-[#f3ead8] px-5 pb-8 pt-5">
+                    {getModerationCopy(pet.moderationStatus) ? (
+                      <span className={`absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${getModerationCopy(pet.moderationStatus)?.className}`}>
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {getModerationCopy(pet.moderationStatus)?.label}
+                      </span>
+                    ) : null}
                     <span className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-sand">
                       {pet.healthStatus || "Healthy"}
                     </span>
@@ -387,6 +412,16 @@ export default function MyPetsPage() {
                         <p className="mt-1 text-lg font-medium text-muted">{form.species} • {form.breed || "Mixed Breed"}</p>
                       </div>
                     </div>
+
+                    {getModerationCopy(editing?.moderationStatus) ? (
+                      <div className={`mt-6 flex items-start gap-3 rounded-2xl border p-4 text-sm font-semibold ${getModerationCopy(editing?.moderationStatus)?.className}`}>
+                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="font-black uppercase tracking-widest">{getModerationCopy(editing?.moderationStatus)?.label}</p>
+                          <p className="mt-1">{editing?.correctionRequestMessage || getModerationCopy(editing?.moderationStatus)?.message}</p>
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
                       {[

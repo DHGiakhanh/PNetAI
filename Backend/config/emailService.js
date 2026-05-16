@@ -325,6 +325,38 @@ const sendRefundRequestToAdmin = async (bookingData) => {
     }
 };
 
+const sendPetCorrectionRequestEmail = async (email, data) => {
+    const { ownerName = "there", petName = "your pet", message } = data;
+    const profileUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-pets`;
+    const requestMessage = message || "Please verify/update this pet information.";
+
+    const mailOptions = {
+        from: resolveFromAddress(),
+        to: email,
+        subject: `Please update ${petName}'s profile`,
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a;">
+                <h1>Pet profile review requested</h1>
+                <p>Hello ${ownerName},</p>
+                <p>Our admin team reviewed <strong>${petName}</strong>'s profile and requested an update:</p>
+                <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 16px; margin: 16px 0;">
+                    ${requestMessage}
+                </div>
+                <p>Please visit your pet library to verify or update the information.</p>
+                <p><a href="${profileUrl}">${profileUrl}</a></p>
+                <p>Best regards,<br>The PNetAI Team</p>
+            </div>
+        `
+    };
+
+    try {
+        await sendMailWithRetry(mailOptions);
+        console.log('✅ Pet correction request email sent to:', email);
+    } catch (error) {
+        console.error('❌ Error sending pet correction request email:', error.message);
+    }
+};
+
 module.exports = {
     sendVerificationEmail,
     sendPasswordResetEmail,
@@ -332,5 +364,6 @@ module.exports = {
     sendAppointmentReminderEmail,
     sendNewBookingNotificationToProvider,
     sendBookingCancellationEmailToUser,
-    sendRefundRequestToAdmin
+    sendRefundRequestToAdmin,
+    sendPetCorrectionRequestEmail
 };
