@@ -283,6 +283,8 @@ const serializeProviderOrder = (order, providerId) => {
     const allItems = Array.isArray(rawOrder.items) ? rawOrder.items : [];
     const orderProviderId = rawOrder.provider?._id || rawOrder.provider;
     const isProviderOwnedOrder = orderProviderId && String(orderProviderId) === providerIdStr;
+    const groupPayos = rawOrder.group && typeof rawOrder.group === "object" ? rawOrder.group.payos : null;
+    const payos = rawOrder.payos || groupPayos;
 
     const providerItems = allItems
         .filter((item) => {
@@ -329,10 +331,10 @@ const serializeProviderOrder = (order, providerId) => {
         user: rawOrder.user,
         hasForeignItems,
         canManageStatus: !hasForeignItems,
-        payos: rawOrder.payos
+        payos: payos
             ? {
-                orderCode: rawOrder.payos.orderCode,
-                status: rawOrder.payos.status,
+                orderCode: payos.orderCode || groupPayos?.orderCode,
+                status: payos.status || groupPayos?.status,
             }
             : null,
     };
@@ -665,6 +667,53 @@ const syncOrderGroupStatusWithPayOS = async (orderGroup, payOSStatus, payOSData 
             await order.save();
         }
     }
+};
+
+const refreshPayOSPaymentForOrder = async (order) => {
+    if (order.paymentMethod !== "PAYOS" || order.paymentStatus !== "pending") {
+        return order;
+    }
+
+    if (order.group) {
+        const orderGroup = await db.OrderGroup.findById(order.group);
+        if (!orderGroup?.payos?.orderCode) {
+            return order;
+        }
+
+        const payOSResponse = await getPaymentLinkInfo(orderGroup.payos.orderCode);
+        if (payOSResponse?.code === "00" && payOSResponse?.data) {
+            await syncOrderGroupStatusWithPayOS(orderGroup, payOSResponse.data.status, payOSResponse.data);
+            orderGroup.payos = {
+                ...toPlainObject(orderGroup.payos),
+                paymentLinkId: payOSResponse.data.id || orderGroup.payos?.paymentLinkId,
+                status: payOSResponse.data.status,
+            };
+            orderGroup.updatedAt = Date.now();
+            await orderGroup.save();
+        }
+
+        return db.Order.findById(order._id)
+            .populate("user", "name email phone")
+            .populate("provider", "name email")
+            .populate("group")
+            .populate("items.product", "name images category providerId");
+    }
+
+    if (order.payos?.orderCode) {
+        const payOSResponse = await getPaymentLinkInfo(order.payos.orderCode);
+        if (payOSResponse?.code === "00" && payOSResponse?.data) {
+            await syncOrderStatusWithPayOS(order, payOSResponse.data.status);
+            order.payos = {
+                ...toPlainObject(order.payos),
+                paymentLinkId: payOSResponse.data.id || order.payos?.paymentLinkId,
+                status: payOSResponse.data.status,
+            };
+            order.updatedAt = Date.now();
+            await order.save();
+        }
+    }
+
+    return order;
 };
 
 // Create order (Checkout COD)
@@ -1163,6 +1212,7 @@ router.get("/provider/orders", verifyToken, ensureProviderFullyApproved, async (
             db.Order.find(query)
                 .populate("user", "name email phone")
                 .populate("provider", "name email")
+                .populate("group")
                 .populate("items.product", "name images category providerId")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -1192,6 +1242,7 @@ router.get("/provider/orders/:id", verifyToken, ensureProviderFullyApproved, asy
         const order = await db.Order.findById(req.params.id)
             .populate("user", "name email phone")
             .populate("provider", "name email")
+            .populate("group")
             .populate("items.product", "name images category providerId");
 
         if (!order) {
@@ -1226,18 +1277,32 @@ router.patch("/provider/orders/:id/status", verifyToken, ensureProviderFullyAppr
             return res.status(400).json({ message: "Invalid order status." });
         }
 
-        const order = await db.Order.findById(req.params.id)
+        let order = await db.Order.findById(req.params.id)
             .populate("user", "name email phone")
             .populate("provider", "name email")
+            .populate("group")
             .populate("items.product", "name images category providerId");
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
 
-        const normalizedOrder = serializeProviderOrder(order, req.userId);
+        let normalizedOrder = serializeProviderOrder(order, req.userId);
         if (normalizedOrder.providerItems.length === 0) {
             return res.status(404).json({ message: "Order not found for this provider" });
+        }
+
+        if (order.paymentMethod === "PAYOS" && order.paymentStatus === "pending") {
+            try {
+                order = await refreshPayOSPaymentForOrder(order);
+                normalizedOrder = serializeProviderOrder(order, req.userId);
+            } catch (error) {
+                return res.status(502).json({
+                    message: "Could not verify PayOS payment status. Please try again.",
+                    code: "PAYOS_SYNC_FAILED",
+                    error: error.response?.data || error.message,
+                });
+            }
         }
 
         if (order.paymentMethod === "PAYOS" && order.paymentStatus === "pending") {
