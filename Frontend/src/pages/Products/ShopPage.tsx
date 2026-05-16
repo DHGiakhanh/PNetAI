@@ -119,7 +119,7 @@ export default function ShopPage() {
   const requestIdRef = useRef(0);
 
   const AVAILABLE_TAGS = [
-    "dog", "cat", "bird", "rabbit", "hamster", 
+    "dog", "cat", "bird", "rabbit", "hamster", "other",
     "food", "toys", "accessories", "medical", "grooming", "travel"
   ];
   const pageSize = 8;
