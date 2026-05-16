@@ -55,32 +55,6 @@ router.get('/profile', verifyToken, async (req, res) => {
     }
 });
 
-// Get notifications for the signed-in user
-router.get('/notifications', verifyToken, async (req, res) => {
-    try {
-        const notifications = await db.Notification.find({ user: req.userId, isAdmin: { $ne: true } })
-            .sort({ createdAt: -1 })
-            .limit(50);
-        res.status(200).json({ notifications });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Mark a user notification as read
-router.patch('/notifications/:id/read', verifyToken, async (req, res) => {
-    try {
-        const notification = await db.Notification.findOne({ _id: req.params.id, user: req.userId });
-        if (!notification) return res.status(404).json({ message: "Notification not found" });
-
-        notification.isRead = true;
-        await notification.save();
-        res.status(200).json({ message: "Notification marked as read", notification });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
 // Upload legal document file for provider onboarding
 router.post('/provider/upload-legal-file', verifyToken, (req, res, next) => {
     upload.single("file")(req, res, (err) => {

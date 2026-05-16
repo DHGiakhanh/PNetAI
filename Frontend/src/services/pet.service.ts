@@ -128,7 +128,7 @@ export const petService = {
 
   addMedicalHistoryNote: async (
     petId: string,
-    payload: { note?: string; notes?: string[]; bookingId?: string }
+    payload: { recordNote?: string; historySummary?: string; bookingId?: string }
   ): Promise<Pet> => {
     const response = await apiClient.post(`/pets/${petId}/medical-history-note`, payload);
     return response.data?.pet;

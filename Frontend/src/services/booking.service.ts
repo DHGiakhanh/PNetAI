@@ -7,6 +7,8 @@ export interface BookingData {
   bookingTime: string;
   totalAmount: number;
   paymentMethod?: string;
+  note?: string;
+  petNote?: string;
 }
 
 export const bookingService = {

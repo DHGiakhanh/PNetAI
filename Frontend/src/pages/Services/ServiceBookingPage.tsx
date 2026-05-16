@@ -15,6 +15,7 @@ import {
 import { serviceService, Service } from "../../services/service.service";
 import { petService, Pet } from "@/services/pet.service";
 import { formatVnd } from "@/utils/currency";
+import { authService, UserProfile } from "../../services/auth.service";
 import { bookingService } from "@/services/booking.service";
 import { toast } from "react-hot-toast";
 import {
@@ -77,8 +78,9 @@ export default function ServiceBookingPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(addDays(startOfToday(), 1));
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [petNote, setPetNote] = useState<string>("");
+  const [bookingNote, setBookingNote] = useState<string>("");
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
   const [pets, setPets] = useState<Pet[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [occupiedSlots, setOccupiedSlots] = useState<Record<string, Set<string>>>({});
@@ -94,6 +96,7 @@ export default function ServiceBookingPage() {
   });
 
   const [providerServices, setProviderServices] = useState<Service[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const bookablePets = useMemo(
     () => pets.filter((pet) => pet.moderationStatus !== "disabled"),
@@ -113,6 +116,7 @@ export default function ServiceBookingPage() {
   useEffect(() => {
     if (isLoggedIn && view === "wizard") {
       petService.getMyPets().then(setPets).catch(() => setPets([]));
+      authService.getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
     }
   }, [isLoggedIn, view]);
 
@@ -250,7 +254,10 @@ export default function ServiceBookingPage() {
         bookingDate: format(selectedDate, 'yyyy-MM-dd'),
         bookingTime: selectedTime,
         totalAmount: service.basePrice,
-        note: description
+        note: bookingNote,
+        petNote: petNote,
+        returnUrl: `${window.location.origin}/services/${service._id}/booking/success`,
+        cancelUrl: `${window.location.origin}/services/${service._id}/booking/cancel`,
       };
       const result = await bookingService.confirmBookingPayOS(payload);
       if (result?.payment?.checkoutUrl) {
@@ -516,11 +523,13 @@ export default function ServiceBookingPage() {
                              const hours = provider?.operatingHours || { start: "08:00", end: "18:00" };
                              const allSlots = generateTimeSlots(hours.start, hours.end, 30);
                              const slotsWithState = allSlots.map((slot) => {
-                               const blockedByTime = isSlotInPast(selectedDate, slot);
-                               const blockedByBooking = isSlotOccupied(selectedDate, slot);
+                               const inPast = isSlotInPast(selectedDate, slot);
+                               const occupied = isSlotOccupied(selectedDate, slot);
                                return {
                                  slot,
-                                 unavailable: blockedByTime || blockedByBooking,
+                                 inPast,
+                                 occupied,
+                                 unavailable: inPast || occupied,
                                };
                              });
 
@@ -541,14 +550,16 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Morning sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {morning.map(({ slot, unavailable }) => (
+                                         {morning.map(({ slot, unavailable, inPast }) => (
                                             <button
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
                                               className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                  ? inPast 
+                                                    ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                    : "bg-amber-50 border-amber-200 text-amber-600 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
@@ -557,7 +568,7 @@ export default function ServiceBookingPage() {
                                                {slot}
                                                {unavailable && (
                                                   <div className="absolute top-1.5 right-1.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${inPast ? "bg-rose-500" : "bg-amber-500"}`} />
                                                   </div>
                                                 )}
                                             </button>
@@ -571,14 +582,16 @@ export default function ServiceBookingPage() {
                                          <span className="w-8 h-px bg-sand/30" /> Afternoon sessions
                                       </p>
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                         {afternoon.map(({ slot, unavailable }) => (
+                                         {afternoon.map(({ slot, unavailable, inPast }) => (
                                             <button
                                               key={slot}
                                               onClick={() => !unavailable && setSelectedTime(slot)}
                                               disabled={unavailable}
                                               className={`relative py-4 rounded-2xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${
                                                 unavailable
-                                                  ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                  ? inPast 
+                                                    ? "bg-rose-50 border-rose-100 text-rose-300 cursor-not-allowed"
+                                                    : "bg-amber-50 border-amber-200 text-amber-600 cursor-not-allowed"
                                                   : selectedTime === slot
                                                     ? "bg-ink border-ink text-white shadow-xl scale-105"
                                                     : "bg-white border-sand/30 text-muted/60 hover:border-caramel/20"
@@ -587,7 +600,7 @@ export default function ServiceBookingPage() {
                                                {slot}
                                                {unavailable && (
                                                   <div className="absolute top-1.5 right-1.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${inPast ? "bg-rose-500" : "bg-amber-500"}`} />
                                                   </div>
                                                 )}
                                             </button>

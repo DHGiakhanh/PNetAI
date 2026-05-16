@@ -12,8 +12,8 @@ const { removeMissingProductsFromCart } = require("../utils/cart");
 const router = express.Router();
 
 const toUpperText = (value) => (typeof value === "string" ? value.trim().toUpperCase() : "");
-const STANDARD_SHIPPING_FEE_VND = 12000;
-const EXPRESS_SHIPPING_FEE_VND = 25000;
+const STANDARD_SHIPPING_FEE_VND = 30000;
+const EXPRESS_SHIPPING_FEE_VND = 100000;
 const FREE_SHIPPING_THRESHOLD_VND = 500000;
 const VALID_SHIPPING_METHODS = ["standard", "express"];
 

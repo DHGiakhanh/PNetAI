@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import {
   Search,
   Loader2,
@@ -8,8 +9,13 @@ import {
   ChevronRight,
   ShieldCheck,
   Stethoscope,
+  Navigation,
+  LocateFixed,
+  Compass,
+  Map as MapIcon,
 } from "lucide-react";
 import { serviceService } from "@/services/service.service";
+import { ServicesMapOverlay } from "@/components/services/ServicesMapOverlay";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<any[]>([]);
@@ -17,6 +23,10 @@ export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<"loading" | "granted" | "denied" | "prompt">("prompt");
+  const [showMap, setShowMap] = useState(false);
 
   const fetchServices = async () => {
     try {
@@ -35,9 +45,47 @@ export default function ServicesPage() {
     }
   };
 
+  const requestLocation = () => {
+    setLocationStatus("loading");
+    if (!navigator.geolocation) {
+      setLocationStatus("denied");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationStatus("granted");
+      },
+      (error) => {
+        console.error("Location error:", error);
+        setLocationStatus("denied");
+      }
+    );
+  };
+
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
   useEffect(() => {
     fetchServices();
   }, [page, search]);
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
 
   const facilities = useMemo(() => services, [services]);
 
@@ -68,23 +116,64 @@ export default function ServicesPage() {
             Authorized Medical &amp; Lifestyle Ateliers
           </p>
 
-          {/* Search */}
-          <div className="mt-12 max-w-2xl mx-auto relative group">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within:text-caramel transition-colors">
-              <Search className="w-5 h-5" />
+          {/* Search & Location Control */}
+          <div className="mt-12 max-w-3xl mx-auto flex flex-col md:flex-row gap-4 items-center">
+            <div className="relative flex-1 group w-full">
+              <div className="absolute left-6 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within:text-caramel transition-colors">
+                <Search className="w-5 h-5" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search ateliers, clinics, or wellness centers..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full bg-white border border-sand pl-14 pr-6 py-5 rounded-[2rem] text-base outline-none shadow-xl shadow-ink/5 focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all font-semibold text-ink placeholder:text-muted/25"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search ateliers, clinics, or wellness centers..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full bg-white border border-sand pl-14 pr-6 py-5 rounded-[2rem] text-base outline-none shadow-xl shadow-ink/5 focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all font-semibold text-ink placeholder:text-muted/25"
-            />
+            
+            <button 
+              onClick={requestLocation}
+              disabled={locationStatus === "loading"}
+              className={`h-[68px] px-8 rounded-[2rem] flex items-center gap-3 transition-all font-black text-[10px] uppercase tracking-widest shadow-xl border ${
+                locationStatus === "granted" 
+                  ? "bg-emerald-50 border-emerald-100 text-emerald-600 shadow-emerald-500/5 hover:bg-emerald-100" 
+                  : locationStatus === "denied"
+                  ? "bg-rose-50 border-rose-100 text-rose-600 shadow-rose-500/5 hover:bg-rose-100"
+                  : "bg-white border-sand text-caramel shadow-ink/5 hover:bg-warm"
+              }`}
+            >
+              {locationStatus === "loading" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Compass className={`w-4 h-4 ${locationStatus === "granted" ? "animate-pulse" : ""}`} />
+              )}
+              <span className="hidden sm:inline">
+                {locationStatus === "granted" ? "Location Active" : locationStatus === "denied" ? "Location Denied" : "Identify Location"}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => setShowMap(true)}
+              className="h-[68px] px-8 bg-ink text-white rounded-[2rem] flex items-center gap-3 transition-all font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-caramel active:scale-95"
+            >
+              <MapIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">View Map</span>
+            </button>
           </div>
         </div>
+
+        <AnimatePresence>
+          {showMap && (
+            <ServicesMapOverlay 
+              facilities={facilities}
+              userLocation={userLocation}
+              onClose={() => setShowMap(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Grid */}
         {loading ? (
@@ -176,15 +265,53 @@ export default function ServicesPage() {
                         </p>
                       )}
 
-                      {/* Address */}
-                      {facility.providerAddress && (
-                        <div className="flex items-start gap-2 mb-3">
-                          <MapPin className="w-3.5 h-3.5 text-caramel shrink-0 mt-0.5" />
-                          <p className="text-[11px] font-semibold text-muted line-clamp-1">
-                            {facility.providerAddress}
-                          </p>
-                        </div>
-                      )}
+                      {/* Address & Distance */}
+                      <div className="space-y-2 mb-3">
+                         {facility.providerAddress && (
+                           <div className="flex items-start gap-2">
+                             <MapPin className="w-3.5 h-3.5 text-caramel shrink-0 mt-0.5" />
+                             <p className="text-[11px] font-semibold text-muted line-clamp-1">
+                               {facility.providerAddress}
+                             </p>
+                           </div>
+                         )}
+                         
+                         {locationStatus === "granted" && userLocation && facility.providerLocation?.coordinates ? (
+                            <div className="flex items-center gap-2">
+                               <Navigation className="w-3.5 h-3.5 text-emerald-500" />
+                               <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                                  {calculateDistance(
+                                     userLocation.lat, 
+                                     userLocation.lng, 
+                                     facility.providerLocation.coordinates[1], 
+                                     facility.providerLocation.coordinates[0]
+                                  ).toFixed(1)} km
+                               </p>
+                            </div>
+                         ) : locationStatus === "denied" || locationStatus === "prompt" ? (
+                            <div className="flex flex-col gap-2 p-3 bg-warm/50 rounded-xl border border-sand/20">
+                               <p className="text-[9px] font-bold text-muted/60 uppercase leading-tight">
+                                  Bạn cần cung cấp vị trí để biết khoảng cách
+                               </p>
+                               <button 
+                                 onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    requestLocation();
+                                 }}
+                                 className="flex items-center gap-2 text-[9px] font-black text-caramel uppercase hover:underline"
+                               >
+                                  <LocateFixed className="w-3 h-3" />
+                                  Cấp quyền truy cập
+                               </button>
+                            </div>
+                         ) : locationStatus === "loading" ? (
+                            <div className="flex items-center gap-2 animate-pulse">
+                               <div className="w-3 h-3 bg-sand rounded-full" />
+                               <div className="h-2 w-20 bg-sand rounded-full" />
+                            </div>
+                         ) : null}
+                      </div>
 
                       {/* Tags */}
                       {tags.length > 0 && (
