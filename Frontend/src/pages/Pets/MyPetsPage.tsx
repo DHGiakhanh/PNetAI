@@ -3,7 +3,6 @@ import {
   Activity,
   CalendarDays,
   Edit3,
-  Eye,
   Heart,
   ImageUp,
   PawPrint,
@@ -52,6 +51,9 @@ const genderOptions: SelectOption[] = [
   { value: "Male", label: "Male" },
   { value: "Female", label: "Female" },
 ];
+
+const closeButtonClass =
+  "grid h-9 w-9 place-items-center rounded-full border border-sand bg-[#FAF7F2] text-ink shadow-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-caramel/40";
 
 const selectStyles: StylesConfig<SelectOption, false> = {
   control: (base, state) => ({
@@ -159,6 +161,9 @@ export default function MyPetsPage() {
 
   const closeModal = () => {
     setModalOpen(false);
+  };
+
+  const resetModalState = () => {
     setEditing(null);
     setViewOnly(false);
     setForm(initialForm);
@@ -186,11 +191,12 @@ export default function MyPetsPage() {
     e.preventDefault();
     try {
       setSaving(true);
+      const { medicalHistoryRecords, ...editableProfile } = form;
       if (editing?._id) {
-        await petService.updatePet(editing._id, form);
+        await petService.updatePet(editing._id, editableProfile);
         toast.success("Pet profile updated.");
       } else {
-        await petService.createPet(form);
+        await petService.createPet(editableProfile);
         toast.success("New pet added successfully.");
       }
       closeModal();
@@ -238,7 +244,19 @@ export default function MyPetsPage() {
           {loading
             ? [...Array(3)].map((_, idx) => <div key={idx} className="h-72 animate-pulse rounded-3xl bg-sand/70" />)
             : sortedPets.map((pet) => (
-                <article key={pet._id} className="overflow-hidden rounded-3xl border border-sand bg-white shadow-sm">
+                <article
+                  key={pet._id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openView(pet)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openView(pet);
+                    }
+                  }}
+                  className="group cursor-pointer overflow-hidden rounded-3xl border border-sand bg-white shadow-sm transition hover:-translate-y-1 hover:border-caramel/60 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-caramel/50"
+                >
                   <div className="relative bg-[#f3ead8] px-5 pb-8 pt-5">
                     <span className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-sand">
                       {pet.healthStatus || "Healthy"}
@@ -281,27 +299,28 @@ export default function MyPetsPage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
-                        onClick={() => openView(pet)}
-                        className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-2 py-2 text-xs font-semibold text-ink hover:bg-warm"
-                      >
-                        <Eye className="h-4 w-4" /> View
-                      </button>
-                      <button
-                        onClick={() => openEdit(pet)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit(pet);
+                        }}
                         className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-2 py-2 text-xs font-semibold text-ink hover:bg-warm"
                       >
                         <Edit3 className="h-4 w-4" /> Edit
                       </button>
                       <button
-                        onClick={() => setDeletingPet(pet)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingPet(pet);
+                        }}
                         className="inline-flex items-center justify-center gap-1 rounded-full border border-rust/30 px-2 py-2 text-xs font-semibold text-rust hover:bg-[#fff1eb]"
                       >
                         <Trash2 className="h-4 w-4" /> Del
                       </button>
                       <Link
                         to="/services"
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center justify-center rounded-full bg-brown px-2 py-2 text-xs font-semibold text-white hover:bg-brown-dark"
                       >
                         <Stethoscope className="h-4 w-4" />
@@ -325,25 +344,29 @@ export default function MyPetsPage() {
             </button>
           ) : null}
         </div>
-      </div>      <AnimatePresence>
+      </div>      <AnimatePresence onExitComplete={resetModalState}>
         {modalOpen && (
           <div className="fixed inset-0 z-[80] flex items-start justify-center bg-black/45 backdrop-blur-[2px] p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative max-h-[96vh] w-full max-w-4xl overflow-y-auto rounded-[40px] border border-sand bg-[#FAF7F2] shadow-2xl"
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="relative w-full max-w-4xl overflow-hidden rounded-[40px] border border-sand bg-[#FAF7F2] shadow-2xl"
             >
+              <div className="max-h-[96vh] overflow-y-auto [scrollbar-gutter:stable]">
               {viewOnly ? (
                 <div className="relative">
                   {/* View Only Layout */}
-                  <div className="relative h-48 overflow-hidden rounded-t-[40px] bg-ink">
+                  <div className="relative h-48 overflow-hidden bg-ink">
                     <div className="absolute inset-0 bg-gradient-to-r from-caramel/20 to-transparent" />
                     <button
+                      type="button"
                       onClick={closeModal}
-                      className="absolute right-6 top-6 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+                      className={`absolute right-8 top-5 z-40 ${closeButtonClass}`}
+                      aria-label="Close modal"
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
 
@@ -474,7 +497,7 @@ export default function MyPetsPage() {
                       <button
                         type="button"
                         onClick={closeModal}
-                        className="grid h-9 w-9 place-items-center rounded-full border border-sand bg-white text-muted shadow-sm hover:bg-warm hover:text-ink"
+                        className={closeButtonClass}
                         aria-label="Close modal"
                       >
                         <X className="h-4 w-4" />
@@ -812,7 +835,7 @@ export default function MyPetsPage() {
                     </section>
                   </div>
 
-                  <div className="mt-6 mb-6 flex justify-end gap-2 border-t border-sand pt-5">
+                  <div className="mx-6 mb-6 mt-6 flex justify-end gap-2 border-t border-sand pt-5 md:mx-8">
                     <button
                       type="button"
                       onClick={closeModal}
@@ -836,6 +859,7 @@ export default function MyPetsPage() {
                   </div>
                 </form>
               )}
+              </div>
             </motion.div>
           </div>
         )}
