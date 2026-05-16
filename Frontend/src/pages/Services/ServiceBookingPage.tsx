@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { 
   MapPin, 
@@ -9,7 +9,8 @@ import {
   Plus,
   Building2,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from "lucide-react";
 import { serviceService, Service } from "../../services/service.service";
 import { petService, Pet } from "@/services/pet.service";
@@ -97,6 +98,14 @@ export default function ServiceBookingPage() {
   const [providerServices, setProviderServices] = useState<Service[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
+  const bookablePets = useMemo(
+    () => pets.filter((pet) => pet.moderationStatus !== "disabled"),
+    [pets]
+  );
+  const selectedPet = useMemo(
+    () => pets.find((pet) => pet._id === selectedPetId) || null,
+    [pets, selectedPetId]
+  );
 
   useEffect(() => {
     if (serviceId) {
@@ -141,10 +150,11 @@ export default function ServiceBookingPage() {
   }, [service?._id, currentMonth, view]);
 
   useEffect(() => {
-    if (!selectedPetId && pets.length > 0) {
-      setSelectedPetId(pets[0]._id);
+    if (selectedPetId && pets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
+      return;
     }
-  }, [pets, selectedPetId]);
+    setSelectedPetId(bookablePets[0]?._id || null);
+  }, [bookablePets, pets, selectedPetId]);
 
   const fetchService = async (id: string) => {
     try {
@@ -232,6 +242,10 @@ export default function ServiceBookingPage() {
 
   const handleConfirm = async () => {
     if (!service || !selectedPetId || !selectedTime) return;
+    if (selectedPet?.moderationStatus === "disabled") {
+      toast.error("This pet profile is temporarily disabled for booking.");
+      return;
+    }
     setIsProcessing(true);
     try {
       const payload = {
@@ -614,11 +628,19 @@ export default function ServiceBookingPage() {
                        <div className="grid md:grid-cols-2 gap-4">
                           {pets.map(pet => {
                              const sel = selectedPetId === pet._id;
+                             const disabledByModeration = pet.moderationStatus === "disabled";
                              return (
                                <button 
                                  key={pet._id} 
-                                 onClick={() => setSelectedPetId(pet._id)} 
-                                 className={`flex items-start gap-3 p-4 rounded-2xl border-2 text-left transition-all ${sel ? "border-ink bg-warm/50 shadow-lg -translate-y-0.5" : "border-sand/30 bg-white hover:border-caramel/20"}`}
+                                 onClick={() => !disabledByModeration && setSelectedPetId(pet._id)}
+                                 disabled={disabledByModeration}
+                                 className={`flex items-start gap-3 p-4 rounded-2xl border-2 text-left transition-all ${
+                                   disabledByModeration
+                                     ? "cursor-not-allowed border-rose-100 bg-rose-50 opacity-75"
+                                     : sel
+                                       ? "border-ink bg-warm/50 shadow-lg -translate-y-0.5"
+                                       : "border-sand/30 bg-white hover:border-caramel/20"
+                                 }`}
                                >
                                   <div className="w-12 h-12 rounded-xl bg-sand/10 flex items-center justify-center border border-sand/20 overflow-hidden shrink-0">
                                      {pet.avatarUrl ? <img src={pet.avatarUrl} className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 opacity-20" />}
@@ -628,7 +650,14 @@ export default function ServiceBookingPage() {
                                      <p className="text-[8px] font-black uppercase tracking-[0.1em] text-muted/30">Species: {pet.species} • Breed: {pet.breed || "None"}</p>
                                      <p className="text-[7px] font-bold uppercase tracking-widest text-muted/20 mt-0.5">Gender: {pet.gender || "Unknown"} • Age: {pet.age || 0}y</p>
                                   </div>
-                                  {sel && <div className="h-2 w-2 rounded-full bg-caramel mt-2 shadow-md" />}
+                                  {disabledByModeration ? (
+                                    <div className="mt-1 flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-rose-600 ring-1 ring-rose-100">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Disabled
+                                    </div>
+                                  ) : sel ? (
+                                    <div className="h-2 w-2 rounded-full bg-caramel mt-2 shadow-md" />
+                                  ) : null}
                                </button>
                              )
                           })}
@@ -644,57 +673,20 @@ export default function ServiceBookingPage() {
                           </button>
                        </div>
 
-                       <div className="space-y-6">
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Companion Symptoms & History</label>
-                             <textarea 
-                               className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
-                               placeholder="Describe your pet's current health status or symptoms..."
-                               value={petNote}
-                               onChange={(e) => setPetNote(e.target.value)}
-                             />
-                          </div>
-                          
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Service Request Notes</label>
-                             <textarea 
-                               className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
-                               placeholder="Special requests for the facility (parking, arrival instructions, etc.)..."
-                               value={bookingNote}
-                               onChange={(e) => setBookingNote(e.target.value)}
-                             />
-                          </div>
-                       </div>
+                       {pets.length > 0 && bookablePets.length === 0 && (
+                         <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
+                           All existing pet profiles are temporarily disabled for booking. Please update the requested information or add a new valid pet profile.
+                         </div>
+                       )}
 
-                       <div className="pt-8 border-t border-sand/30">
-                          <h3 className="text-xl font-serif font-bold italic text-ink mb-6">Personal Information</h3>
-                          <div className="grid md:grid-cols-2 gap-4">
-                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Full Name</p>
-                                <p className="text-sm font-bold text-ink">{currentUser?.name || "Missing Name"}</p>
-                             </div>
-                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Email Registry</p>
-                                <p className="text-sm font-bold text-ink">{currentUser?.email || "Missing Email"}</p>
-                             </div>
-                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Phone Number</p>
-                                <p className={`text-sm font-bold ${currentUser?.phone ? "text-ink" : "text-rose-500"}`}>
-                                   {currentUser?.phone || "Phone required"}
-                                </p>
-                             </div>
-                             <div className="p-5 bg-warm/20 rounded-3xl border border-sand/20">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-1">Permanent Address</p>
-                                <p className={`text-sm font-bold ${currentUser?.address ? "text-ink" : "text-rose-500"}`}>
-                                   {currentUser?.address || "Address required"}
-                                </p>
-                             </div>
-                          </div>
-                          {(!currentUser?.phone || !currentUser?.address || !currentUser?.name) && (
-                             <p className="mt-4 text-[10px] font-bold text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100 italic">
-                                * Attention: You must complete your profile (Phone & Address) in settings before placing an order.
-                             </p>
-                          )}
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted/20 pl-4">Consultation Notes (Optional)</label>
+                          <textarea 
+                            className="w-full bg-warm/10 border border-sand/40 rounded-2xl p-4 text-[13px] min-h-[80px] outline-none focus:bg-white focus:border-caramel/30 focus:ring-8 focus:ring-warm transition-all resize-none"
+                            placeholder="Detail relevant medical history..."
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                          />
                        </div>
                     </div>
                  )}
@@ -710,21 +702,10 @@ export default function ServiceBookingPage() {
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                    </button>
                  ) : (
-                    <button 
-                      onClick={handleConfirm} 
-                      disabled={
-                        !isLoggedIn || 
-                        !selectedPetId || 
-                        isProcessing || 
-                        !currentUser?.phone || 
-                        !currentUser?.address || 
-                        !currentUser?.name
-                      } 
-                      className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl"
-                    >
-                       {isProcessing ? "Processing..." : "Thanh toán PayOS"}
-                       {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-                    </button>
+                   <button onClick={handleConfirm} disabled={!isLoggedIn || !selectedPetId || selectedPet?.moderationStatus === "disabled" || isProcessing} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-caramel text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-ink transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
+                      {isProcessing ? "Processing..." : "Thanh toán PayOS"}
+                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+                   </button>
                  )}
               </div>
            </div>

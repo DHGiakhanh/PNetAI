@@ -95,6 +95,24 @@ const validateBookingSlot = async ({ serviceId, bookingDate, bookingTime }) => {
     return { ok: true, normalizedBookingDate: dayStart };
 };
 
+const validateBookablePet = async ({ petId, userId }) => {
+    const pet = await db.Pet.findOne({ _id: petId, user: userId });
+    if (!pet) {
+        return { ok: false, code: 404, message: "Pet profile not found.", pet: null };
+    }
+
+    if (pet.moderationStatus === "disabled") {
+        return {
+            ok: false,
+            code: 403,
+            message: "This pet profile is temporarily disabled. Please update the information or contact support before booking.",
+            pet,
+        };
+    }
+
+    return { ok: true, pet };
+};
+
 // Create a new service booking (Manual/Test)
 router.post("/confirm", verifyToken, async (req, res) => {
     try {
@@ -107,8 +125,11 @@ router.post("/confirm", verifyToken, async (req, res) => {
         const service = await db.Service.findById(serviceId).populate('providerId', 'name email');
         if (!service) return res.status(404).json({ message: "Service not found." });
 
-        const pet = await db.Pet.findById(petId);
-        if (!pet) return res.status(404).json({ message: "Pet profile not found." });
+        const petValidation = await validateBookablePet({ petId, userId: req.userId });
+        if (!petValidation.ok) {
+            return res.status(petValidation.code).json({ message: petValidation.message });
+        }
+        const pet = petValidation.pet;
 
         const user = await db.User.findById(req.userId);
         if (!user) return res.status(404).json({ message: "User not found." });
@@ -170,8 +191,11 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
         const service = await db.Service.findById(serviceId).populate('providerId', 'name email');
         if (!service) return res.status(404).json({ message: "Service not found." });
 
-        const pet = await db.Pet.findById(petId);
-        if (!pet) return res.status(404).json({ message: "Pet profile not found." });
+        const petValidation = await validateBookablePet({ petId, userId: req.userId });
+        if (!petValidation.ok) {
+            return res.status(petValidation.code).json({ message: petValidation.message });
+        }
+        const pet = petValidation.pet;
 
         const user = await db.User.findById(req.userId);
         if (!user) return res.status(404).json({ message: "User not found." });

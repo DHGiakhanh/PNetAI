@@ -49,6 +49,18 @@ const petSchema = new Schema({
     lastVisitDate: { type: Date },
     avatarUrl: { type: String, default: "" },
     notes: { type: String, default: "" },
+    moderationStatus: {
+        type: String,
+        enum: ["active", "flagged", "disabled"],
+        default: "active",
+        index: true,
+    },
+    moderationReason: { type: String, default: "" },
+    moderationNote: { type: String, default: "" },
+    moderatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    moderatedAt: { type: Date },
+    correctionRequestedAt: { type: Date },
+    correctionRequestMessage: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });

@@ -14,12 +14,14 @@ import {
   LogIn,
   Trash2,
   LayoutDashboard,
+  Bell,
 } from "lucide-react";
 import { cartService, CartItem, CartProduct } from "../services/cart.service";
 import { productService } from "../services/product.service";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { formatVnd, FREE_SHIPPING_THRESHOLD_VND } from "@/utils/currency";
+import apiClient from "@/utils/api.service";
 
 type LocalUser = {
   name?: string;
@@ -36,6 +38,15 @@ type CartPreviewItem = {
   price: number;
   priceText: string;
   image?: string;
+};
+
+type UserNotification = {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 };
 
 function isActive(pathname: string, target: string) {
@@ -57,11 +68,14 @@ export function AppNavbar() {
   );
   const accountRef = useRef<HTMLDivElement | null>(null);
   const cartRef = useRef<HTMLDivElement | null>(null);
+  const notificationRef = useRef<HTMLDivElement | null>(null);
   const token = localStorage.getItem("token");
   const isLoggedIn = Boolean(token);
   const [userData, setUserData] = useState<LocalUser | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
 
   const syncUser = () => {
     try {
@@ -131,6 +145,29 @@ export function AppNavbar() {
       setCartCount(0);
       setCartTotal(0);
       setCartPreviewItems([]);
+    }
+  };
+
+  const syncNotifications = async () => {
+    if (!isLoggedIn || userData?.role !== "user") {
+      setNotifications([]);
+      return;
+    }
+
+    try {
+      const response = await apiClient.get("/user/notifications");
+      setNotifications(response.data?.notifications || []);
+    } catch {
+      setNotifications([]);
+    }
+  };
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      await apiClient.patch(`/user/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((item) => (item._id === id ? { ...item, isRead: true } : item)));
+    } catch {
+      toast.error("Could not update notification.");
     }
   };
 
@@ -254,6 +291,9 @@ export function AppNavbar() {
           setCartOpen(false);
         }
       }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onClickOutside);
@@ -271,6 +311,14 @@ export function AppNavbar() {
     syncUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    syncNotifications();
+    if (!isLoggedIn || userData?.role !== "user") return;
+    const timer = window.setInterval(syncNotifications, 60_000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, userData?.role]);
 
   useEffect(() => {
     const onCartUpdated = () => {
@@ -370,6 +418,48 @@ export function AppNavbar() {
             ) : null}
             {isLoggedIn ? (
               <>
+                {userData?.role === "user" ? (
+                  <div ref={notificationRef} className="relative hidden md:block">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationOpen((prev) => !prev)}
+                      className="relative grid h-10 w-10 place-items-center rounded-full border border-sand bg-white text-gray-600 hover:text-brown"
+                      aria-label="Open notifications"
+                    >
+                      <Bell className="h-5 w-5" />
+                      {notifications.some((item) => !item.isRead) ? (
+                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rust ring-2 ring-white" />
+                      ) : null}
+                    </button>
+                    {notificationOpen ? (
+                      <div className="absolute right-0 top-12 z-[70] w-80 rounded-2xl border border-sand bg-white p-3 shadow-xl">
+                        <p className="mb-2 px-2 text-[10px] font-black uppercase tracking-widest text-muted">Notifications</p>
+                        {notifications.length === 0 ? (
+                          <p className="rounded-xl bg-warm/40 p-4 text-sm font-semibold text-muted">No notifications yet.</p>
+                        ) : (
+                          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                            {notifications.map((notification) => (
+                              <button
+                                key={notification._id}
+                                type="button"
+                                onClick={() => markNotificationRead(notification._id)}
+                                className={`w-full rounded-xl border p-3 text-left transition hover:bg-warm ${
+                                  notification.isRead ? "border-sand bg-white" : "border-caramel/30 bg-warm/50"
+                                }`}
+                              >
+                                <p className="text-sm font-black text-ink">{notification.title}</p>
+                                <p className="mt-1 text-xs font-medium leading-relaxed text-muted">{notification.message}</p>
+                                <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted/70">
+                                  {new Date(notification.createdAt).toLocaleString()}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setCartOpen((prev) => !prev)}

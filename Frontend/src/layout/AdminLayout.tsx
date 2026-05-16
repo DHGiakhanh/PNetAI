@@ -15,7 +15,7 @@ import {
   UserPlus,
   Users2,
   AlertCircle,
-  Heart
+  PawPrint
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/admin/NotificationCenter';
 
@@ -35,7 +35,7 @@ export const AdminLayout = () => {
     { section: "Users", title: "Sales Team", icon: UserPlus, path: "/admin/users/sales" },
     { section: "Users", title: "Providers", icon: Users2, path: "/admin/users/providers" },
     { section: "Users", title: "Pet Owners", icon: Users, path: "/admin/users/owners" },
-    { section: "Users", title: "Pet Directory", icon: Heart, path: "/admin/pets" },
+    { section: "Users", title: "Pets", icon: PawPrint, path: "/admin/pets" },
 
     { section: "Finance", title: "Transactions", icon: CreditCard, path: "/admin/finance/transactions" },
     { section: "Finance", title: "Refund Requests", icon: AlertCircle, path: "/admin/finance/refunds" },

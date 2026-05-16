@@ -11,6 +11,13 @@ export type MedicalHistoryRecord = {
 
 export type Pet = {
   _id: string;
+  user?: {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    avatarUrl?: string;
+  };
   name: string;
   species: "Dog" | "Cat" | "Bird" | "Rabbit" | "Hamster" | "Other";
   breed?: string;
@@ -26,6 +33,17 @@ export type Pet = {
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
+  moderationStatus?: "active" | "flagged" | "disabled";
+  moderationReason?: string;
+  moderationNote?: string;
+  moderatedBy?: {
+    _id: string;
+    name: string;
+    email?: string;
+  };
+  moderatedAt?: string;
+  correctionRequestedAt?: string;
+  correctionRequestMessage?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -46,6 +64,29 @@ export type PetPayload = {
   lastVisitDate?: string;
   avatarUrl?: string;
   notes?: string;
+};
+
+export type AdminPetFilters = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  species?: string;
+  healthStatus?: string;
+  moderationStatus?: string;
+};
+
+export type AdminPetsResponse = {
+  pets: Pet[];
+  pagination: {
+    total: number;
+    page: number;
+    pages: number;
+  };
+  moderationSummary: {
+    active: number;
+    flagged: number;
+    disabled: number;
+  };
 };
 
 export const petService = {
@@ -90,6 +131,28 @@ export const petService = {
     payload: { recordNote?: string; historySummary?: string; bookingId?: string }
   ): Promise<Pet> => {
     const response = await apiClient.post(`/pets/${petId}/medical-history-note`, payload);
+    return response.data?.pet;
+  },
+
+  getAdminPets: async (params: AdminPetFilters): Promise<AdminPetsResponse> => {
+    const response = await apiClient.get("/admin/pets", { params });
+    return {
+      pets: response.data?.pets ?? [],
+      pagination: response.data?.pagination ?? { total: 0, page: 1, pages: 1 },
+      moderationSummary: response.data?.moderationSummary ?? { active: 0, flagged: 0, disabled: 0 },
+    };
+  },
+
+  updatePetModeration: async (
+    id: string,
+    payload: { moderationStatus: "active" | "flagged" | "disabled"; moderationReason?: string; moderationNote?: string }
+  ): Promise<Pet> => {
+    const response = await apiClient.patch(`/admin/pets/${id}/moderation`, payload);
+    return response.data?.pet;
+  },
+
+  requestPetCorrection: async (id: string, message: string): Promise<Pet> => {
+    const response = await apiClient.post(`/admin/pets/${id}/request-correction`, { message });
     return response.data?.pet;
   },
 };
