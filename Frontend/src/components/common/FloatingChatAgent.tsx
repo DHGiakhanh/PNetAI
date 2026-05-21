@@ -13,6 +13,13 @@ type ChatMessage = {
   content: string;
 };
 
+type ChatLocation = {
+  lat: number;
+  lng: number;
+  address?: string;
+  source: "profile" | "browser";
+};
+
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "agent",
@@ -35,6 +42,73 @@ const getCurrentUserId = () => {
   } catch {
     return "";
   }
+};
+
+const getStoredUserLocation = (): ChatLocation | null => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    if (!rawUser) return null;
+
+    const user = JSON.parse(rawUser);
+    const coordinates = user?.location?.coordinates;
+    if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+
+    const [lng, lat] = coordinates;
+    if (typeof lat !== "number" || typeof lng !== "number") return null;
+
+    return {
+      lat,
+      lng,
+      address: user?.location?.addressName || user?.address || "",
+      source: "profile",
+    };
+  } catch {
+    return null;
+  }
+};
+
+const shouldAskBrowserLocation = (text: string) => {
+  const normalized = text.toLowerCase();
+  return [
+    "gần tôi",
+    "gan toi",
+    "gần đây",
+    "gan day",
+    "quanh đây",
+    "quanh day",
+    "xung quanh",
+    "near me",
+    "nearby",
+    "gần nhất",
+    "gan nhat",
+  ].some((keyword) => normalized.includes(keyword));
+};
+
+const getBrowserLocation = () =>
+  new Promise<ChatLocation | null>((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          source: "browser",
+        });
+      },
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 5 * 60 * 1000 }
+    );
+  });
+
+const getChatLocation = async (text: string) => {
+  const storedLocation = getStoredUserLocation();
+  if (storedLocation) return storedLocation;
+  if (!shouldAskBrowserLocation(text)) return null;
+  return getBrowserLocation();
 };
 
 export default function FloatingChatAgent() {
@@ -104,9 +178,11 @@ export default function FloatingChatAgent() {
     setIsTyping(true);
 
     try {
+      const location = await getChatLocation(text);
       const response = await apiClient.post("/chatbot/chat", {
         message: text,
         userId: getCurrentUserId(),
+        location,
       });
 
       const data = response.data;

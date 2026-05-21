@@ -41,11 +41,28 @@ function resolveForwardUserId(req) {
     return req.body.userId || req.userId || '';
 }
 
+// Location từ frontend chỉ forward sang AI team để recommend dịch vụ gần user.
+function normalizeLocation(location) {
+    if (!location || typeof location !== 'object') return null;
+
+    const lat = Number(location.lat);
+    const lng = Number(location.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    return {
+        lat,
+        lng,
+        address: typeof location.address === 'string' ? location.address : '',
+        source: location.source === 'browser' ? 'browser' : 'profile',
+    };
+}
+
 // Context nhẹ cho AI team: chỉ gửi userId để AI-server tự query MongoDB theo intent từng câu.
-function buildTeamChatPayload(message, userId, history) {
+function buildTeamChatPayload(message, userId, history, location) {
     return {
         message,
         userId,
+        location,
         language: CHATBOT_LANGUAGE,
         instructions: VIETNAMESE_REPLY_INSTRUCTION,
         history,
@@ -229,9 +246,9 @@ async function callOpenRouter(message, userId, history) {
     };
 }
 
-async function callConfiguredProvider(message, userId, history) {
+async function callConfiguredProvider(message, userId, history, location) {
     if (CHATBOT_PROVIDER === 'team') {
-        return callTeamChatbot(buildTeamChatPayload(message, userId, history));
+        return callTeamChatbot(buildTeamChatPayload(message, userId, history, location));
     }
 
     return callOpenRouter(message, userId, history);
@@ -245,6 +262,7 @@ router.post('/chat', optionalVerifyToken, async (req, res) => {
     try {
         const forwardUserId = resolveForwardUserId(req);
         const verifiedUserId = req.userId || '';
+        const location = normalizeLocation(req.body.location);
         const lastHistory = verifiedUserId
             ? await db.AIHistory.find({ userId: verifiedUserId })
                 .sort({ createdAt: -1 })
@@ -260,7 +278,8 @@ router.post('/chat', optionalVerifyToken, async (req, res) => {
         const aiResult = await callConfiguredProvider(
             message,
             CHATBOT_PROVIDER === 'team' ? forwardUserId : verifiedUserId,
-            history
+            history,
+            location
         );
 
         if (verifiedUserId) {
