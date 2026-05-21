@@ -68,6 +68,14 @@ export default function MyBookingsPage() {
     [bookings]
   );
 
+  // Exclude cancelled bookings from totals displayed to user
+  const activeBookings = useMemo(() => bookings.filter((b) => b.status !== 'cancelled'), [bookings]);
+
+  const totalSpentActive = useMemo(
+    () => activeBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0),
+    [activeBookings]
+  );
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm to-cream px-4 pb-16 pt-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
@@ -76,8 +84,8 @@ export default function MyBookingsPage() {
 
         <div className="mt-4 rounded-2xl border border-sand bg-white/90 p-4 text-sm text-ink shadow-sm">
           <p>
-            Total bookings: <span className="font-semibold">{bookings.length}</span> · Total spent:{" "}
-            <span className="font-semibold text-brown">{formatVnd(totalSpent)}</span>
+            Total bookings: <span className="font-semibold">{activeBookings.length}</span> · Total spent: {" "}
+            <span className="font-semibold text-brown">{formatVnd(totalSpentActive)}</span>
           </p>
         </div>
 

@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CalendarDays,
   Edit3,
+  Eye,
   Heart,
   ImageUp,
   PawPrint,
@@ -265,16 +266,7 @@ export default function MyPetsPage() {
             : sortedPets.map((pet) => (
                 <article
                   key={pet._id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openView(pet)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openView(pet);
-                    }
-                  }}
-                  className="group cursor-pointer overflow-hidden rounded-3xl border border-sand bg-white shadow-sm transition hover:-translate-y-1 hover:border-caramel/60 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-caramel/50"
+                  className="group overflow-hidden rounded-3xl border border-sand bg-white shadow-sm transition hover:-translate-y-1 hover:border-caramel/60 hover:shadow-lg"
                 >
                   <div className="relative bg-[#f3ead8] px-5 pb-8 pt-5">
                     {getModerationCopy(pet.moderationStatus) ? (
@@ -328,11 +320,11 @@ export default function MyPetsPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          openEdit(pet);
+                          openView(pet);
                         }}
                         className="inline-flex items-center justify-center gap-1 rounded-full border border-sand px-2 py-2 text-xs font-semibold text-ink hover:bg-warm"
                       >
-                        <Edit3 className="h-4 w-4" /> Edit
+                        <Eye className="h-4 w-4" /> View
                       </button>
                       <button
                         onClick={(e) => {
