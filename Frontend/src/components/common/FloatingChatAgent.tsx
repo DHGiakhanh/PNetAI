@@ -25,6 +25,18 @@ const quickReplies = [
   "Tôi muốn gợi ý đồ chơi cho mèo 6 tháng tuổi",
 ];
 
+const getCurrentUserId = () => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    if (!rawUser) return "";
+
+    const user = JSON.parse(rawUser);
+    return user?.id || user?._id || "";
+  } catch {
+    return "";
+  }
+};
+
 export default function FloatingChatAgent() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -94,6 +106,7 @@ export default function FloatingChatAgent() {
     try {
       const response = await apiClient.post("/chatbot/chat", {
         message: text,
+        userId: getCurrentUserId(),
       });
 
       const data = response.data;

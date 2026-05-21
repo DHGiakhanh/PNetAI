@@ -5,30 +5,56 @@ const axios = require('axios');
 const db = require('../models');
 const verifyToken = require('../middlewares/verifyToken');
 
-const AI_API_KEY = process.env.AI_API_KEY;           // OpenRouter API key
+const AI_API_KEY = process.env.AI_API_KEY;
 const AI_MODEL = process.env.AI_MODEL || 'google/gemini-2.5-flash';
 const AI_BASE_URL = 'https://openrouter.ai/api/v1';
+const CHATBOT_PROVIDER = (process.env.CHATBOT_PROVIDER || 'openrouter').toLowerCase();
+const CHATBOT_TIMEOUT_MS = Number(process.env.CHATBOT_TIMEOUT_MS) || 30000;
+const CHATBOT_LANGUAGE = process.env.CHATBOT_LANGUAGE || 'vi';
 
-// Middleware tùy chỉnh để giải mã token nếu có (không bắt buộc)
+const VIETNAMESE_REPLY_INSTRUCTION =
+    'Luon tra loi bang tieng Viet tu nhien, de hieu, than thien. Neu cau hoi lien quan suc khoe thu cung va thieu thong tin, hay hoi lai truoc khi ket luan.';
+
+// Middleware optional: có token thì lấy userId, không có/không hợp lệ thì xem như guest.
 const optionalVerifyToken = (req, res, next) => {
     const token = req.headers['authorization'];
     if (!token) {
         req.userId = null;
         return next();
     }
+
     const bearer = token.split(' ');
     const bearerToken = bearer[1];
+    if (!bearerToken) {
+        req.userId = null;
+        return next();
+    }
+
     jwt.verify(bearerToken, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) req.userId = null;
-        else req.userId = decoded.userId;
+        req.userId = err ? null : decoded.userId;
         next();
     });
 };
 
-// Helper function to build the data context
+// UserId frontend gửi chỉ dùng để forward cho AI team. Backend không dùng id này để query DB.
+function resolveForwardUserId(req) {
+    return req.body.userId || req.userId || '';
+}
+
+// Context nhẹ cho AI team: chỉ gửi userId để AI-server tự query MongoDB theo intent từng câu.
+function buildTeamChatPayload(message, userId, history) {
+    return {
+        message,
+        userId,
+        language: CHATBOT_LANGUAGE,
+        instructions: VIETNAMESE_REPLY_INSTRUCTION,
+        history,
+    };
+}
+
+// Context marketplace/pet chỉ dùng cho OpenRouter/Gemini tạm thời.
 async function getRealtimeContext(userId) {
     try {
-        // Fetch base data
         const queries = [
             db.User.find({ role: 'service_provider', status: 'active' })
                 .limit(5)
@@ -38,9 +64,11 @@ async function getRealtimeContext(userId) {
                 .select('name price category description images')
         ];
 
-        // Only fetch pets if userId exists
         if (userId) {
-            queries.push(db.Pet.find({ user: userId }).select('name breed species age weightKg healthStatus avatarUrl'));
+            queries.push(
+                db.Pet.find({ user: userId })
+                    .select('name breed species age weightKg healthStatus avatarUrl')
+            );
         }
 
         const results = await Promise.all(queries);
@@ -48,119 +76,217 @@ async function getRealtimeContext(userId) {
         const productsRaw = results[1];
         const pets = userId ? results[2] : [];
 
-        // Process ateliers
         const ateliersWithServices = await Promise.all(ateliersRaw.map(async (atelier) => {
             const services = await db.Service.find({ providerId: atelier._id, isAvailable: true })
                 .select('title basePrice category description images')
                 .limit(3);
-                
+
             return {
                 id: atelier._id,
                 name: atelier.legalDocuments?.clinicName || atelier.name || 'Atelier',
                 avatar: atelier.avatarUrl,
-                address: atelier.location?.addressName || 'Liên hệ để biết địa chỉ',
-                services: services.map(s => ({
-                    id: s._id,
-                    title: s.title,
-                    price: s.basePrice,
-                    image: s.images && s.images.length > 0 ? s.images[0] : null
+                address: atelier.location?.addressName || 'Lien he de biet dia chi',
+                services: services.map((service) => ({
+                    id: service._id,
+                    title: service.title,
+                    price: service.basePrice,
+                    image: service.images && service.images.length > 0 ? service.images[0] : null
                 }))
             };
         }));
 
-        const products = productsRaw.map(p => ({
-            id: p._id,
-            name: p.name || 'Sản phẩm',
-            price: p.price,
-            image: p.images && p.images.length > 0 ? p.images[0] : null
+        const products = productsRaw.map((product) => ({
+            id: product._id,
+            name: product.name || 'San pham',
+            price: product.price,
+            image: product.images && product.images.length > 0 ? product.images[0] : null
         }));
 
-        let userStatus = "";
+        let userStatus = '';
         if (!userId) {
-            userStatus = "Khách vãng lai (Chưa đăng nhập).";
+            userStatus = 'Khach vang lai, chua dang nhap.';
         } else if (pets.length === 0) {
-            userStatus = "Thành viên (Đã đăng nhập nhưng chưa thêm thú cưng).";
+            userStatus = 'Nguoi dung da dang nhap nhung chua them thu cung.';
         } else {
-            userStatus = `Chủ nuôi (Đã đăng nhập và có ${pets.length} bé thú cưng).`;
+            userStatus = `Nguoi dung da dang nhap va co ${pets.length} be thu cung.`;
         }
 
         return `
-TRẠNG THÁI NGƯỜI DÙNG: ${userStatus}
+NGON NGU TRA LOI: Tieng Viet.
+HUONG DAN GIONG VAN: ${VIETNAMESE_REPLY_INSTRUCTION}
 
-DỮ LIỆU HỆ THỐNG HIỆN TẠI:
-- THÚ CƯNG CỦA HỌ: ${pets.length > 0 ? JSON.stringify(pets) : "Trống."}
-- DANH SÁCH ATELIERS & DỊCH VỤ: ${ateliersWithServices.length > 0 ? JSON.stringify(ateliersWithServices) : "Trống."}
-- SẢN PHẨM CỬA HÀNG: ${products.length > 0 ? JSON.stringify(products) : "Trống."}
+TRANG THAI NGUOI DUNG: ${userStatus}
 
-YÊU CẦU GỢI Ý:
-1. Nếu là Khách vãng lai hoặc chưa có thú cưng: Tập trung giới thiệu các dịch vụ Ateliers nổi bật và Sản phẩm bán chạy. Khuyến khích họ đăng nhập/thêm thú cưng để được tư vấn sức khỏe cá nhân hóa.
-2. Nếu đã có thú cưng: Ưu tiên tư vấn dựa trên giống loài, cân nặng và tình trạng sức khỏe của bé. Gợi ý sản phẩm/dịch vụ phù hợp với hồ sơ bé.
-3. Luôn trả lời bằng văn bản tự nhiên khi nói về thú cưng. Dùng thẻ [DATA: ...] cho Sản phẩm/Atelier.
+DU LIEU HE THONG HIEN TAI:
+- THU CUNG CUA HO: ${pets.length > 0 ? JSON.stringify(pets) : 'Trong.'}
+- DANH SACH ATELIERS VA DICH VU: ${ateliersWithServices.length > 0 ? JSON.stringify(ateliersWithServices) : 'Trong.'}
+- SAN PHAM CUA HANG: ${products.length > 0 ? JSON.stringify(products) : 'Trong.'}
+
+QUY TAC TRA LOI:
+1. Neu la guest hoac chua co thu cung: tu van chung, goi y dang nhap/them thu cung khi can ca nhan hoa.
+2. Neu da co thu cung: tu van dua tren giong loai, can nang va tinh trang suc khoe cua be.
+3. Neu co nhieu thu cung va cau hoi khong ro dang hoi be nao, hay hoi lai truoc.
+4. Luon tra loi bang tieng Viet tu nhien.
 `;
     } catch (error) {
-        console.error("Error loading context data:", error);
-        return "Dữ liệu hệ thống hiện đang bận.";
+        console.error('Error loading context data:', error);
+        return 'Du lieu he thong hien dang ban.';
     }
 }
 
-router.post('/chat', optionalVerifyToken, async (req, res) => {
-    try {
-        const { message, type = "general" } = req.body;
-        if (!message) return res.status(400).json({ error: 'Message is required' });
-        if (!AI_API_KEY) return res.status(500).json({ error: 'AI API Key is not configured' });
+function joinUrl(baseUrl, path) {
+    return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+}
 
-        const dataContext = await getRealtimeContext(req.userId);
-        const lastHistory = req.userId 
-            ? await db.AIHistory.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(3).select('question answer')
-            : [];
-        const historyContext = lastHistory.reverse().map(h => `User: ${h.question}\nAI: ${h.answer}`).join('\n\n');
+// AI team có thể trả answer/reply/message/response, backend chuẩn hóa về answer cho frontend.
+function extractTeamAnswer(data) {
+    if (typeof data === 'string' && data.trim()) return data.trim();
 
-        const systemPrompt = `${dataContext}\n\nLỊCH SỬ:\n${historyContext || "Bắt đầu"}`;
+    const candidates = [
+        data?.answer,
+        data?.reply,
+        data?.message,
+        data?.response,
+        data?.data?.answer,
+        data?.data?.reply,
+        data?.data?.message,
+        data?.data?.response,
+    ];
 
-        const response = await axios.post(
-            `${AI_BASE_URL}/chat/completions`,
-            {
-                model: AI_MODEL,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: message },
-                ],
-                max_tokens: 2000,
-                temperature: 0.7,
+    return candidates.find((value) => typeof value === 'string' && value.trim())?.trim();
+}
+
+// Adapter AI team: gửi userId để AI-server tự quyết query MongoDB field nào theo từng câu hỏi.
+async function callTeamChatbot(payload) {
+    if (!process.env.CHATBOT_URL) {
+        throw new Error('CHATBOT_URL is not configured');
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.CHATBOT_API_KEY) {
+        headers.Authorization = `Bearer ${process.env.CHATBOT_API_KEY}`;
+    }
+
+    const response = await axios.post(
+        joinUrl(process.env.CHATBOT_URL, 'chat'),
+        payload,
+        {
+            headers,
+            timeout: CHATBOT_TIMEOUT_MS,
+        }
+    );
+
+    const answer = extractTeamAnswer(response.data);
+    if (!answer) {
+        throw new Error('Team chatbot response did not include answer/reply/message/response');
+    }
+
+    return {
+        answer,
+        provider: 'team',
+        model: 'team-chatbot',
+    };
+}
+
+// Adapter OpenRouter/Gemini tạm thời, giữ để dễ đổi provider bằng env.
+async function callOpenRouter(message, userId, history) {
+    if (!AI_API_KEY) {
+        throw new Error('AI API Key is not configured');
+    }
+
+    const dataContext = await getRealtimeContext(userId);
+    const historyContext = history
+        .map((item) => `User: ${item.question}\nAI: ${item.answer}`)
+        .join('\n\n');
+    const systemPrompt = `${dataContext}\n\nLICH SU:\n${historyContext || 'Bat dau'}`;
+
+    const response = await axios.post(
+        `${AI_BASE_URL}/chat/completions`,
+        {
+            model: AI_MODEL,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message },
+            ],
+            max_tokens: 2000,
+            temperature: 0.7,
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${AI_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
+                'X-Title': 'PNetAI Assistant',
             },
-            {
-                headers: {
-                    'Authorization': `Bearer ${AI_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
-                    'X-Title': 'PNetAI Assistant',
-                },
-            }
+            timeout: CHATBOT_TIMEOUT_MS,
+        }
+    );
+
+    return {
+        answer: response.data.choices?.[0]?.message?.content || 'Xin lỗi, hiện tại AI chưa có phản hồi.',
+        provider: 'openrouter',
+        model: AI_MODEL,
+    };
+}
+
+async function callConfiguredProvider(message, userId, history) {
+    if (CHATBOT_PROVIDER === 'team') {
+        return callTeamChatbot(buildTeamChatPayload(message, userId, history));
+    }
+
+    return callOpenRouter(message, userId, history);
+}
+
+// Endpoint chính cho frontend: frontend gửi message + userId, backend forward theo provider.
+router.post('/chat', optionalVerifyToken, async (req, res) => {
+    const { message, type = 'general' } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    try {
+        const forwardUserId = resolveForwardUserId(req);
+        const verifiedUserId = req.userId || '';
+        const lastHistory = verifiedUserId
+            ? await db.AIHistory.find({ userId: verifiedUserId })
+                .sort({ createdAt: -1 })
+                .limit(3)
+                .select('question answer')
+                .lean()
+            : [];
+        const history = lastHistory.reverse().map((item) => ({
+            question: item.question,
+            answer: item.answer,
+        }));
+
+        const aiResult = await callConfiguredProvider(
+            message,
+            CHATBOT_PROVIDER === 'team' ? forwardUserId : verifiedUserId,
+            history
         );
 
-        const answer = response.data.choices?.[0]?.message?.content || 'Không có phản hồi từ AI.';
-
-        // Chỉ lưu lịch sử nếu user đã đăng nhập
-        if (req.userId) {
+        if (verifiedUserId) {
             const chatHistory = new db.AIHistory({
-                userId: req.userId,
+                userId: verifiedUserId,
                 question: message,
-                answer: answer,
-                type: type,
-                metadata: { model: AI_MODEL }
+                answer: aiResult.answer,
+                type,
+                metadata: {
+                    provider: aiResult.provider,
+                    model: aiResult.model,
+                }
             });
             await chatHistory.save();
         }
 
-        res.json({ answer });
-
+        res.json({ answer: aiResult.answer });
     } catch (error) {
-        console.error('AI Error:', error.response?.data || error.message);
-        const errMsg = error.response?.data?.error?.message || error.message;
-        res.status(500).json({ error: `AI Error: ${errMsg}` });
+        console.error('AI gateway error:', error.response?.data || error.message);
+        res.status(200).json({
+            answer: 'Xin lỗi, hiện tại trợ lý AI đang bận. Bạn vui lòng thử lại sau ít phút nhé.',
+        });
     }
 });
 
+// Lịch sử chat vẫn yêu cầu token vì đây là dữ liệu cá nhân.
 router.get('/history', verifyToken, async (req, res) => {
     try {
         const history = await db.AIHistory.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(50);
