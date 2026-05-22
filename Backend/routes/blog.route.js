@@ -103,13 +103,29 @@ router.post('/:id/like', verifyToken, async (req, res) => {
         if (!blog) return res.status(404).json({ message: "Blog not found" });
 
         const likeIndex = blog.likes.indexOf(req.userId);
+        let liked = false;
         if (likeIndex === -1) {
             blog.likes.push(req.userId);
+            liked = true;
         } else {
             blog.likes.splice(likeIndex, 1);
         }
 
         await blog.save();
+
+        // Create notification if liked and not liking own post
+        if (liked && blog.author.toString() !== req.userId) {
+            const user = await db.User.findById(req.userId);
+            const likerName = user ? user.name : "Someone";
+            await db.Notification.create({
+                user: blog.author,
+                title: "New Like on your post",
+                message: `${likerName} liked your post "${blog.title}"`,
+                type: "like",
+                relatedId: blog._id
+            });
+        }
+
         res.status(200).json({ likes: blog.likes });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -135,11 +151,47 @@ router.post('/:id/comment', verifyToken, async (req, res) => {
         blog.comments.push(newComment);
         await blog.save();
 
+        // Create notification if not commenting on own post
+        if (blog.author.toString() !== req.userId) {
+            const user = await db.User.findById(req.userId);
+            const commenterName = user ? user.name : "Someone";
+            const previewText = text.length > 50 ? `${text.substring(0, 50)}...` : text;
+            await db.Notification.create({
+                user: blog.author,
+                title: "New Comment on your post",
+                message: `${commenterName} commented: "${previewText}"`,
+                type: "comment",
+                relatedId: blog._id
+            });
+        }
+
         const updatedBlog = await db.Blog.findById(req.params.id)
             .populate('comments.user', 'name avatarUrl')
             .populate('comments.replies.user', 'name avatarUrl');
         
         res.status(201).json({ comments: updatedBlog.comments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Report a blog post
+router.post('/:id/report', verifyToken, async (req, res) => {
+    try {
+        const { reason } = req.body;
+        if (!reason) return res.status(400).json({ message: "Reason is required" });
+        
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+        
+        const newReport = new db.Report({
+            reporter: req.userId,
+            blog: req.params.id,
+            reason
+        });
+        await newReport.save();
+        
+        res.status(201).json({ message: "Blog post reported successfully", report: newReport });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -246,7 +298,7 @@ const checkBlacklist = (title, content) => {
 // Create/Draft blog (Any logged-in user)
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { title, content, category, image, status } = req.body;
+        const { title, content, category, image, images, status } = req.body;
         
         let finalStatus = status || 'draft';
         let autoNote = "";
@@ -261,7 +313,7 @@ router.post('/', verifyToken, async (req, res) => {
         }
 
         const blog = new db.Blog({
-            title, content, category, image,
+            title, content, category, image, images,
             status: finalStatus,
             reviewNote: autoNote,
             author: req.userId
@@ -291,7 +343,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         }
 
         // Apply updates
-        const updatableFields = ['title', 'content', 'category', 'image', 'status'];
+        const updatableFields = ['title', 'content', 'category', 'image', 'images', 'status'];
         updatableFields.forEach(field => {
             if (req.body[field] !== undefined) blog[field] = req.body[field];
         });
