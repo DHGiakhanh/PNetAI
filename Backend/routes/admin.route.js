@@ -1249,5 +1249,105 @@ router.delete("/notifications/:id", verifyToken, isAdmin, async (req, res) => {
     }
 });
 
+// --- Admin Social & Breeding Moderation ---
+
+// Get all blog reports
+router.get('/reports', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const reports = await db.Report.find()
+            .populate('reporter', 'name email avatarUrl')
+            .populate({
+                path: 'blog',
+                populate: { path: 'author', select: 'name email avatarUrl' }
+            })
+            .sort({ createdAt: -1 });
+        res.status(200).json({ reports });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Resolve a report status
+router.patch('/reports/:id/resolve', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (status !== 'resolved') return res.status(400).json({ message: "Invalid status" });
+
+        const report = await db.Report.findById(req.params.id);
+        if (!report) return res.status(404).json({ message: "Report not found" });
+
+        report.status = 'resolved';
+        await report.save();
+
+        res.status(200).json({ message: "Report status updated to resolved", report });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Hide/Unhide/Approve a blog post
+router.patch('/blogs/:id/status', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['approved', 'hidden', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
+        }
+
+        const blog = await db.Blog.findById(req.params.id);
+        if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+        blog.status = status;
+        blog.reviewedBy = req.userId;
+        blog.reviewedAt = new Date();
+        await blog.save();
+
+        res.status(200).json({ message: `Blog status updated to ${status}`, blog });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get all breeding listings
+router.get('/breeding/listings', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const listings = await db.BreedingListing.find()
+            .populate('pet')
+            .populate('user', 'name email avatarUrl')
+            .sort({ createdAt: -1 });
+        res.status(200).json({ listings });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Approve/Disable/Reject breeding listings
+router.patch('/breeding/listings/:id/status', verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['approved', 'disabled', 'rejected', 'pending'].includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
+        }
+
+        const listing = await db.BreedingListing.findById(req.params.id).populate('pet');
+        if (!listing) return res.status(404).json({ message: "Breeding listing not found" });
+
+        listing.status = status;
+        await listing.save();
+
+        // Notify the pet owner about status update
+        await db.Notification.create({
+            user: listing.user,
+            title: `Breeding Listing ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            message: `Your breeding listing for pet "${listing.pet.name}" has been ${status} by the admin.`,
+            type: status === "approved" ? "success" : "warning",
+            relatedId: listing._id
+        });
+
+        res.status(200).json({ message: `Listing status updated to ${status}`, listing });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
 

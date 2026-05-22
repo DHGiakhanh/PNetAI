@@ -15,6 +15,9 @@ const Payout = require("./payout.model");
 const Booking = require("./booking.model");
 const Notification = require("./notification.model");
 const AIHistory = require("./ai_history.model");
+const Report = require("./report.model");
+const BreedingListing = require("./breedingListing.model");
+const BreedingRequest = require("./breedingRequest.model");
 
 const db = {}
 
@@ -35,6 +38,9 @@ db.Payout = Payout;
 db.Booking = Booking;
 db.Notification = Notification;
 db.AIHistory = AIHistory;
+db.Report = Report;
+db.BreedingListing = BreedingListing;
+db.BreedingRequest = BreedingRequest;
 
 
 module.exports = db;
