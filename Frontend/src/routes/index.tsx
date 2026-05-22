@@ -64,6 +64,11 @@ import CheckoutSuccessPage from "@/pages/Shop/CheckoutSuccessPage";
 import CheckoutCancelPage from "@/pages/Shop/CheckoutCancelPage";
 import AdminOrdersPage from "@/pages/Admin/AdminOrdersPage";
 
+import BreedingPage from "@/pages/Breeding/BreedingPage";
+import BreedingRequestsPage from "@/pages/Breeding/BreedingRequestsPage";
+import AdminReportsPage from "@/pages/Admin/Social/AdminReportsPage";
+import AdminBreedingPage from "@/pages/Admin/Breeding/AdminBreedingPage";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -80,6 +85,8 @@ export default function AppRoutes() {
           <Route path="finance/refunds" element={<RefundRequestsPage />} />
           <Route path="finance/payouts" element={<div className="p-20 text-center text-xs font-bold uppercase tracking-widest text-muted">Payout / Ledger Ledger Module Coming Soon</div>} />
           <Route path="blogs/approvals" element={<AdminBlogApprovalsPage />} />
+          <Route path="social/reports" element={<AdminReportsPage />} />
+          <Route path="breeding/approvals" element={<AdminBreedingPage />} />
           
           {/* Legacy or fallback */}
           <Route path="users" element={<Navigate to="/admin/users/owners" replace />} />
@@ -127,6 +134,7 @@ export default function AppRoutes() {
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="blogs" element={<BlogsPage />} />
         <Route path="blogs/:blogId" element={<BlogDetailPage />} />
+        <Route path="breeding" element={<BreedingPage />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
@@ -138,6 +146,7 @@ export default function AppRoutes() {
           <Route path="my-blogs" element={<MyBlogsPage />} />
           <Route path="blogs/new" element={<BlogEditorPage />} />
           <Route path="blogs/edit/:id" element={<BlogEditorPage />} />
+          <Route path="breeding/requests" element={<BreedingRequestsPage />} />
         </Route>
       </Route>
 
