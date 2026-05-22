@@ -42,6 +42,8 @@ export const AdminLayout = () => {
     { section: "Finance", title: "Payouts / Ledger", icon: Banknote, path: "/admin/finance/payouts" },
 
     { section: "Moderation", title: "Blog Queue", icon: BookOpen, path: "/admin/blogs/approvals" },
+    { section: "Moderation", title: "Reported Posts", icon: AlertCircle, path: "/admin/social/reports" },
+    { section: "Moderation", title: "Breeding Queue", icon: PawPrint, path: "/admin/breeding/approvals" },
   ];
  
   const providerMenuItems = [

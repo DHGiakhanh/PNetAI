@@ -391,6 +391,13 @@ export function AppNavbar() {
               <Users className="h-4 w-4" />
               Blog
             </Link>
+            <Link
+              to="/breeding"
+              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/breeding") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+            >
+              <PawPrint className="h-4 w-4" />
+              Breeding
+            </Link>
             {isLoggedIn && dashboardLink && (
               <Link
                 to={dashboardLink}
@@ -442,7 +449,13 @@ export function AppNavbar() {
                               <button
                                 key={notification._id}
                                 type="button"
-                                onClick={() => markNotificationRead(notification._id)}
+                                onClick={() => {
+                                  markNotificationRead(notification._id);
+                                  if (notification.type === "breeding_request" || notification.type === "breeding_response") {
+                                    navigate("/breeding/requests");
+                                    setNotificationOpen(false);
+                                  }
+                                }}
                                 className={`w-full rounded-xl border p-3 text-left transition hover:bg-warm ${
                                   notification.isRead ? "border-sand bg-white" : "border-caramel/30 bg-warm/50"
                                 }`}
@@ -534,6 +547,12 @@ export function AppNavbar() {
                       >
                         My Blog
                       </Link>
+                      <Link
+                        to="/breeding/requests"
+                        className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
+                      >
+                        Breeding Requests
+                      </Link>
                       <button
                         type="button"
                         onClick={handleLogout}
@@ -616,6 +635,13 @@ export function AppNavbar() {
               >
                 Blog
               </Link>
+              <Link
+                to="/breeding"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+              >
+                Breeding
+              </Link>
               {isLoggedIn && dashboardLink && (
                 <Link
                   to={dashboardLink}
@@ -658,6 +684,13 @@ export function AppNavbar() {
                     className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
                   >
                     My Blog
+                  </Link>
+                  <Link
+                    to="/breeding/requests"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+                  >
+                    Breeding Requests
                   </Link>
                   <button
                     type="button"
