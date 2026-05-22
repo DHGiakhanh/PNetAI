@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { User, ChevronRight, Loader2, BookOpen } from "lucide-react";
+import { User, ChevronRight, Loader2, BookOpen, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Pagination from "@/components/common/Pagination";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
@@ -27,6 +28,13 @@ export default function BlogsPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 6;
 
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reporting, setReporting] = useState(false);
+
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
+
   const fetchBlogs = async (page: number) => {
     try {
       setLoading(true);
@@ -43,6 +51,22 @@ export default function BlogsPage() {
   useEffect(() => {
     fetchBlogs(currentPage);
   }, [currentPage]);
+
+  const handleReportSubmit = async () => {
+    if (!reportReason.trim() || !selectedPostId) return;
+    try {
+      setReporting(true);
+      await apiClient.post(`/blogs/${selectedPostId}/report`, { reason: reportReason });
+      toast.success("Thank you. The report has been submitted to the admin for review.");
+      setReportModalOpen(false);
+      setReportReason("");
+      setSelectedPostId(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit report.");
+    } finally {
+      setReporting(false);
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -90,13 +114,27 @@ export default function BlogsPage() {
                   </Link>
 
                   <div className="p-8 flex flex-col flex-1">
-                    <div className="flex items-center gap-3 mb-6">
-                      <span className="px-4 py-1.5 bg-warm/50 border border-sand/30 text-caramel text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
-                        {post.category}
-                      </span>
-                      <span className="text-[10px] font-bold text-muted/40 uppercase tracking-widest">
-                        {new Date(post.createdAt).toLocaleDateString()}
-                      </span>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <span className="px-4 py-1.5 bg-warm/50 border border-sand/30 text-caramel text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
+                          {post.category}
+                        </span>
+                        <span className="text-[10px] font-bold text-muted/40 uppercase tracking-widest">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {isLoggedIn && (
+                        <button 
+                          onClick={() => {
+                            setSelectedPostId(post._id);
+                            setReportModalOpen(true);
+                          }}
+                          className="text-muted/40 hover:text-red-500 transition-colors p-1.5 rounded-full hover:bg-red-50/50"
+                          title="Report post"
+                        >
+                          <AlertCircle className="w-4.5 h-4.5" />
+                        </button>
+                      )}
                     </div>
 
                     <Link to={`/blogs/${post._id}`} className="block group/title mb-4">
@@ -142,6 +180,70 @@ export default function BlogsPage() {
           </>
         )}
       </div>
+
+      {/* Report Modal */}
+      <AnimatePresence>
+        {reportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setReportModalOpen(false)}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden bg-white border border-sand/50 shadow-2xl rounded-[2.5rem] p-8 z-10"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl font-bold italic text-ink">Report Journal Entry</h3>
+                  <p className="text-xs text-muted/50 font-medium">Help keep our community safe and high-quality.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                    Reason for reporting
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    placeholder="Provide a detailed explanation of why this post violates community guidelines (e.g. spam, inappropriate behavior, harassment, etc.)."
+                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => setReportModalOpen(false)}
+                  className="flex-1 px-5 py-3 border border-sand text-ink text-sm font-bold rounded-2xl hover:bg-[#FBF9F2] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReportSubmit}
+                  disabled={reporting || !reportReason.trim()}
+                  className="flex-1 px-5 py-3 bg-red-500 text-white text-sm font-bold rounded-2xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {reporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : "Submit Report"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

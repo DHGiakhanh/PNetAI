@@ -15,7 +15,8 @@ import {
   X,
   MessageSquare,
   Trash2,
-  ThumbsUp
+  ThumbsUp,
+  AlertCircle
 } from "lucide-react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -60,6 +61,7 @@ type Blog = {
   content: string;
   category: string;
   image?: string;
+  images?: string[];
   author: Author;
   likes: string[];
   comments: BlogComment[];
@@ -92,12 +94,22 @@ export default function BlogDetailPage() {
   const [replyText, setReplyText] = useState("");
   const [replyImage, setReplyImage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [activeImage, setActiveImage] = useState<string>("");
+
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   const fetchBlog = async () => {
     try {
       setLoading(true);
       const res = await apiClient.get(`/blogs/${blogId}`);
       setBlog(res.data.blog);
+      if (res.data.blog.images && res.data.blog.images.length > 0) {
+        setActiveImage(res.data.blog.images[0]);
+      } else if (res.data.blog.image) {
+        setActiveImage(res.data.blog.image);
+      }
     } catch (error) {
       toast.error("Could not find this story.");
       navigate("/blogs");
@@ -110,6 +122,21 @@ export default function BlogDetailPage() {
     fetchBlog();
     window.scrollTo(0, 0);
   }, [blogId]);
+
+  const handleReportSubmit = async () => {
+    if (!reportReason.trim()) return;
+    try {
+      setReporting(true);
+      await apiClient.post(`/blogs/${blogId}/report`, { reason: reportReason });
+      toast.success("Thank you. The report has been submitted to the admin for review.");
+      setReportModalOpen(false);
+      setReportReason("");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit report.");
+    } finally {
+      setReporting(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setShowBackToTop(window.scrollY > window.innerHeight);
@@ -277,16 +304,48 @@ export default function BlogDetailPage() {
                 <Clock3 className="w-4 h-4" />
                 {Math.ceil(blog.content.length / 500) + 1} min read
               </span>
+              {isLoggedIn && (
+                <>
+                  <span className="w-1 h-1 bg-sand/60 rounded-full lg:hidden" />
+                  <button
+                    onClick={() => setReportModalOpen(true)}
+                    className="flex items-center gap-2 text-red-500 hover:text-red-600 transition-colors lg:hidden normal-case font-bold"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    Report
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="relative aspect-[16/9] rounded-[3.5rem] overflow-hidden shadow-2xl shadow-ink/10 border-[12px] border-white ring-1 ring-sand/50">
-            {blog.image ? (
-                <img src={blog.image} alt={blog.title} className="w-full h-full object-cover" />
-            ) : (
-                <div className="w-full h-full bg-warm flex items-center justify-center text-muted/20">
-                    <BookOpen className="w-24 h-24" />
-                </div>
+          <div className="space-y-4">
+            <div className="relative aspect-[16/9] rounded-[3.5rem] overflow-hidden shadow-2xl shadow-ink/10 border-[12px] border-white ring-1 ring-sand/50">
+              {activeImage ? (
+                  <img src={activeImage} alt={blog.title} className="w-full h-full object-cover transition-all duration-500" />
+              ) : blog.image ? (
+                  <img src={blog.image} alt={blog.title} className="w-full h-full object-cover transition-all duration-500" />
+              ) : (
+                  <div className="w-full h-full bg-warm flex items-center justify-center text-muted/20">
+                      <BookOpen className="w-24 h-24" />
+                  </div>
+              )}
+            </div>
+
+            {blog.images && blog.images.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-sand">
+                {blog.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveImage(img)}
+                    className={`relative w-24 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                      activeImage === img ? "border-caramel scale-105 shadow-md" : "border-sand/40 hover:border-sand hover:scale-102"
+                    }`}
+                  >
+                    <img src={img} alt={`thumbnail-${idx}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </header>
@@ -325,6 +384,19 @@ export default function BlogDetailPage() {
               >
                 <LinkIcon className="w-6 h-6" />
               </button>
+
+              {isLoggedIn && (
+                <>
+                  <div className="h-px bg-sand/40 w-8" />
+                  <button 
+                    onClick={() => setReportModalOpen(true)}
+                    className="w-14 h-14 rounded-full bg-white border-2 border-sand/40 grid place-items-center text-muted hover:text-red-500 hover:border-red-500 transition-all shadow-xl active:scale-90"
+                    title="Report post"
+                  >
+                    <AlertCircle className="w-6 h-6" />
+                  </button>
+                </>
+              )}
             </div>
           </aside>
 
@@ -539,6 +611,70 @@ export default function BlogDetailPage() {
           >
             <ArrowUp className="w-7 h-7" />
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Report Modal */}
+      <AnimatePresence>
+        {reportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setReportModalOpen(false)}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden bg-white border border-sand/50 shadow-2xl rounded-[2.5rem] p-8 z-10"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl font-bold italic text-ink">Report Journal Entry</h3>
+                  <p className="text-xs text-muted/50 font-medium">Help keep our community safe and high-quality.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                    Reason for reporting
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    placeholder="Provide a detailed explanation of why this post violates community guidelines (e.g. spam, inappropriate behavior, harassment, etc.)."
+                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 resize-none font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => setReportModalOpen(false)}
+                  className="flex-1 px-5 py-3 border border-sand text-ink text-sm font-bold rounded-2xl hover:bg-[#FBF9F2] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReportSubmit}
+                  disabled={reporting || !reportReason.trim()}
+                  className="flex-1 px-5 py-3 bg-red-500 text-white text-sm font-bold rounded-2xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {reporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : "Submit Report"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
