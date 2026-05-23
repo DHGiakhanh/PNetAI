@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   Clock3,
   FileEdit,
-  AlertCircle
+  AlertCircle,
+  EyeOff
 } from "lucide-react";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
@@ -21,7 +22,7 @@ type Blog = {
   _id: string;
   title: string;
   category: string;
-  status: "draft" | "pending" | "approved" | "rejected";
+  status: "draft" | "pending" | "approved" | "rejected" | "hidden";
   image?: string;
   createdAt: string;
   views: number;
@@ -71,7 +72,8 @@ export default function MyBlogsPage() {
       approved: { label: "Published", icon: CheckCircle2, class: "bg-emerald-50 text-emerald-700 border-emerald-100" },
       pending: { label: "In Review", icon: Clock3, class: "bg-amber-50 text-amber-700 border-amber-100" },
       draft: { label: "Draft", icon: FileEdit, class: "bg-slate-50 text-slate-600 border-slate-100" },
-      rejected: { label: "Refined Needed", icon: AlertCircle, class: "bg-rose-50 text-rose-700 border-rose-100" }
+      rejected: { label: "Refined Needed", icon: AlertCircle, class: "bg-rose-50 text-rose-700 border-rose-100" },
+      hidden: { label: "Hidden", icon: EyeOff, class: "bg-gray-50 text-gray-600 border-gray-100" }
     };
     const config = configs[status];
     const Icon = config.icon;

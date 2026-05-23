@@ -7,7 +7,7 @@ const notificationSchema = new Schema({
     message: { type: String, required: true },
     type: { 
         type: String, 
-        enum: ["info", "success", "warning", "error", "refund_request", "pet_correction_request"], 
+        enum: ["info", "success", "warning", "error", "refund_request", "pet_correction_request", "like", "comment", "breeding_request", "breeding_response"], 
         default: "info" 
     },
     relatedId: { type: Schema.Types.ObjectId }, // Reference to Booking or Order

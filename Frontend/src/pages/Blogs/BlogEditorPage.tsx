@@ -42,6 +42,7 @@ export default function BlogEditorPage() {
     content: "",
     category: CATEGORIES[0],
     image: "",
+    images: [] as string[],
     status: "draft" as "draft" | "pending"
   });
   
@@ -110,6 +111,7 @@ export default function BlogEditorPage() {
             content: blog.content,
             category: blog.category,
             image: blog.image || "",
+            images: blog.images || [],
             status: blog.status === 'approved' ? 'pending' : (blog.status as "draft" | "pending")
           });
         } catch (error) {
@@ -122,6 +124,35 @@ export default function BlogEditorPage() {
       fetchBlog();
     }
   }, [id, isEdit, navigate]);
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages = [...(formData.images || [])];
+    try {
+      toast.loading("Uploading gallery image...", { id: "gallery-upload" });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} too heavy. Limit is 5MB.`);
+          continue;
+        }
+        const { url } = await authService.generalUpload(file);
+        newImages.push(url);
+      }
+      setFormData(prev => ({ ...prev, images: newImages }));
+      toast.success("Gallery updated", { id: "gallery-upload" });
+    } catch {
+      toast.error("Upload failed", { id: "gallery-upload" });
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    const newImages = [...(formData.images || [])];
+    newImages.splice(index, 1);
+    setFormData(prev => ({ ...prev, images: newImages }));
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,6 +325,32 @@ export default function BlogEditorPage() {
            </AnimatePresence>
         </div>
 
+        {/* Gallery Images Area */}
+        <div className="mb-12">
+          <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-3">
+            Gallery Images (Optional)
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            {formData.images?.map((img, idx) => (
+              <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border border-sand group shadow-sm">
+                <img src={img} alt={`gallery-${idx}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeGalleryImage(idx)}
+                  className="absolute top-2 -right-2 group-hover:right-2 bg-rose-600 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            <label className="group flex flex-col items-center justify-center aspect-video rounded-2xl border-2 border-dashed border-sand hover:border-caramel/50 bg-white hover:bg-warm/20 transition-all cursor-pointer">
+              <ImageIcon className="w-5 h-5 text-muted/30 group-hover:scale-110 transition-transform mb-1" />
+              <span className="text-[10px] font-bold text-muted/50 uppercase tracking-wider">Add Image</span>
+              <input type="file" multiple className="hidden" accept="image/*" onChange={handleGalleryUpload} />
+            </label>
+          </div>
+        </div>
+
         {/* Title Input */}
         <textarea 
           placeholder="Title of your fragment..."
@@ -360,9 +417,16 @@ export default function BlogEditorPage() {
                   <span className="text-xs font-bold uppercase tracking-[0.3em] text-caramel mb-6 block">{formData.category}</span>
                   <h1 className="text-5xl md:text-7xl font-bold text-ink italic mb-10 leading-tight">{formData.title || "The Unnamed Fragment"}</h1>
                 </div>
-                {formData.image && (
-                  <img src={formData.image} className="w-full rounded-[4rem] mb-20 shadow-2xl" alt="Cover" />
-                )}
+                 {formData.image && (
+                   <img src={formData.image} className="w-full rounded-[4rem] mb-10 shadow-2xl" alt="Cover" />
+                 )}
+                 {formData.images && formData.images.length > 0 && (
+                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-20">
+                     {formData.images.map((img, idx) => (
+                       <img key={idx} src={img} className="rounded-2xl aspect-video object-cover shadow-md w-full" alt={`Gallery preview ${idx}`} />
+                     ))}
+                   </div>
+                 )}
                 <div 
                   className="prose-lg text-2xl text-ink/70 leading-relaxed font-medium"
                   dangerouslySetInnerHTML={{ __html: formData.content || "Silence is the only thing found in this draft..." }}
