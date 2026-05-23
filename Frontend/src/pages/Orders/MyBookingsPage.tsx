@@ -63,11 +63,6 @@ export default function MyBookingsPage() {
     fetchBookings();
   }, []);
 
-  const totalSpent = useMemo(
-    () => bookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0),
-    [bookings]
-  );
-
   // Exclude cancelled bookings from totals displayed to user
   const activeBookings = useMemo(() => bookings.filter((b) => b.status !== 'cancelled'), [bookings]);
 
