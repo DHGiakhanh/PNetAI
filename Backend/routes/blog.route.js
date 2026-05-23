@@ -23,6 +23,8 @@ router.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
         const blogs = await db.Blog.find(query)
             .populate('author', 'name avatarUrl role')
+            .populate('comments.user', 'name avatarUrl')
+            .populate('comments.replies.user', 'name avatarUrl')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(Number(limit));
