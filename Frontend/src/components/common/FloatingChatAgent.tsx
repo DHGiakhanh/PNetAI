@@ -127,6 +127,7 @@ export default function FloatingChatAgent() {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_WELCOME_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -147,41 +148,32 @@ export default function FloatingChatAgent() {
     }
   }, [isOpen]);
 
+  // Monitor token changes to clear chat session on login/logout
   useEffect(() => {
-    const fetchHistory = async () => {
-      if (!isOpen) return;
-
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      try {
-        const response = await apiClient.get("/chatbot/history");
-
-        if (response.status === 200) {
-          const history = response.data;
-          if (history && history.length > 0) {
-            const historyMessages: ChatMessage[] = [];
-            history.reverse().forEach((item: any) => {
-              historyMessages.push({
-                id: `q-${item._id}`,
-                role: "user",
-                content: item.question,
-              });
-              historyMessages.push({
-                id: `a-${item._id}`,
-                role: "agent",
-                content: item.answer,
-              });
-            });
-            setMessages([DEFAULT_WELCOME_MESSAGE, ...historyMessages]);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch chat history:", error);
+    const checkTokenChange = () => {
+      const currentToken = localStorage.getItem("token");
+      const savedToken = (window as any).__pnetai_last_token || null;
+      if (currentToken !== savedToken) {
+        (window as any).__pnetai_last_token = currentToken;
+        // Reset chat history and session ID
+        setMessages([DEFAULT_WELCOME_MESSAGE]);
+        setSessionId(null);
       }
     };
 
-    fetchHistory();
+    // Check on mount and every time the chat widget is opened/closed
+    checkTokenChange();
+
+    // Listen for storage events (e.g. login/logout in other tabs)
+    window.addEventListener("storage", checkTokenChange);
+
+    // Check periodically as a fallback in single page application
+    const interval = setInterval(checkTokenChange, 1000);
+
+    return () => {
+      window.removeEventListener("storage", checkTokenChange);
+      clearInterval(interval);
+    };
   }, [isOpen]);
 
   const sendMessage = async (text: string) => {
@@ -203,6 +195,7 @@ export default function FloatingChatAgent() {
         message: text,
         userId: getCurrentUserId(),
         location,
+        sessionId,
       });
 
       const data = response.data;
@@ -216,6 +209,10 @@ export default function FloatingChatAgent() {
             content: data.answer,
           },
         ]);
+      }
+
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
       }
     } catch (error: any) {
       console.error("API call error:", error);
