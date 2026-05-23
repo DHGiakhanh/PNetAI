@@ -174,18 +174,35 @@ function extractTeamAnswer(data) {
 }
 
 // Adapter AI team: gửi userId để AI-server tự quyết query MongoDB field nào theo từng câu hỏi.
-async function callTeamChatbot(payload) {
+async function callTeamChatbot({ message, location, sessionId, authToken }) {
     if (!process.env.CHATBOT_URL) {
         throw new Error('CHATBOT_URL is not configured');
     }
 
     const headers = { 'Content-Type': 'application/json' };
-    if (process.env.CHATBOT_API_KEY) {
+    if (authToken) {
+        headers.Authorization = authToken;
+    } else if (process.env.CHATBOT_API_KEY) {
         headers.Authorization = `Bearer ${process.env.CHATBOT_API_KEY}`;
     }
 
+    let aiLocation = null;
+    if (location) {
+        aiLocation = {
+            coordinates: [location.lng, location.lat],
+            addressName: location.address || null
+        };
+    }
+
+    const payload = {
+        query: message,
+        session_id: sessionId || null,
+        stream: false,
+        location: aiLocation
+    };
+
     const response = await axios.post(
-        joinUrl(process.env.CHATBOT_URL, 'chat'),
+        joinUrl(process.env.CHATBOT_URL, 'v1/chat'),
         payload,
         {
             headers,
@@ -200,6 +217,7 @@ async function callTeamChatbot(payload) {
 
     return {
         answer,
+        sessionId: response.data.session_id || response.data.data?.session_id || sessionId || null,
         provider: 'team',
         model: 'team-chatbot',
     };
@@ -246,9 +264,9 @@ async function callOpenRouter(message, userId, history) {
     };
 }
 
-async function callConfiguredProvider(message, userId, history, location) {
+async function callConfiguredProvider({ message, userId, history, location, sessionId, authToken }) {
     if (CHATBOT_PROVIDER === 'team') {
-        return callTeamChatbot(buildTeamChatPayload(message, userId, history, location));
+        return callTeamChatbot({ message, location, sessionId, authToken });
     }
 
     return callOpenRouter(message, userId, history);
@@ -263,26 +281,32 @@ router.post('/chat', optionalVerifyToken, async (req, res) => {
         const forwardUserId = resolveForwardUserId(req);
         const verifiedUserId = req.userId || '';
         const location = normalizeLocation(req.body.location);
-        const lastHistory = verifiedUserId
-            ? await db.AIHistory.find({ userId: verifiedUserId })
+
+        let history = [];
+        // Only load history from MongoDB if CHATBOT_PROVIDER is NOT 'team'
+        if (CHATBOT_PROVIDER !== 'team' && verifiedUserId) {
+            const lastHistory = await db.AIHistory.find({ userId: verifiedUserId })
                 .sort({ createdAt: -1 })
                 .limit(3)
                 .select('question answer')
-                .lean()
-            : [];
-        const history = lastHistory.reverse().map((item) => ({
-            question: item.question,
-            answer: item.answer,
-        }));
+                .lean();
+            history = lastHistory.reverse().map((item) => ({
+                question: item.question,
+                answer: item.answer,
+            }));
+        }
 
-        const aiResult = await callConfiguredProvider(
+        const aiResult = await callConfiguredProvider({
             message,
-            CHATBOT_PROVIDER === 'team' ? forwardUserId : verifiedUserId,
+            userId: CHATBOT_PROVIDER === 'team' ? forwardUserId : verifiedUserId,
             history,
-            location
-        );
+            location,
+            sessionId: req.body.sessionId || null,
+            authToken: req.headers['authorization']
+        });
 
-        if (verifiedUserId) {
+        // Only save conversation history to MongoDB if CHATBOT_PROVIDER is NOT 'team'
+        if (CHATBOT_PROVIDER !== 'team' && verifiedUserId) {
             const chatHistory = new db.AIHistory({
                 userId: verifiedUserId,
                 question: message,
@@ -291,12 +315,16 @@ router.post('/chat', optionalVerifyToken, async (req, res) => {
                 metadata: {
                     provider: aiResult.provider,
                     model: aiResult.model,
+                    sessionId: aiResult.sessionId || null,
                 }
             });
             await chatHistory.save();
         }
 
-        res.json({ answer: aiResult.answer });
+        res.json({
+            answer: aiResult.answer,
+            sessionId: aiResult.sessionId || null
+        });
     } catch (error) {
         console.error('AI gateway error:', error.response?.data || error.message);
         res.status(200).json({
