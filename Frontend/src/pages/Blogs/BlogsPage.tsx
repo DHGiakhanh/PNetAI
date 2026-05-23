@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   User, 
   Loader2, 
@@ -12,12 +12,16 @@ import {
   Award,
   MoreHorizontal,
   Send,
-  Share2
+  Share2,
+  Image as ImageIcon,
+  X,
+  Upload
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Pagination from "@/components/common/Pagination";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
+import { authService } from "@/services/auth.service";
 
 type BlogReply = {
   _id: string;
@@ -162,9 +166,103 @@ export default function BlogsPage() {
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
 
+  const navigate = useNavigate();
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserId = currentUser._id || currentUser.id || "";
+
+  // Quick Post Creator states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState("");
+  const [newPostCategory, setNewPostCategory] = useState("Nutrition & Health");
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostImages, setNewPostImages] = useState<string[]>([]);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+  const [isUploadingPostImages, setIsUploadingPostImages] = useState(false);
+
+  const handleComposerClick = () => {
+    if (!isLoggedIn) {
+      toast.error("Please log in to create a post.");
+      navigate("/login");
+      return;
+    }
+    setIsCreateModalOpen(true);
+  };
+
+  const handleQuickPostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setIsUploadingPostImages(true);
+    const uploadedUrls = [...newPostImages];
+    try {
+      toast.loading("Uploading images...", { id: "quick-post-upload" });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} is too large (limit 5MB).`);
+          continue;
+        }
+        const { url } = await authService.generalUpload(file);
+        uploadedUrls.push(url);
+      }
+      setNewPostImages(uploadedUrls);
+      toast.success("Images uploaded!", { id: "quick-post-upload" });
+    } catch (error) {
+      toast.error("Upload failed", { id: "quick-post-upload" });
+    } finally {
+      setIsUploadingPostImages(false);
+    }
+  };
+
+  const removeQuickPostImage = (index: number) => {
+    setNewPostImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleQuickPostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      toast.error("Please log in to post.");
+      return;
+    }
+    if (!newPostTitle.trim()) {
+      toast.error("Please add a title.");
+      return;
+    }
+    if (!newPostContent.trim()) {
+      toast.error("Please add some content.");
+      return;
+    }
+
+    try {
+      setIsSubmittingPost(true);
+      const mainImage = newPostImages[0] || "";
+      
+      const payload = {
+        title: newPostTitle,
+        content: newPostContent,
+        category: newPostCategory,
+        image: mainImage,
+        images: newPostImages,
+        status: "pending"
+      };
+      
+      await apiClient.post("/blogs", payload);
+      toast.success("Post submitted for review! It will be visible once approved.");
+      
+      setNewPostTitle("");
+      setNewPostCategory("Nutrition & Health");
+      setNewPostContent("");
+      setNewPostImages([]);
+      setIsCreateModalOpen(false);
+      
+      fetchBlogs(currentPage);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create post.");
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
 
   const handleReplySubmit = async (postId: string, commentId: string) => {
     if (!isLoggedIn) {
@@ -309,6 +407,61 @@ export default function BlogsPage() {
           
           {/* Main Feed (Left) */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Quick Post Creator Box */}
+            <div className="bg-white rounded-[2rem] border border-sand/50 shadow-sm p-4 space-y-3 hover:border-caramel/20 transition-all duration-300">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center shrink-0">
+                  {isLoggedIn && currentUser.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-5 h-5 text-caramel/40" />
+                  )}
+                </div>
+                <button
+                  onClick={handleComposerClick}
+                  className="flex-1 bg-warm/30 hover:bg-warm/50 border border-sand/35 rounded-full px-5 py-3 text-xs text-muted/60 font-medium transition-colors text-left outline-none cursor-pointer"
+                >
+                  {isLoggedIn 
+                    ? `What's on your mind, ${currentUser.name || "friend"}? Share a story or tip...`
+                    : "Log in to share your pet companion stories..."}
+                </button>
+              </div>
+              
+              <div className="border-t border-sand/10 pt-3 flex items-center justify-between text-xs font-bold text-muted/60">
+                <button
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      setNewPostCategory("Pet Lifestyle");
+                    }
+                    handleComposerClick();
+                  }}
+                  className="flex items-center gap-2 hover:bg-[#FBF9F2] px-4 py-2 rounded-full hover:text-ink transition-colors cursor-pointer animate-duration-300"
+                >
+                  <ImageIcon className="w-4.5 h-4.5 text-emerald-500" />
+                  <span>Photo/Gallery</span>
+                </button>
+                <button
+                  onClick={handleComposerClick}
+                  className="flex items-center gap-2 hover:bg-[#FBF9F2] px-4 py-2 rounded-full hover:text-ink transition-colors cursor-pointer animate-duration-300"
+                >
+                  <BookOpen className="w-4.5 h-4.5 text-caramel" />
+                  <span>Write Story</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      setNewPostCategory("Success Stories");
+                    }
+                    handleComposerClick();
+                  }}
+                  className="flex items-center gap-2 hover:bg-[#FBF9F2] px-4 py-2 rounded-full hover:text-ink transition-colors cursor-pointer animate-duration-300"
+                >
+                  <Award className="w-4.5 h-4.5 text-amber-500" />
+                  <span>Success Story</span>
+                </button>
+              </div>
+            </div>
+
             {loading ? (
               <div className="flex flex-col items-center justify-center p-32 bg-white rounded-[2.5rem] border border-sand/50 shadow-sm">
                  <Loader2 className="w-10 h-10 animate-spin text-caramel mb-4" />
@@ -752,6 +905,174 @@ export default function BlogsPage() {
                   ) : "Submit Report"}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Quick Post Modal */}
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCreateModalOpen(false)}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg overflow-y-auto max-h-[90vh] bg-white border border-sand/50 shadow-2xl rounded-[2.5rem] p-8 z-10 scrollbar-none"
+            >
+              <div className="flex items-center justify-between mb-6 border-b border-sand/15 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-caramel/10 rounded-full flex items-center justify-center text-caramel">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl font-bold italic text-ink">Share a Post</h3>
+                    <p className="text-xs text-muted/50 font-medium">Create a new post for the community.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="p-2 hover:bg-warm rounded-full text-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleQuickPostSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                    Post Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                    placeholder="E.g., Tips for preparing nutritious meals for puppies"
+                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 transition-all font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                      Topic Category
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={newPostCategory}
+                        onChange={(e) => setNewPostCategory(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 transition-all font-medium appearance-none cursor-pointer"
+                      >
+                        {[
+                          "Nutrition & Health",
+                          "Training & Behavior",
+                          "Pet Lifestyle",
+                          "Species Guide: Dogs",
+                          "Species Guide: Cats",
+                          "Species Guide: Other",
+                          "Pet Travel",
+                          "Success Stories"
+                        ].map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                      Photos (Optional)
+                    </label>
+                    <label className="flex items-center gap-2 px-4 py-3 border border-dashed border-sand/50 hover:border-caramel/40 rounded-2xl cursor-pointer bg-warm/5 hover:bg-warm/15 transition-all text-sm text-ink/70 justify-center">
+                      <Upload className="w-4 h-4 text-caramel/70" />
+                      <span className="font-bold text-xs">Add Images</span>
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*" 
+                        onChange={handleQuickPostImageUpload} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Previews */}
+                {(newPostImages.length > 0 || isUploadingPostImages) && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted/60 uppercase tracking-wider mb-2">
+                      Selected Photos ({newPostImages.length})
+                    </label>
+                    <div className="grid grid-cols-4 gap-2.5 p-3 bg-warm/5 rounded-2xl border border-sand/20">
+                      {newPostImages.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-sand/30 group">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeQuickPostImage(idx)}
+                            className="absolute top-1 right-1 bg-ink/75 hover:bg-ink text-white p-1 rounded-full transition-opacity cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {isUploadingPostImages && (
+                        <div className="aspect-square rounded-xl border border-sand/30 bg-warm/5 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 animate-spin text-caramel" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
+                    Post Content
+                  </label>
+                  <textarea
+                    rows={5}
+                    required
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    placeholder="Share details about nutrition, behaviors, trips, or success stories..."
+                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 resize-none transition-all font-medium leading-relaxed"
+                  />
+                </div>
+
+                <div className="mt-8 flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="flex-1 px-5 py-3.5 border border-sand text-ink text-sm font-bold rounded-2xl hover:bg-[#FBF9F2] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPost || isUploadingPostImages || !newPostTitle.trim() || !newPostContent.trim()}
+                    className="flex-1 px-5 py-3.5 bg-caramel text-white text-sm font-bold rounded-2xl hover:bg-[#b08e6f] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-caramel/10 cursor-pointer"
+                  >
+                    {isSubmittingPost ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : "Post to Feed"}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
