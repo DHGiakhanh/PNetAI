@@ -76,9 +76,9 @@ The floating chat widget (`FloatingChatAgent`) is powered by an external **Pytho
 ### Architecture Overview
 
 ```
-┌─────────────────────┐     POST /api/chatbot/chat      ┌──────────────────────────┐
-│  React Frontend     │ ──────────────────────────────► │  Node.js Backend         │
-│  FloatingChatAgent  │ ◄────────────────────────────── │  chatbot.route.js        │
+┌─────────────────────┐     POST /api/chatbot/chat       ┌──────────────────────────┐
+│  React Frontend     │ ──────────────────────────────►  │  Node.js Backend         │
+│  FloatingChatAgent  │ ◄──────────────────────────────  │  chatbot.route.js        │
 │                     │   { answer, sessionId }          │                          │
 └─────────────────────┘                                  └───────────┬──────────────┘
                                                                      │ POST /api/v1/chat
