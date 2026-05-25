@@ -345,7 +345,7 @@ export default function BreedingPage() {
                         {list.pet.species}
                       </span>
                       <span className={`px-3 py-1 text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-sm ${
-                        list.pet.gender === "Male" ? "bg-blue-500/90" : list.pet.gender === "Female" ? "bg-pink-500/90" : "bg-gray-500/90"
+                        list.pet.gender === "Male" ? "bg-blue-500/90" : list.pet.gender === "Female" ? "bg-rose-600/85" : "bg-gray-500/90"
                       }`}>
                         {list.pet.gender}
                       </span>
