@@ -335,7 +335,7 @@ export default function ProductDetailPage() {
                 <img
                   alt={product.name}
                   src={activeImage}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                   loading="lazy"
                 />
               ) : (
@@ -356,7 +356,7 @@ export default function ProductDetailPage() {
                   }`}
                   aria-label={`View image ${idx + 1}`}
                 >
-                  <img alt="" src={img} className="h-full w-full object-cover" loading="lazy" />
+                  <img alt="" src={img} className="h-full w-full object-contain" loading="lazy" />
                 </button>
               ))}
             </div>
@@ -681,7 +681,7 @@ export default function ProductDetailPage() {
                     relatedProduct.images[0] ||
                     "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=400&auto=format&fit=crop"
                   }
-                  className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                  className="h-full w-full object-contain transition group-hover:scale-[1.02]"
                   loading="lazy"
                 />
               </div>
