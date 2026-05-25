@@ -35,10 +35,11 @@ export const ProductCatalog = () => {
   const [togglingProductId, setTogglingProductId] = useState<string | null>(null);
   const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
 
-  const [cropper, setCropper] = useState<{ image: string; open: boolean; target: "new" | "edit" }>({
+  const [cropper, setCropper] = useState<{ image: string; open: boolean; target: "new" | "edit"; aspect?: number }>({
     image: "",
     open: false,
     target: "new",
+    aspect: undefined,
   });
 
   // New item state
@@ -356,7 +357,7 @@ export const ProductCatalog = () => {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-warm overflow-hidden border border-sand/30 shrink-0">
-                        <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=400'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.name} />
+                        <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=400'} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={p.name} />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-ink mb-0.5">{p.name}</p>
@@ -557,7 +558,7 @@ export const ProductCatalog = () => {
                     <label className="relative block h-52 w-full cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-sand/50 bg-white/70 transition-colors hover:bg-warm group sm:h-60">
                        {newItem.images[0] ? (
                          <>
-                           <img src={newItem.images[0]} className="w-full h-full object-cover" alt="Cover preview" />
+                           <img src={newItem.images[0]} className="w-full h-full object-contain" alt="Cover preview" />
                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent px-5 py-4 text-white">
                              <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Cover image</p>
                              <p className="mt-1 text-xs font-medium text-white/85">
@@ -588,7 +589,7 @@ export const ProductCatalog = () => {
                               onClick={() => setCoverProductImage("new", index)}
                               className="block aspect-[4/3] w-full"
                             >
-                              <img src={image} className="h-full w-full object-cover" alt={`Product preview ${index + 1}`} />
+                              <img src={image} className="h-full w-full object-contain" alt={`Product preview ${index + 1}`} />
                             </button>
                             <button
                               type="button"
@@ -738,7 +739,7 @@ export const ProductCatalog = () => {
                       <>
                         <img
                           src={editingProduct.images[0]}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain"
                           alt="Editing cover preview"
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/65 via-ink/5 to-transparent px-5 py-4 text-white">
@@ -773,7 +774,7 @@ export const ProductCatalog = () => {
                             onClick={() => setCoverProductImage("edit", index)}
                             className="block aspect-[4/3] w-full"
                           >
-                            <img src={image} alt={`Product image ${index + 1}`} className="h-full w-full object-cover" />
+                            <img src={image} alt={`Product image ${index + 1}`} className="h-full w-full object-contain" />
                           </button>
                           <button
                             type="button"
@@ -816,7 +817,7 @@ export const ProductCatalog = () => {
         {cropper.open && (
           <ImageCropperModal
             image={cropper.image}
-            aspect={PRODUCT_IMAGE_ASPECT}
+            aspect={cropper.aspect}
             onClose={() => setCropper((p) => ({ ...p, open: false }))}
             onCropComplete={handleCropComplete}
           />
