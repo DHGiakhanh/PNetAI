@@ -368,9 +368,9 @@ export default function BreedingPage() {
                     </p>
 
                     {/* Owner & Action */}
-                    <div className="mt-auto pt-6 border-t border-sand/30 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center">
+                    <div className="mt-auto pt-6 border-t border-sand/30 flex items-center justify-between gap-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="w-9 h-9 shrink-0 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center">
                           {list.user?.avatarUrl ? (
                              <img src={list.user.avatarUrl} alt={list.user.name} className="w-full h-full object-cover" />
                           ) : (
@@ -379,9 +379,14 @@ export default function BreedingPage() {
                              </div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-ink/80 leading-none">{list.user?.name || "Pet Parent"}</p>
-                          <p className="text-[9px] font-medium text-muted/50 leading-none mt-1">{list.user?.phone || list.user?.email || ""}</p>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-ink/80 leading-none">{list.user?.name || "Pet Parent"}</p>
+                          <p
+                            className="truncate text-[9px] font-medium text-muted/50 leading-none mt-1"
+                            title={list.user?.phone || list.user?.email || ""}
+                          >
+                            {list.user?.phone || list.user?.email || ""}
+                          </p>
                         </div>
                       </div>
 
@@ -391,7 +396,7 @@ export default function BreedingPage() {
                             setSelectedListing(list);
                             setRequestModalOpen(true);
                           }}
-                          className="px-5 py-2.5 bg-warm text-caramel hover:bg-ink hover:text-white rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                          className="shrink-0 whitespace-nowrap px-5 py-2.5 bg-warm text-caramel hover:bg-ink hover:text-white rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95"
                         >
                           Send Request
                           <ChevronRight className="w-3.5 h-3.5" />
