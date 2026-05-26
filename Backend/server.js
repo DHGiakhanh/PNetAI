@@ -3,6 +3,8 @@ const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 const httpErrors = require("http-errors");
+const http = require("http");
+const { initSocket } = require("./services/socket.service");
 require("dotenv").config();
 
 const connectDb = require ("./config/db");
@@ -11,6 +13,8 @@ const ApiRouter = require("./routes/api.route");
 const { initReminderCron } = require("./scripts/reminderService");
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
 
 // CORS configuration
 app.use(cors({
@@ -49,7 +53,7 @@ app.use(async (err, req, res, next) => {
 
 const PORT = process.env.PORT || 9999;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running on port: ${PORT}`);
     //Connect database 
     connectDb();
