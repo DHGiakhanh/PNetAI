@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Phone,
   Mail,
-  MessageSquare
+  MessageSquare,
+  EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import apiClient from "@/utils/api.service";
@@ -60,6 +61,7 @@ export default function BreedingRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [hiddenListingIds, setHiddenListingIds] = useState<Set<string>>(new Set());
   const { openChatWithUser } = useChatWindows();
 
   const fetchIncoming = async () => {
@@ -106,6 +108,19 @@ export default function BreedingRequestsPage() {
       );
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update request status.");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleHideListing = async (listingId: string) => {
+    try {
+      setProcessingId(`hide-${listingId}`);
+      await apiClient.patch(`/breeding/${listingId}/hide`);
+      setHiddenListingIds(prev => new Set([...prev, listingId]));
+      toast.success("Listing hidden. It will no longer appear in the public matchmaker.");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to hide listing.");
     } finally {
       setProcessingId(null);
     }
@@ -273,23 +288,44 @@ export default function BreedingRequestsPage() {
                         </button>
                       </>
                     ) : (
-                      <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider self-end ${
-                        req.status === "accepted"
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                          : "bg-rose-50 text-rose-600 border border-rose-200"
-                      }`}>
-                        {req.status === "accepted" ? (
-                          <>
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Accepted
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3.5 h-3.5" />
-                            Rejected
-                          </>
+                      <div className="flex flex-col gap-2 items-end">
+                        <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider self-end ${
+                          req.status === "accepted"
+                            ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                            : "bg-rose-50 text-rose-600 border border-rose-200"
+                        }`}>
+                          {req.status === "accepted" ? (
+                            <>
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              Accepted
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-3.5 h-3.5" />
+                              Rejected
+                            </>
+                          )}
+                        </span>
+                        {req.status === "accepted" && req.listing?._id && (
+                          <button
+                            onClick={() => handleHideListing(req.listing._id)}
+                            disabled={processingId !== null || hiddenListingIds.has(req.listing._id)}
+                            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-50 ${
+                              hiddenListingIds.has(req.listing._id)
+                                ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+                            }`}
+                            title="Hide this listing from the public matchmaker"
+                          >
+                            {processingId === `hide-${req.listing._id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <EyeOff className="w-3.5 h-3.5" />
+                            )}
+                            {hiddenListingIds.has(req.listing._id) ? "Hidden" : "Hide Listing"}
+                          </button>
                         )}
-                      </span>
+                      </div>
                     )}
                   </div>
                 </motion.article>
