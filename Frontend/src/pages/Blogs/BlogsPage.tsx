@@ -79,7 +79,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 1) {
     return (
-      <Link to={`/blogs/${post._id}`} className="block aspect-[16/10] overflow-hidden relative group">
+      <Link to={`/feeds/${post._id}`} className="block aspect-[16/10] overflow-hidden relative group">
         <img src={allImages[0]} alt={post.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
       </Link>
     );
@@ -87,7 +87,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 2) {
     return (
-      <Link to={`/blogs/${post._id}`} className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
+      <Link to={`/feeds/${post._id}`} className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
         <div className="overflow-hidden group relative">
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </div>
@@ -100,7 +100,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 3) {
     return (
-      <Link to={`/blogs/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+      <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
         <div className="col-span-2 overflow-hidden group relative">
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </div>
@@ -119,7 +119,7 @@ const renderCollage = (post: BlogPost) => {
   // 4 or more images
   const remaining = count - 3;
   return (
-    <Link to={`/blogs/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+    <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
       <div className="col-span-2 overflow-hidden group relative">
         <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
       </div>
@@ -524,7 +524,7 @@ export default function BlogsPage() {
 
                     {/* Card Body */}
                     <div className="p-5 space-y-3">
-                      <Link to={`/blogs/${post._id}`} className="block group">
+                      <Link to={`/feeds/${post._id}`} className="block group">
                         <h3 className="font-serif text-xl font-bold italic text-ink group-hover:text-caramel transition-colors leading-tight">
                           {post.title}
                         </h3>
@@ -532,7 +532,7 @@ export default function BlogsPage() {
                       <p className="text-muted/70 text-xs leading-relaxed font-medium">
                         {post.content.replace(/<[^>]*>/g, '').substring(0, 180)}
                         {post.content.replace(/<[^>]*>/g, '').length > 180 && (
-                          <Link to={`/blogs/${post._id}`} className="text-caramel hover:text-rust font-bold ml-1 hover:underline">
+                          <Link to={`/feeds/${post._id}`} className="text-caramel hover:text-rust font-bold ml-1 hover:underline">
                             ... Read More
                           </Link>
                         )}
@@ -558,13 +558,13 @@ export default function BlogsPage() {
                           <Heart className={`w-4 h-4 ${post.likes?.includes(currentUserId) ? "fill-current text-red-500" : "text-muted/40"}`} />
                           <span>{post.likes?.length || 0} Likes</span>
                         </button>
-                        <Link to={`/blogs/${post._id}`} className="flex items-center gap-1.5 hover:text-caramel transition-colors">
+                        <Link to={`/feeds/${post._id}`} className="flex items-center gap-1.5 hover:text-caramel transition-colors">
                           <MessageSquare className="w-4 h-4 text-muted/40 hover:text-caramel" />
                           <span>{post.comments?.length || 0} Comments</span>
                         </Link>
                         <button 
                           onClick={() => {
-                            const postUrl = `${window.location.origin}/blogs/${post._id}`;
+                            const postUrl = `${window.location.origin}/feeds/${post._id}`;
                             navigator.clipboard.writeText(postUrl);
                             toast.success("Link archived to clipboard!");
                           }}
@@ -817,11 +817,11 @@ export default function BlogsPage() {
               </div>
             </div>
 
-            {/* Trending Journals */}
+            {/* Trending Feeds */}
             <div className="bg-white border border-sand/50 rounded-[2rem] p-6 shadow-sm">
               <h3 className="font-serif text-lg font-bold italic text-ink mb-4 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-caramel" />
-                Trending Journals
+                Trending Feeds
               </h3>
               
               {trendingLoading ? (
@@ -835,7 +835,7 @@ export default function BlogsPage() {
                   {trendingPosts.map((tPost) => (
                     <Link
                       key={tPost._id}
-                      to={`/blogs/${tPost._id}`}
+                      to={`/feeds/${tPost._id}`}
                       className="flex items-center gap-3 group border-b border-sand/10 pb-3 last:border-0 last:pb-0"
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-warm shrink-0 border border-sand/30">

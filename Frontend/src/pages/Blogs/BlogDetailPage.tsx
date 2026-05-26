@@ -114,7 +114,7 @@ export default function BlogDetailPage() {
       }
     } catch (error) {
       toast.error("Could not find this story.");
-      navigate("/blogs");
+      navigate("/feeds");
     } finally {
       setLoading(false);
     }
@@ -272,7 +272,7 @@ export default function BlogDetailPage() {
 
       <div className="max-w-4xl mx-auto px-6 pt-12">
         <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted mb-8">
-          <Link to="/blogs" className="hover:text-caramel transition-colors">Journal</Link>
+          <Link to="/feeds" className="hover:text-caramel transition-colors">Feeds</Link>
           <ChevronRight className="w-3 h-3" />
           <span className="text-caramel">{blog.category}</span>
           <ChevronRight className="w-3 h-3" />

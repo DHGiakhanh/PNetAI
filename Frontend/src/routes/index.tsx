@@ -132,8 +132,8 @@ export default function AppRoutes() {
         <Route path="otp-verify" element={<OtpVerifyPage />} />
         <Route path="verify-reactivation" element={<VerifyReactivation />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
-        <Route path="blogs" element={<BlogsPage />} />
-        <Route path="blogs/:blogId" element={<BlogDetailPage />} />
+        <Route path="feeds" element={<BlogsPage />} />
+        <Route path="feeds/:blogId" element={<BlogDetailPage />} />
         <Route path="breeding" element={<BreedingPage />} />
 
         {/* Protected */}
@@ -143,9 +143,9 @@ export default function AppRoutes() {
           <Route path="my-bookings" element={<MyBookingsPage />} />
           <Route path="my-orders" element={<MyOrdersPage />} />
           <Route path="purchased-products" element={<Navigate to="/my-orders" replace />} />
-          <Route path="my-blogs" element={<MyBlogsPage />} />
-          <Route path="blogs/new" element={<BlogEditorPage />} />
-          <Route path="blogs/edit/:id" element={<BlogEditorPage />} />
+          <Route path="my-feeds" element={<MyBlogsPage />} />
+          <Route path="feeds/new" element={<BlogEditorPage />} />
+          <Route path="feeds/edit/:id" element={<BlogEditorPage />} />
           <Route path="breeding/requests" element={<BreedingRequestsPage />} />
         </Route>
       </Route>

@@ -116,7 +116,7 @@ export default function BlogEditorPage() {
           });
         } catch (error) {
           toast.error("Could not load article for editing.");
-          navigate("/my-blogs");
+          navigate("/my-feeds");
         } finally {
           setFetching(false);
         }
@@ -204,7 +204,7 @@ export default function BlogEditorPage() {
         toast.success(submitStatus === "pending" ? "Sent for Moderation" : "Draft Archived");
       }
       
-      navigate("/my-blogs");
+      navigate("/my-feeds");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Storage failure.");
     } finally {
@@ -224,7 +224,7 @@ export default function BlogEditorPage() {
       {/* Editorial Bar */}
       <nav className="sticky top-0 z-[60] bg-white/80 backdrop-blur-xl border-b border-sand px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <button onClick={() => navigate("/my-blogs")} className="p-2 hover:bg-warm rounded-full text-muted transition-colors">
+          <button onClick={() => navigate("/my-feeds")} className="p-2 hover:bg-warm rounded-full text-muted transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex flex-col">
