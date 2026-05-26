@@ -22,6 +22,7 @@ import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import apiClient from "@/utils/api.service";
 import { authService } from "@/services/auth.service";
+import { MiniProfileModal } from "@/components/social/MiniProfileModal";
 
 type Author = {
   _id: string;
@@ -99,6 +100,7 @@ export default function BlogDetailPage() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const fetchBlog = async () => {
     try {
@@ -283,7 +285,10 @@ export default function BlogDetailPage() {
           </h1>
 
           <div className="flex flex-wrap items-center gap-6 mb-12">
-            <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full border border-sand shadow-sm">
+            <div 
+              onClick={() => setSelectedUserId(blog.author._id)}
+              className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full border border-sand shadow-sm cursor-pointer hover:border-caramel/40 hover:bg-warm/10 transition-all"
+            >
               <div className="w-8 h-8 rounded-full bg-warm overflow-hidden border border-sand/40">
                 {blog.author.avatarUrl ? (
                    <img src={blog.author.avatarUrl} alt={blog.author.name} className="w-full h-full object-cover" />
@@ -485,12 +490,20 @@ export default function BlogDetailPage() {
                   {blog.comments.map(comment => (
                     <div key={comment._id} className="space-y-6">
                       <div className="flex gap-6 group">
-                        <div className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand">
+                        <div 
+                          onClick={() => setSelectedUserId(comment.user._id)}
+                          className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand cursor-pointer"
+                        >
                            {comment.user.avatarUrl ? <img src={comment.user.avatarUrl} className="w-full h-full object-cover" /> : comment.user.name[0].toUpperCase()}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-bold text-ink text-sm">{comment.user.name}</span>
+                            <span 
+                              onClick={() => setSelectedUserId(comment.user._id)}
+                              className="font-bold text-ink text-sm cursor-pointer hover:text-caramel transition-colors"
+                            >
+                              {comment.user.name}
+                            </span>
                             <span className="text-[10px] text-muted/40 font-bold uppercase tracking-widest">{new Date(comment.createdAt).toLocaleDateString()}</span>
                           </div>
                           <p className="text-lg text-muted/70 leading-relaxed font-medium italic whitespace-pre-wrap">{comment.text}</p>
@@ -576,12 +589,20 @@ export default function BlogDetailPage() {
                         <div className="ml-20 space-y-8 border-l-2 border-sand/30 pl-8">
                            {comment.replies.map(reply => (
                              <div key={reply._id} className="flex gap-4 group/reply">
-                                <div className="w-10 h-10 rounded-xl bg-warm flex items-center justify-center text-[10px] font-bold flex-shrink-0 border border-sand overflow-hidden">
+                                <div 
+                                  onClick={() => setSelectedUserId(reply.user._id)}
+                                  className="w-10 h-10 rounded-xl bg-warm flex items-center justify-center text-[10px] font-bold flex-shrink-0 border border-sand overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+                                >
                                    {reply.user.avatarUrl ? <img src={reply.user.avatarUrl} className="w-full h-full object-cover" /> : reply.user.name[0].toUpperCase()}
                                 </div>
                                 <div className="flex-1">
                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="font-bold text-ink text-xs">{reply.user.name}</span>
+                                      <span 
+                                        onClick={() => setSelectedUserId(reply.user._id)}
+                                        className="font-bold text-ink text-xs cursor-pointer hover:text-caramel transition-colors"
+                                      >
+                                        {reply.user.name}
+                                      </span>
                                       <span className="text-[8px] text-muted/40 font-bold uppercase tracking-widest">{new Date(reply.createdAt).toLocaleDateString()}</span>
                                    </div>
                                    <p className="text-base text-muted/70 leading-relaxed font-medium italic">{reply.text}</p>
@@ -675,6 +696,16 @@ export default function BlogDetailPage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mini Profile Modal */}
+      <AnimatePresence>
+        {selectedUserId && (
+          <MiniProfileModal
+            userId={selectedUserId}
+            onClose={() => setSelectedUserId(null)}
+          />
         )}
       </AnimatePresence>
     </div>

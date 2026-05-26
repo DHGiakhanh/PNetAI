@@ -9,11 +9,14 @@ import {
   Calendar,
   AlertCircle,
   Phone,
-  Mail
+  Mail,
+  MessageSquare
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
+import { useChatWindows } from "@/context/ChatWindowContext";
+import { MiniProfileModal } from "@/components/social/MiniProfileModal";
 
 type Pet = {
   _id: string;
@@ -56,6 +59,8 @@ export default function BreedingRequestsPage() {
   const [outgoingRequests, setOutgoingRequests] = useState<BreedingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { openChatWithUser } = useChatWindows();
 
   const fetchIncoming = async () => {
     try {
@@ -178,7 +183,12 @@ export default function BreedingRequestsPage() {
                   <div className="flex-1 space-y-6">
                     {/* Header: Breeding Listing Pet and Requester Pet */}
                     <div className="flex flex-wrap items-center gap-3 text-sm">
-                      <span className="font-bold text-ink">{req.requester.name}</span>
+                      <span 
+                        onClick={() => setSelectedUserId(req.requester._id)}
+                        className="font-bold text-ink cursor-pointer hover:text-caramel transition-colors"
+                      >
+                        {req.requester.name}
+                      </span>
                       <span className="text-muted/40 font-medium">proposed mating between</span>
                       <span className="px-3 py-1 bg-warm border border-sand/30 rounded-full text-xs font-bold text-caramel flex items-center gap-1.5">
                         {req.requesterPet.name} ({req.requesterPet.gender})
@@ -216,20 +226,24 @@ export default function BreedingRequestsPage() {
                         <Calendar className="w-3.5 h-3.5" />
                         {new Date(req.createdAt).toLocaleDateString()}
                       </span>
-                      {req.status === "accepted" && (
-                        <>
-                          <span className="w-1 h-1 bg-sand rounded-full" />
-                          <span className="flex items-center gap-1 text-ink/80">
-                            <Phone className="w-3.5 h-3.5" />
-                            {req.requester.phone || "No phone listed"}
-                          </span>
-                          <span className="w-1 h-1 bg-sand rounded-full" />
-                          <span className="flex items-center gap-1 text-ink/80">
-                            <Mail className="w-3.5 h-3.5" />
-                            {req.requester.email}
-                          </span>
-                        </>
-                      )}
+                      <span className="w-1 h-1 bg-sand rounded-full" />
+                      <span className="flex items-center gap-1 text-ink/80">
+                        <Phone className="w-3.5 h-3.5" />
+                        {req.requester.phone || "No phone listed"}
+                      </span>
+                      <span className="w-1 h-1 bg-sand rounded-full" />
+                      <span className="flex items-center gap-1 text-ink/80">
+                        <Mail className="w-3.5 h-3.5" />
+                        {req.requester.email}
+                      </span>
+                      <span className="w-1 h-1 bg-sand rounded-full" />
+                      <button
+                        onClick={() => openChatWithUser(req.requester._id)}
+                        className="flex items-center gap-1 text-caramel hover:text-rust font-bold transition-colors cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Nhắn tin
+                      </button>
                     </div>
                   </div>
 
@@ -308,7 +322,12 @@ export default function BreedingRequestsPage() {
                         {req.listing?.pet?.name || "Deleted Pet"}
                       </span>
                       <span className="text-muted/50 font-medium">owned by</span>
-                      <span className="font-bold text-ink">{req.listing?.user?.name || "Owner"}</span>
+                      <span 
+                        onClick={() => req.listing?.user?._id && setSelectedUserId(req.listing.user._id)}
+                        className="font-bold text-ink cursor-pointer hover:text-caramel transition-colors"
+                      >
+                        {req.listing?.user?.name || "Owner"}
+                      </span>
                     </div>
 
                     {/* Comparison Card */}
@@ -338,7 +357,7 @@ export default function BreedingRequestsPage() {
                         <Calendar className="w-3.5 h-3.5" />
                         {new Date(req.createdAt).toLocaleDateString()}
                       </span>
-                      {req.status === "accepted" && req.listing?.user && (
+                      {req.listing?.user && (
                         <>
                           <span className="w-1 h-1 bg-sand rounded-full" />
                           <span className="flex items-center gap-1 text-ink/80">
@@ -350,6 +369,14 @@ export default function BreedingRequestsPage() {
                             <Mail className="w-3.5 h-3.5" />
                             {req.listing.user.email}
                           </span>
+                          <span className="w-1 h-1 bg-sand rounded-full" />
+                          <button
+                            onClick={() => openChatWithUser(req.listing.user._id)}
+                            className="flex items-center gap-1 text-caramel hover:text-rust font-bold transition-colors cursor-pointer"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            Nhắn tin
+                          </button>
                         </>
                       )}
                     </div>
@@ -376,6 +403,16 @@ export default function BreedingRequestsPage() {
           )
         )}
       </div>
+
+      {/* Mini Profile Modal */}
+      <AnimatePresence>
+        {selectedUserId && (
+          <MiniProfileModal
+            userId={selectedUserId}
+            onClose={() => setSelectedUserId(null)}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

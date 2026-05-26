@@ -277,6 +277,55 @@ router.get("/friends/requests/sent", verifyToken, async (req, res) => {
   }
 });
 
+// Get a user's public profile and friendship status relative to the logged-in user
+router.get("/users/profile/:userId", verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await db.User.findById(userId)
+      .select("name email avatarUrl role description phone");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let status = "none";
+    if (userId === req.userId) {
+      status = "self";
+    } else {
+      const fs = await db.Friendship.findOne({
+        $or: [
+          { requester: req.userId, recipient: userId },
+          { requester: userId, recipient: req.userId },
+        ],
+      });
+
+      if (fs) {
+        if (fs.status === "accepted") {
+          status = "friends";
+        } else if (fs.status === "pending") {
+          status = fs.requester.toString() === req.userId ? "pending_sent" : "pending_received";
+        }
+      }
+    }
+
+    res.status(200).json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        description: user.description,
+        phone: status === "friends" ? user.phone : undefined,
+      },
+      friendshipStatus: status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Search users & return friendship status relative to logged-in user
 router.get("/users/search", verifyToken, async (req, res) => {
   try {

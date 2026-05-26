@@ -138,6 +138,24 @@ export const socialService = {
     return response.data?.users || [];
   },
 
+  getUserProfile: async (
+    userId: string
+  ): Promise<{
+    user: {
+      _id: string;
+      name: string;
+      email: string;
+      avatarUrl?: string;
+      role: string;
+      description?: string;
+      phone?: string;
+    };
+    friendshipStatus: "none" | "pending_sent" | "pending_received" | "friends" | "self";
+  }> => {
+    const response = await apiClient.get(`/social/users/profile/${userId}`);
+    return response.data;
+  },
+
   // Conversations & Messages
   getConversations: async (): Promise<Conversation[]> => {
     const response = await apiClient.get("/social/conversations");
