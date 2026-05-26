@@ -470,7 +470,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Tìm tên hoặc email..."
-                    className="h-9 flex-1 rounded-xl border border-sand bg-warm/10 px-3 text-xs text-ink outline-none transition focus:border-caramel focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    className="h-9 flex-1 rounded-xl border border-sand bg-warm/10 px-3 text-xs text-ink outline-none transition focus:border-caramel focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:bg-slate-950"
                   />
                   <button
                     type="submit"

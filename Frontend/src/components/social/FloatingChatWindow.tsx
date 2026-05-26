@@ -427,7 +427,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
             onChange={handleTextChange}
             placeholder="Aa"
             disabled={sending}
-            className="h-8 flex-1 rounded-full border border-sand/80 bg-warm/10 px-3.5 text-xs text-ink outline-none transition placeholder:text-muted focus:border-caramel focus:bg-white disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-amber-700"
+            className="h-8 flex-1 rounded-full border border-sand/80 bg-warm/10 px-3.5 text-xs text-ink outline-none transition placeholder:text-muted focus:border-caramel focus:bg-white disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:border-amber-700 dark:focus:bg-slate-950"
           />
 
           <button
