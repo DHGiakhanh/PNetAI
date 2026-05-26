@@ -16,7 +16,6 @@ import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
 const CATEGORIES = ["Food", "Accessories", "Health", "Toys", "Grooming", "Travel"];
 const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "other", "medical", "grooming", "food", "toys", "accessories", "travel"];
-const PRODUCT_IMAGE_ASPECT = 4 / 3;
 const MAX_PRODUCT_IMAGES = 6;
 
 const moveImageToFront = (images: string[], index: number) => {
