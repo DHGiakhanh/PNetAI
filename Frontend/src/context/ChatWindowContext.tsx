@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Conversation, socialService } from "../services/social.service";
 import { toast } from "react-hot-toast";
 
@@ -15,8 +16,17 @@ interface ChatWindowContextProps {
 const ChatWindowContext = createContext<ChatWindowContextProps | undefined>(undefined);
 
 export const ChatWindowProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { pathname } = useLocation();
+  const hasActiveSession = Boolean(localStorage.getItem("token"));
   const [openChats, setOpenChats] = useState<Conversation[]>([]);
   const [minimizedChats, setMinimizedChats] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!hasActiveSession) {
+      setOpenChats([]);
+      setMinimizedChats([]);
+    }
+  }, [hasActiveSession, pathname]);
 
   // Listen to new message notifications - if a chat is closed and we get a message, we might not open it automatically (too intrusive), but if it's minimized, we can update its state.
   useEffect(() => {
@@ -46,6 +56,8 @@ export const ChatWindowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const openChat = (convo: Conversation) => {
+    if (!localStorage.getItem("token")) return;
+
     setOpenChats((prev) => {
       // If already open, do nothing (or move to end/focus)
       if (prev.some((c) => c._id === convo._id)) {
@@ -93,8 +105,8 @@ export const ChatWindowProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <ChatWindowContext.Provider
       value={{
-        openChats,
-        minimizedChats,
+        openChats: hasActiveSession ? openChats : [],
+        minimizedChats: hasActiveSession ? minimizedChats : [],
         openChat,
         openChatWithUser,
         closeChat,
