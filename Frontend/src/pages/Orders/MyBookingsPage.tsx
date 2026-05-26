@@ -63,9 +63,12 @@ export default function MyBookingsPage() {
     fetchBookings();
   }, []);
 
-  const totalSpent = useMemo(
-    () => bookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0),
-    [bookings]
+  // Exclude cancelled bookings from totals displayed to user
+  const activeBookings = useMemo(() => bookings.filter((b) => b.status !== 'cancelled'), [bookings]);
+
+  const totalSpentActive = useMemo(
+    () => activeBookings.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0),
+    [activeBookings]
   );
 
   return (
@@ -76,8 +79,8 @@ export default function MyBookingsPage() {
 
         <div className="mt-4 rounded-2xl border border-sand bg-white/90 p-4 text-sm text-ink shadow-sm">
           <p>
-            Total bookings: <span className="font-semibold">{bookings.length}</span> · Total spent:{" "}
-            <span className="font-semibold text-brown">{formatVnd(totalSpent)}</span>
+            Total bookings: <span className="font-semibold">{activeBookings.length}</span> · Total spent: {" "}
+            <span className="font-semibold text-brown">{formatVnd(totalSpentActive)}</span>
           </p>
         </div>
 

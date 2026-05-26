@@ -206,6 +206,7 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
         }
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`;
         const finalReturnUrl = returnUrl || `${frontendUrl}/services/${serviceId}/booking/success`;
         const finalCancelUrl = cancelUrl || `${frontendUrl}/services/${serviceId}/booking/cancel`;
 
@@ -235,11 +236,15 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
 
         // Create PayOS payment link
         const orderCode = await generateUniqueOrderCode();
+        // Use a backend cancel endpoint so when user returns from PayOS by cancelling
+        // we can mark the created booking as cancelled and release the time slot.
+        const backendCancelEndpoint = `${backendUrl.replace(/\/$/, '')}/bookings/payos/cancel?bookingId=${newBooking._id}&returnUrl=${encodeURIComponent(finalCancelUrl)}`;
+
         const payload = {
             orderCode,
             amount,
             description: `BK ${orderCode}`.slice(0, 25),
-            cancelUrl: finalCancelUrl,
+            cancelUrl: backendCancelEndpoint,
             returnUrl: finalReturnUrl,
             items: [
                 {
@@ -294,6 +299,39 @@ router.post("/confirm/payos", verifyToken, async (req, res) => {
             message: "Cannot create PayOS payment link for booking",
             error: error.response?.data || error.message,
         });
+    }
+});
+
+// PayOS cancel redirect handler — cancels the pending booking and redirects to frontend
+router.get('/payos/cancel', async (req, res) => {
+    try {
+        const { bookingId, returnUrl } = req.query;
+
+        if (bookingId) {
+            const booking = await db.Booking.findById(bookingId);
+            if (booking && booking.status === 'pending') {
+                booking.status = 'cancelled';
+                booking.updatedAt = Date.now();
+                await booking.save();
+
+                // also mark linked transaction as failed if present
+                const tx = await db.Transaction.findOne({ referenceId: booking._id, type: 'service_booking' });
+                if (tx && tx.status === 'pending') {
+                    tx.status = 'failed';
+                    tx.updatedAt = Date.now();
+                    await tx.save();
+                }
+            }
+        }
+
+        if (returnUrl && ensureValidUrl(String(returnUrl))) {
+            return res.redirect(String(returnUrl));
+        }
+
+        return res.status(200).json({ message: 'Booking cancelled' });
+    } catch (error) {
+        console.error('PayOS cancel error:', error);
+        return res.status(500).json({ message: 'Error processing cancel' });
     }
 });
 
