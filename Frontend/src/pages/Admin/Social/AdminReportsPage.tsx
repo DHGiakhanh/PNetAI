@@ -139,7 +139,7 @@ export default function AdminReportsPage() {
                         <div className="space-y-1">
                           {rep.blog ? (
                             <Link 
-                              to={`/blogs/${rep.blog._id}`} 
+                              to={`/feeds/${rep.blog._id}`} 
                               target="_blank"
                               rel="noopener noreferrer"
                               className="font-serif font-bold italic text-ink text-base line-clamp-1 hover:text-caramel transition-colors inline-flex items-center gap-1.5 group/title"

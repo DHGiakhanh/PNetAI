@@ -85,6 +85,25 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
+// Hide (disable) a listing — owner only. Used after a successful match.
+router.patch('/:id/hide', verifyToken, async (req, res) => {
+    try {
+        const listing = await db.BreedingListing.findById(req.params.id);
+        if (!listing) return res.status(404).json({ message: "Listing not found" });
+
+        if (listing.user.toString() !== req.userId) {
+            return res.status(403).json({ message: "Access denied. Not the listing owner." });
+        }
+
+        listing.status = "disabled";
+        await listing.save();
+
+        res.status(200).json({ message: "Breeding listing hidden successfully", listing });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Delete a listing (owner/admin only)
 router.delete('/:id', verifyToken, async (req, res) => {
     try {

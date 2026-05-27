@@ -18,6 +18,9 @@ const AIHistory = require("./ai_history.model");
 const Report = require("./report.model");
 const BreedingListing = require("./breedingListing.model");
 const BreedingRequest = require("./breedingRequest.model");
+const Friendship = require("./friendship.model");
+const Conversation = require("./conversation.model");
+const Message = require("./message.model");
 
 const db = {}
 
@@ -41,6 +44,9 @@ db.AIHistory = AIHistory;
 db.Report = Report;
 db.BreedingListing = BreedingListing;
 db.BreedingRequest = BreedingRequest;
+db.Friendship = Friendship;
+db.Conversation = Conversation;
+db.Message = Message;
 
 
 module.exports = db;

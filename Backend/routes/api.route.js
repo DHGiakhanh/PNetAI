@@ -16,6 +16,7 @@ const bookingRoutes = require("./booking.route");
 const subscriptionRoutes = require("./subscription.route");
 const chatbotRoutes = require("./chatbot.route");
 const breedingRoutes = require("./breeding.route");
+const socialRoutes = require("./social.route");
 const ApiRouter = express.Router();
 
 // Auth routes
@@ -68,5 +69,8 @@ ApiRouter.use('/chatbot', chatbotRoutes);
 
 // Breeding routes
 ApiRouter.use('/breeding', breedingRoutes);
+
+// Social routes
+ApiRouter.use('/social', socialRoutes);
 
 module.exports = ApiRouter;

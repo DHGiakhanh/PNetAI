@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import apiClient from "@/utils/api.service";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
+import { MiniProfileModal } from "@/components/social/MiniProfileModal";
 
 type Pet = {
   _id: string;
@@ -81,6 +82,7 @@ export default function BreedingPage() {
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserId = currentUser._id || currentUser.id || "";
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const fetchListings = async () => {
     try {
@@ -368,9 +370,12 @@ export default function BreedingPage() {
                     </p>
 
                     {/* Owner & Action */}
-                    <div className="mt-auto pt-6 border-t border-sand/30 flex items-center justify-between gap-4">
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="w-9 h-9 shrink-0 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center">
+                    <div className="mt-auto pt-6 border-t border-sand/30 flex items-center justify-between">
+                      <div 
+                        onClick={() => list.user?._id && setSelectedUserId(list.user._id)}
+                        className="flex items-center gap-3 cursor-pointer hover:opacity-85 hover:text-caramel transition-all"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center">
                           {list.user?.avatarUrl ? (
                              <img src={list.user.avatarUrl} alt={list.user.name} className="w-full h-full object-cover" />
                           ) : (
@@ -688,6 +693,16 @@ export default function BreedingPage() {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mini Profile Modal */}
+      <AnimatePresence>
+        {selectedUserId && (
+          <MiniProfileModal
+            userId={selectedUserId}
+            onClose={() => setSelectedUserId(null)}
+          />
         )}
       </AnimatePresence>
     </main>

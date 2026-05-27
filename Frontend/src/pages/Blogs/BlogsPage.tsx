@@ -22,6 +22,7 @@ import Pagination from "@/components/common/Pagination";
 import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
 import { authService } from "@/services/auth.service";
+import { MiniProfileModal } from "@/components/social/MiniProfileModal";
 
 type BlogReply = {
   _id: string;
@@ -78,7 +79,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 1) {
     return (
-      <Link to={`/blogs/${post._id}`} className="block aspect-[16/10] overflow-hidden relative group">
+      <Link to={`/feeds/${post._id}`} className="block aspect-[16/10] overflow-hidden relative group">
         <img src={allImages[0]} alt={post.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
       </Link>
     );
@@ -86,7 +87,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 2) {
     return (
-      <Link to={`/blogs/${post._id}`} className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
+      <Link to={`/feeds/${post._id}`} className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
         <div className="overflow-hidden group relative">
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </div>
@@ -99,7 +100,7 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 3) {
     return (
-      <Link to={`/blogs/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+      <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
         <div className="col-span-2 overflow-hidden group relative">
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
         </div>
@@ -118,7 +119,7 @@ const renderCollage = (post: BlogPost) => {
   // 4 or more images
   const remaining = count - 3;
   return (
-    <Link to={`/blogs/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+    <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
       <div className="col-span-2 overflow-hidden group relative">
         <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
       </div>
@@ -165,6 +166,7 @@ export default function BlogsPage() {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const isLoggedIn = Boolean(localStorage.getItem("token"));
@@ -481,7 +483,10 @@ export default function BlogsPage() {
                     {/* Card Header */}
                     <div className="p-5 flex items-center justify-between border-b border-sand/20">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center shrink-0">
+                        <div 
+                          onClick={() => setSelectedUserId(post.author._id)}
+                          className="w-10 h-10 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                        >
                           {post.author.avatarUrl ? (
                             <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" />
                           ) : (
@@ -489,7 +494,12 @@ export default function BlogsPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-ink leading-tight">{post.author.name}</p>
+                          <p 
+                            onClick={() => setSelectedUserId(post.author._id)}
+                            className="text-xs font-bold text-ink leading-tight cursor-pointer hover:text-caramel transition-colors"
+                          >
+                            {post.author.name}
+                          </p>
                           <div className="flex items-center gap-1.5 text-[9px] text-muted/50 font-bold uppercase tracking-wider mt-0.5">
                             <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                             <span>&bull;</span>
@@ -514,7 +524,7 @@ export default function BlogsPage() {
 
                     {/* Card Body */}
                     <div className="p-5 space-y-3">
-                      <Link to={`/blogs/${post._id}`} className="block group">
+                      <Link to={`/feeds/${post._id}`} className="block group">
                         <h3 className="font-serif text-xl font-bold italic text-ink group-hover:text-caramel transition-colors leading-tight">
                           {post.title}
                         </h3>
@@ -522,7 +532,7 @@ export default function BlogsPage() {
                       <p className="text-muted/70 text-xs leading-relaxed font-medium">
                         {post.content.replace(/<[^>]*>/g, '').substring(0, 180)}
                         {post.content.replace(/<[^>]*>/g, '').length > 180 && (
-                          <Link to={`/blogs/${post._id}`} className="text-caramel hover:text-rust font-bold ml-1 hover:underline">
+                          <Link to={`/feeds/${post._id}`} className="text-caramel hover:text-rust font-bold ml-1 hover:underline">
                             ... Read More
                           </Link>
                         )}
@@ -548,13 +558,13 @@ export default function BlogsPage() {
                           <Heart className={`w-4 h-4 ${post.likes?.includes(currentUserId) ? "fill-current text-red-500" : "text-muted/40"}`} />
                           <span>{post.likes?.length || 0} Likes</span>
                         </button>
-                        <Link to={`/blogs/${post._id}`} className="flex items-center gap-1.5 hover:text-caramel transition-colors">
+                        <Link to={`/feeds/${post._id}`} className="flex items-center gap-1.5 hover:text-caramel transition-colors">
                           <MessageSquare className="w-4 h-4 text-muted/40 hover:text-caramel" />
                           <span>{post.comments?.length || 0} Comments</span>
                         </Link>
                         <button 
                           onClick={() => {
-                            const postUrl = `${window.location.origin}/blogs/${post._id}`;
+                            const postUrl = `${window.location.origin}/feeds/${post._id}`;
                             navigator.clipboard.writeText(postUrl);
                             toast.success("Link archived to clipboard!");
                           }}
@@ -582,7 +592,10 @@ export default function BlogsPage() {
                             {post.comments.slice(0, visibleCount).map((comment) => (
                               <div key={comment._id} className="space-y-2">
                                 <div className="flex gap-2.5 items-start text-xs">
-                                  <div className="w-7 h-7 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5">
+                                  <div 
+                                    onClick={() => setSelectedUserId(comment.user._id)}
+                                    className="w-7 h-7 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                                  >
                                     {comment.user?.avatarUrl ? (
                                       <img src={comment.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                                     ) : (
@@ -591,7 +604,12 @@ export default function BlogsPage() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="bg-[#FBF9F2] border border-sand/40 rounded-2xl px-3.5 py-2 inline-block max-w-full">
-                                      <p className="font-bold text-ink leading-tight mb-0.5">{comment.user?.name || "User"}</p>
+                                      <p 
+                                        onClick={() => setSelectedUserId(comment.user._id)}
+                                        className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
+                                      >
+                                        {comment.user?.name || "User"}
+                                      </p>
                                       <p className="text-muted/80 leading-relaxed font-medium break-words">{comment.text}</p>
                                     </div>
                                     <div className="flex items-center gap-3 text-[8px] text-muted/40 font-bold uppercase tracking-wider mt-1 ml-2">
@@ -614,7 +632,10 @@ export default function BlogsPage() {
                                   <div className="ml-9 pl-4 border-l-2 border-sand/35 space-y-2">
                                     {comment.replies.map((reply) => (
                                       <div key={reply._id} className="flex gap-2 items-start text-xs">
-                                        <div className="w-6 h-6 rounded-full bg-warm border border-sand/35 overflow-hidden flex items-center justify-center shrink-0 mt-0.5">
+                                        <div 
+                                          onClick={() => setSelectedUserId(reply.user._id)}
+                                          className="w-6 h-6 rounded-full bg-warm border border-sand/35 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                                        >
                                           {reply.user?.avatarUrl ? (
                                             <img src={reply.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                                           ) : (
@@ -623,7 +644,12 @@ export default function BlogsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                           <div className="bg-[#FBF9F2]/70 border border-sand/30 rounded-xl px-3 py-1.5 inline-block max-w-full">
-                                            <p className="font-bold text-ink leading-tight mb-0.5">{reply.user?.name || "User"}</p>
+                                            <p 
+                                              onClick={() => setSelectedUserId(reply.user._id)}
+                                              className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
+                                            >
+                                              {reply.user?.name || "User"}
+                                            </p>
                                             <p className="text-muted/80 leading-relaxed font-medium break-words">{reply.text}</p>
                                           </div>
                                           <p className="text-[7.5px] text-muted/40 font-bold uppercase tracking-wider mt-0.5 ml-1">
@@ -791,11 +817,11 @@ export default function BlogsPage() {
               </div>
             </div>
 
-            {/* Trending Journals */}
+            {/* Trending Feeds */}
             <div className="bg-white border border-sand/50 rounded-[2rem] p-6 shadow-sm">
               <h3 className="font-serif text-lg font-bold italic text-ink mb-4 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-caramel" />
-                Trending Journals
+                Trending Feeds
               </h3>
               
               {trendingLoading ? (
@@ -809,7 +835,7 @@ export default function BlogsPage() {
                   {trendingPosts.map((tPost) => (
                     <Link
                       key={tPost._id}
-                      to={`/blogs/${tPost._id}`}
+                      to={`/feeds/${tPost._id}`}
                       className="flex items-center gap-3 group border-b border-sand/10 pb-3 last:border-0 last:pb-0"
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-warm shrink-0 border border-sand/30">
@@ -826,7 +852,16 @@ export default function BlogsPage() {
                           {tPost.title}
                         </h4>
                         <p className="text-[9px] text-muted/50 font-bold uppercase mt-1 flex items-center gap-1.5">
-                          <span>{tPost.author.name}</span>
+                          <span 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedUserId(tPost.author._id);
+                            }}
+                            className="cursor-pointer hover:text-caramel transition-colors"
+                          >
+                            {tPost.author.name}
+                          </span>
                           <span>&bull;</span>
                           <span className="flex items-center gap-0.5 text-caramel font-semibold">
                             <Eye className="w-3.5 h-3.5" />
@@ -1075,6 +1110,16 @@ export default function BlogsPage() {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mini Profile Modal */}
+      <AnimatePresence>
+        {selectedUserId && (
+          <MiniProfileModal
+            userId={selectedUserId}
+            onClose={() => setSelectedUserId(null)}
+          />
         )}
       </AnimatePresence>
     </main>

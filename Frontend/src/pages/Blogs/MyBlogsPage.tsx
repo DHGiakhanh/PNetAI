@@ -98,12 +98,12 @@ export default function MyBlogsPage() {
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Editorial Studio</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-ink tracking-tight">
-              My Personal <span className="text-caramel/80">Blogs</span>
+              My Personal <span className="text-caramel/80">Feeds</span>
             </h1>
           </div>
           
           <button 
-            onClick={() => navigate("/blogs/new")}
+            onClick={() => navigate("/feeds/new")}
             className="group flex items-center gap-2 bg-ink text-white px-8 py-4 rounded-full font-bold hover:bg-caramel transition-all shadow-xl shadow-ink/10 active:scale-95"
           >
             <Plus className="w-5 h-5 transition-transform group-hover:rotate-90" />
@@ -149,7 +149,7 @@ export default function MyBlogsPage() {
                  <p className="text-sm text-muted/60 max-w-xs mx-auto mb-8">
                    Your pen is silent. Start sharing your pet parenting wisdom with the world.
                  </p>
-                 <button onClick={() => navigate("/blogs/new")} className="text-sm font-bold text-caramel hover:text-rust transition-colors underline decoration-2 underline-offset-4">
+                 <button onClick={() => navigate("/feeds/new")} className="text-sm font-bold text-caramel hover:text-rust transition-colors underline decoration-2 underline-offset-4">
                     Begin your first draft
                  </button>
               </div>
@@ -177,7 +177,7 @@ export default function MyBlogsPage() {
                           </div>
                           <div className="min-w-0">
                              <p className="text-[10px] font-bold uppercase tracking-widest text-caramel/70 mb-1">{blog.category}</p>
-                             <Link to={blog.status === 'approved' ? `/blogs/${blog._id}` : '#'} className="text-base font-serif font-bold text-ink hover:text-caramel transition-colors truncate block italic">
+                             <Link to={blog.status === 'approved' ? `/feeds/${blog._id}` : '#'} className="text-base font-serif font-bold text-ink hover:text-caramel transition-colors truncate block italic">
                                {blog.title}
                              </Link>
                           </div>
@@ -194,7 +194,7 @@ export default function MyBlogsPage() {
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
-                            onClick={() => navigate(`/blogs/edit/${blog._id}`)}
+                            onClick={() => navigate(`/feeds/edit/${blog._id}`)}
                             className="p-2 hover:bg-caramel/10 rounded-xl text-caramel transition-all"
                             title="Edit"
                           >

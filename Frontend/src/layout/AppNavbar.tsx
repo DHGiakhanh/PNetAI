@@ -10,11 +10,11 @@ import {
   PawPrint,
   Store,
   Scissors,
-  Users,
   LogIn,
   Trash2,
   LayoutDashboard,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 import { cartService, CartItem, CartProduct } from "../services/cart.service";
 import { productService } from "../services/product.service";
@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { formatVnd, FREE_SHIPPING_THRESHOLD_VND } from "@/utils/currency";
 import apiClient from "@/utils/api.service";
+import { MessengerDropdown } from "../components/social/MessengerDropdown";
 
 type LocalUser = {
   name?: string;
@@ -69,6 +70,9 @@ export function AppNavbar() {
   const accountRef = useRef<HTMLDivElement | null>(null);
   const cartRef = useRef<HTMLDivElement | null>(null);
   const notificationRef = useRef<HTMLDivElement | null>(null);
+  const messengerRef = useRef<HTMLDivElement | null>(null);
+  const [messengerOpen, setMessengerOpen] = useState(false);
+  const [mobileMessengerOpen, setMobileMessengerOpen] = useState(false);
   const token = localStorage.getItem("token");
   const isLoggedIn = Boolean(token);
   const [userData, setUserData] = useState<LocalUser | null>(null);
@@ -159,6 +163,24 @@ export function AppNavbar() {
       setNotifications(response.data?.notifications || []);
     } catch {
       setNotifications([]);
+    }
+  };
+
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+
+  const syncUnreadChats = async () => {
+    if (!isLoggedIn || userData?.role !== "user") {
+      setUnreadChatsCount(0);
+      return;
+    }
+
+    try {
+      const response = await apiClient.get("/social/conversations");
+      const conversations = response.data?.conversations || [];
+      const unreadCount = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+      setUnreadChatsCount(unreadCount);
+    } catch {
+      setUnreadChatsCount(0);
     }
   };
 
@@ -294,6 +316,9 @@ export function AppNavbar() {
       if (notificationRef.current && !notificationRef.current.contains(target)) {
         setNotificationOpen(false);
       }
+      if (messengerRef.current && !messengerRef.current.contains(target)) {
+        setMessengerOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onClickOutside);
@@ -315,8 +340,40 @@ export function AppNavbar() {
   useEffect(() => {
     syncNotifications();
     if (!isLoggedIn || userData?.role !== "user") return;
+
+    const handleNewNotification = () => {
+      syncNotifications();
+    };
+    window.addEventListener("socket:new_notification", handleNewNotification);
+
     const timer = window.setInterval(syncNotifications, 60_000);
-    return () => window.clearInterval(timer);
+
+    return () => {
+      window.removeEventListener("socket:new_notification", handleNewNotification);
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, userData?.role]);
+
+  useEffect(() => {
+    syncUnreadChats();
+    if (!isLoggedIn || userData?.role !== "user") return;
+
+    const handleNewMessageNotification = () => {
+      syncUnreadChats();
+    };
+    window.addEventListener("socket:chat_message_notification", handleNewMessageNotification);
+    window.addEventListener("socket:new_message", handleNewMessageNotification);
+    window.addEventListener("socket:message_read", handleNewMessageNotification);
+
+    const timer = window.setInterval(syncUnreadChats, 60_000);
+
+    return () => {
+      window.removeEventListener("socket:chat_message_notification", handleNewMessageNotification);
+      window.removeEventListener("socket:new_message", handleNewMessageNotification);
+      window.removeEventListener("socket:message_read", handleNewMessageNotification);
+      window.clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, userData?.role]);
 
@@ -352,8 +409,8 @@ export function AppNavbar() {
 
           <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
             <Link
-              to="/"
-              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+              to="/feeds"
+              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
             >
               <House className="h-4 w-4" />
               Home
@@ -383,13 +440,6 @@ export function AppNavbar() {
             >
               <Store className="h-4 w-4" />
               Shop
-            </Link>
-            <Link
-              to="/blogs"
-              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/blogs") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
-            >
-              <Users className="h-4 w-4" />
-              Blog
             </Link>
             <Link
               to="/breeding"
@@ -426,18 +476,44 @@ export function AppNavbar() {
             {isLoggedIn ? (
               <>
                 {userData?.role === "user" ? (
-                  <div ref={notificationRef} className="relative hidden md:block">
-                    <button
-                      type="button"
-                      onClick={() => setNotificationOpen((prev) => !prev)}
-                      className="relative grid h-10 w-10 place-items-center rounded-full border border-sand bg-white text-gray-600 hover:text-brown"
-                      aria-label="Open notifications"
-                    >
-                      <Bell className="h-5 w-5" />
-                      {notifications.some((item) => !item.isRead) ? (
-                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rust ring-2 ring-white" />
-                      ) : null}
-                    </button>
+                  <>
+                    <div ref={messengerRef} className="relative hidden md:block mr-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMessengerOpen((prev) => !prev);
+                          setNotificationOpen(false);
+                        }}
+                        className="relative grid h-10 w-10 place-items-center rounded-full border border-sand bg-white text-gray-600 hover:text-brown"
+                        aria-label="Open Messenger"
+                      >
+                        <MessageSquare className="h-5 w-5" />
+                        {unreadChatsCount > 0 ? (
+                          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rust ring-2 ring-white" />
+                        ) : null}
+                      </button>
+                      {messengerOpen && (
+                        <div className="absolute right-0 top-12 z-[70] w-96 rounded-2xl shadow-xl">
+                          <MessengerDropdown onClose={() => setMessengerOpen(false)} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div ref={notificationRef} className="relative hidden md:block">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotificationOpen((prev) => !prev);
+                          setMessengerOpen(false);
+                        }}
+                        className="relative grid h-10 w-10 place-items-center rounded-full border border-sand bg-white text-gray-600 hover:text-brown"
+                        aria-label="Open notifications"
+                      >
+                        <Bell className="h-5 w-5" />
+                        {notifications.some((item) => !item.isRead) ? (
+                          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-rust ring-2 ring-white" />
+                        ) : null}
+                      </button>
                     {notificationOpen ? (
                       <div className="absolute right-0 top-12 z-[70] w-80 rounded-2xl border border-sand bg-white p-3 shadow-xl">
                         <p className="mb-2 px-2 text-[10px] font-black uppercase tracking-widest text-muted">Notifications</p>
@@ -472,6 +548,7 @@ export function AppNavbar() {
                       </div>
                     ) : null}
                   </div>
+                  </>
                 ) : null}
                 <button
                   type="button"
@@ -542,10 +619,10 @@ export function AppNavbar() {
                         My Orders
                       </Link>
                       <Link
-                        to="/my-blogs"
+                        to="/my-feeds"
                         className="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-warm"
                       >
-                        My Blog
+                        My Feeds
                       </Link>
                       <Link
                         to="/breeding/requests"
@@ -599,7 +676,7 @@ export function AppNavbar() {
           <div className="border-t border-sand bg-white/95 px-4 py-4 md:hidden">
             <div className="grid gap-3">
               <Link
-                to="/"
+                to="/feeds"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
               >
@@ -629,13 +706,6 @@ export function AppNavbar() {
                 Shop
               </Link>
               <Link
-                to="/blogs"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
-              >
-                Blog
-              </Link>
-              <Link
                 to="/breeding"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
@@ -657,6 +727,32 @@ export function AppNavbar() {
                   <p className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500">
                     {userData?.name ?? "Pet Parent"}
                   </p>
+                  {userData?.role === "user" && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setMobileMessengerOpen((prev) => !prev)}
+                        className="w-full rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm flex justify-between items-center"
+                      >
+                        <span>Messenger</span>
+                        {unreadChatsCount > 0 && (
+                          <span className="rounded-full bg-rust px-2 py-0.5 text-xs text-white font-bold">
+                            {unreadChatsCount}
+                          </span>
+                        )}
+                      </button>
+                      {mobileMessengerOpen && (
+                        <div className="mt-2 rounded-xl border border-sand bg-white p-2 shadow-md dark:border-slate-800 dark:bg-slate-900">
+                          <MessengerDropdown
+                            onClose={() => {
+                              setMobileMessengerOpen(false);
+                              setMobileMenuOpen(false);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Link
                     to="/profile"
                     onClick={() => setMobileMenuOpen(false)}
@@ -679,11 +775,11 @@ export function AppNavbar() {
                     My Orders
                   </Link>
                   <Link
-                    to="/my-blogs"
+                    to="/my-feeds"
                     onClick={() => setMobileMenuOpen(false)}
                     className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
                   >
-                    My Blog
+                    My Feeds
                   </Link>
                   <Link
                     to="/breeding/requests"
@@ -915,12 +1011,12 @@ export function AppNavbar() {
       </motion.aside>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-sand bg-white/95 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-7xl grid-cols-5">
+        <div className="mx-auto grid max-w-7xl grid-cols-4">
           {isLoggedIn ? (
             <>
               <Link
-                to="/"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-500"}`}
+                to="/feeds"
+                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-500"}`}
               >
                 <House className="mb-1 h-4 w-4" />
                 Home
@@ -946,19 +1042,12 @@ export function AppNavbar() {
                 <Store className="mb-1 h-4 w-4" />
                 Shop
               </Link>
-              <Link
-                to="/blogs"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/blogs") ? "text-brown" : "text-gray-500"}`}
-              >
-                <Users className="mb-1 h-4 w-4" />
-                Blog
-              </Link>
             </>
           ) : (
             <>
               <Link
-                to="/"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-500"}`}
+                to="/feeds"
+                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-500"}`}
               >
                 <House className="mb-1 h-4 w-4" />
                 Home
@@ -976,13 +1065,6 @@ export function AppNavbar() {
               >
                 <Store className="mb-1 h-4 w-4" />
                 Shop
-              </Link>
-              <Link
-                to="/blogs"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/blogs") ? "text-brown" : "text-gray-500"}`}
-              >
-                <Users className="mb-1 h-4 w-4" />
-                Blog
               </Link>
               <Link
                 to="/login"
