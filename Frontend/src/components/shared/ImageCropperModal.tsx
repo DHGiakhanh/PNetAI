@@ -17,14 +17,22 @@ type CroppedAreaPixels = {
   height: number;
 };
 
-export const ImageCropperModal = ({ 
-  image, 
-  onClose, 
-  onCropComplete, 
-  aspect = 1 
+const ASPECT_RATIOS = [
+  { label: 'Free', value: undefined },
+  { label: '1:1', value: 1 },
+  { label: '4:3', value: 4 / 3 },
+  { label: '16:9', value: 16 / 9 },
+];
+
+export const ImageCropperModal = ({
+  image,
+  onClose,
+  onCropComplete,
+  aspect = undefined
 }: ImageCropperModalProps) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [currentAspect, setCurrentAspect] = useState(aspect);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedAreaPixels | null>(null);
 
   const onCropChange = (nextCrop: { x: number; y: number }) => setCrop(nextCrop);
@@ -84,20 +92,20 @@ export const ImageCropperModal = ({
               console.error(error);
             });
         }
-      }, 'image/jpeg', 0.95);
+      }, 'image/jpeg', 0.90);
     } catch (e) {
       console.error(e);
     }
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[160] flex items-center justify-center p-6 bg-ink/40 backdrop-blur-md"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         className="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col border border-sand/30"
@@ -117,7 +125,7 @@ export const ImageCropperModal = ({
             image={image}
             crop={crop}
             zoom={zoom}
-            aspect={aspect}
+            aspect={currentAspect}
             onCropChange={onCropChange}
             onCropComplete={onCropCompleteInternal}
             onZoomChange={onZoomChange}
@@ -128,7 +136,26 @@ export const ImageCropperModal = ({
           />
         </div>
 
-        <div className="p-10 bg-white border-t border-sand/10 space-y-8">
+        <div className="p-10 bg-white border-t border-sand/10 space-y-6">
+           <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted">Crop Aspect</label>
+              <div className="flex gap-2 flex-wrap">
+                {ASPECT_RATIOS.map(ratio => (
+                  <button
+                    key={ratio.label}
+                    onClick={() => setCurrentAspect(ratio.value)}
+                    className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                      currentAspect === ratio.value
+                        ? 'bg-ink text-white shadow-md'
+                        : 'bg-warm border border-sand text-muted hover:border-caramel'
+                    }`}
+                  >
+                    {ratio.label}
+                  </button>
+                ))}
+              </div>
+           </div>
+
            <div className="flex items-center gap-6">
               <RotateCcw className="w-4 h-4 text-muted/20" />
               <input
@@ -145,13 +172,13 @@ export const ImageCropperModal = ({
            </div>
 
            <div className="flex gap-4">
-              <button 
+              <button
                 onClick={onClose}
                 className="flex-1 py-5 rounded-full border border-sand font-bold text-xs uppercase tracking-widest hover:bg-warm transition text-muted"
               >
                 Cancel Processing
               </button>
-              <button 
+              <button
                 onClick={handleDone}
                 className="flex-[2] py-5 rounded-full bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-caramel transition shadow-xl flex items-center justify-center gap-3"
               >
