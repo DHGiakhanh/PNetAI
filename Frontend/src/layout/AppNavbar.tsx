@@ -409,11 +409,18 @@ export function AppNavbar() {
 
           <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
             <Link
-              to="/feeds"
-              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+              to="/"
+              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
             >
               <House className="h-4 w-4" />
               Home
+            </Link>
+            <Link
+              to="/feeds"
+              className={`inline-flex items-center gap-1.5 ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-600 hover:text-brown"}`}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Community
             </Link>
             {isLoggedIn ? (
               <Link
@@ -676,11 +683,18 @@ export function AppNavbar() {
           <div className="border-t border-sand bg-white/95 px-4 py-4 md:hidden">
             <div className="grid gap-3">
               <Link
-                to="/feeds"
+                to="/"
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
               >
                 Home
+              </Link>
+              <Link
+                to="/feeds"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-warm"
+              >
+                Community
               </Link>
               {isLoggedIn ? (
                 <Link
@@ -1015,8 +1029,8 @@ export function AppNavbar() {
           {isLoggedIn ? (
             <>
               <Link
-                to="/feeds"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-500"}`}
+                to="/"
+                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-500"}`}
               >
                 <House className="mb-1 h-4 w-4" />
                 Home
@@ -1046,8 +1060,8 @@ export function AppNavbar() {
           ) : (
             <>
               <Link
-                to="/feeds"
-                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/feeds") ? "text-brown" : "text-gray-500"}`}
+                to="/"
+                className={`flex flex-col items-center py-2 text-[11px] font-semibold ${isActive(location.pathname, "/") ? "text-brown" : "text-gray-500"}`}
               >
                 <House className="mb-1 h-4 w-4" />
                 Home
