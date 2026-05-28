@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-sand bg-gradient-to-r from-warm via-white to-cream">
@@ -23,17 +25,17 @@ export default function Footer() {
               <div>
                 <p className="text-sm font-bold text-ink">Explore</p>
                 <div className="mt-3 space-y-2 text-sm text-muted">
-                  <a className="block transition hover:text-brown">Home</a>
-                  <a className="block transition hover:text-brown">Shop</a>
-                  <a className="block transition hover:text-brown">Services</a>
+                  <Link to="/" className="block transition hover:text-brown">Home</Link>
+                  <Link to="/products" className="block transition hover:text-brown">Shop</Link>
+                  <Link to="/services" className="block transition hover:text-brown">Services</Link>
                 </div>
               </div>
               <div>
-                <p className="text-sm font-bold text-ink">Support</p>
+                <p className="text-sm font-bold text-ink">Community</p>
                 <div className="mt-3 space-y-2 text-sm text-muted">
-                  <a className="block transition hover:text-brown">Help Center</a>
-                  <a className="block transition hover:text-brown">Contact</a>
-                  <a className="block transition hover:text-brown">FAQs</a>
+                  <Link to="/breeding" className="block transition hover:text-brown">Breeding</Link>
+                  <Link to="/feeds" className="block transition hover:text-brown">Stories</Link>
+                  <Link to="/register" className="block transition hover:text-brown">Join PNetAI</Link>
                 </div>
               </div>
               <div>
