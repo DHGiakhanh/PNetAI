@@ -1,386 +1,701 @@
-import { useEffect, useState } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  BookOpen,
+  Bot,
+  Heart,
+  House,
+  MapPin,
+  PawPrint,
+  Scissors,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Stethoscope,
+} from "lucide-react";
+import apiClient from "@/utils/api.service";
 import { productService, Product } from "@/services/product.service";
+import { serviceService, Service } from "@/services/service.service";
 import { formatVnd } from "@/utils/currency";
 
-const SERVICES = [
-  { icon: "🛁", name: "Bath & Hygiene", amount: 90000 },
-  { icon: "✂️", name: "Haircut", amount: 160000 },
-  { icon: "💅", name: "Nails & Ears", amount: 55000 },
-  { icon: "🦷", name: "Dental Care", amount: 125000 },
-  { icon: "🏨", name: "Stay", amount: 210000, suffix: "/night" },
-];
-
-export const ServicesStrip = () => {
-  return (
-    <section className="bg-brown py-8">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-6 sm:grid-cols-2 lg:grid-cols-5">
-        {SERVICES.map((service, index) => (
-          <div key={index} className="flex items-center gap-3 rounded-2xl bg-white/10 p-3 text-white">
-            <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-xl">
-              {service.icon}
-            </div>
-            <div>
-              <div className="text-[15px] font-medium leading-tight">{service.name}</div>
-              <div className="text-[12px] opacity-70 mt-0.5">
-                From {formatVnd(service.amount)}{service.suffix ?? ""}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+const STOCK_IMAGES = {
+  grooming:
+    "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=760&h=900&q=72",
+  veterinary:
+    "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=760&h=900&q=72",
+  training:
+    "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=760&h=900&q=72",
+  boarding:
+    "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=760&h=900&q=72",
+  care:
+    "https://images.unsplash.com/photo-1583511655826-05700d52f4d9?auto=format&fit=crop&w=980&h=1100&q=72",
+  cat:
+    "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=640&h=720&q=72",
+  dog:
+    "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=760&h=820&q=72",
+  community:
+    "https://images.unsplash.com/photo-1601758125946-6ec2ef64daf8?auto=format&fit=crop&w=1200&h=840&q=72",
+  product:
+    "https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=720&h=720&q=72",
 };
 
-const FEATURE_LIST = [
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+}: PropsWithChildren<{ className?: string; delay?: number }>) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={shouldReduceMotion ? undefined : { opacity: 0, y: 32 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.65, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Eyebrow({ children, light = false }: PropsWithChildren<{ light?: boolean }>) {
+  return (
+    <p className={`mb-4 text-[11px] font-bold uppercase tracking-[0.3em] ${light ? "text-sand" : "text-caramel"}`}>
+      {children}
+    </p>
+  );
+}
+
+function ImageFallback({
+  src,
+  fallback,
+  alt,
+  className,
+}: {
+  src?: string;
+  fallback: string;
+  alt: string;
+  className?: string;
+}) {
+  const [imageSrc, setImageSrc] = useState(src || fallback);
+
+  useEffect(() => {
+    setImageSrc(src || fallback);
+  }, [fallback, src]);
+
+  return (
+    <img
+      src={imageSrc}
+      alt={alt}
+      loading="lazy"
+      onError={() => setImageSrc(fallback)}
+      className={className}
+    />
+  );
+}
+
+type CareCard = {
+  title: string;
+  description: string;
+  category: string;
+  image: string;
+  path: string;
+  Icon: typeof Stethoscope;
+};
+
+const DEFAULT_CARE_CARDS: CareCard[] = [
   {
-    title: "Premium Care",
-    description: "Personalized attention tailored to your pet's unique personality and needs.",
-    icon: "✨",
+    title: "Pet Grooming",
+    description: "Bathing, brushing, nail care, and simple grooming for a clean, happy pet.",
+    category: "Grooming",
+    image: STOCK_IMAGES.grooming,
+    path: "/services",
+    Icon: Scissors,
   },
   {
-    title: "Eco-Friendly",
-    description: "Sustainability at the heart of everything we choose for our furry friends.",
-    icon: "🌿",
+    title: "Vet Care",
+    description: "Find trusted clinics for health checks and regular care.",
+    category: "Vet Care",
+    image: STOCK_IMAGES.veterinary,
+    path: "/services",
+    Icon: Stethoscope,
   },
   {
-    title: "AI Integration",
-    description: "Smart monitoring and health tracking powered by PNetAI technology.",
-    icon: "🧠",
+    title: "Pet Training",
+    description: "Help your pet learn good habits with patient guidance.",
+    category: "Training",
+    image: STOCK_IMAGES.training,
+    path: "/services",
+    Icon: Sparkles,
+  },
+  {
+    title: "Pet Boarding",
+    description: "Find a safe place for your pet when you are away.",
+    category: "Boarding",
+    image: STOCK_IMAGES.boarding,
+    path: "/services",
+    Icon: House,
   },
 ];
 
-export const Features = () => {
+export const CareServices = () => {
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const popular = await serviceService.getPopularServices();
+        if (popular.length > 0) {
+          setServices(popular.slice(0, 4));
+          return;
+        }
+        const latest = await serviceService.getLatestServices();
+        setServices(latest.slice(0, 4));
+      } catch {
+        setServices([]);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  const cards = DEFAULT_CARE_CARDS.map((fallback, index) => {
+    const service = services[index];
+    if (!service) return fallback;
+
+    return {
+      title: service.title,
+      description: service.description || fallback.description,
+      category: service.category || fallback.category,
+      image: service.images?.[0] || fallback.image,
+      path: `/services/${service._id}`,
+      Icon: fallback.Icon,
+    };
+  });
+
   return (
-    <section className="py-24 bg-gradient-to-r from-warm to-cream">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 md:grid-cols-3">
-        {FEATURE_LIST.map((feature, idx) => (
-          <div
-            key={idx}
-            className="p-10 bg-white rounded-3xl border border-sand shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group"
+    <section className="relative overflow-hidden bg-cream px-4 py-20 sm:px-6 sm:py-28">
+      <div className="pointer-events-none absolute -left-16 top-28 h-44 w-28 rounded-full border-[3px] border-sage/50" />
+      <div className="pointer-events-none absolute -right-20 bottom-28 h-56 w-56 rounded-full border-[3px] border-blush/50" />
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="mb-14 flex flex-col justify-between gap-6 text-center md:flex-row md:items-end md:text-left">
+          <div className="max-w-3xl">
+            <Eyebrow>Services</Eyebrow>
+            <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
+              Pet care made
+              <br className="hidden sm:block" /> simple
+            </h2>
+          </div>
+          <Link
+            to="/services"
+            className="mx-auto inline-flex items-center gap-2 rounded-full border border-sand bg-white px-6 py-3 font-semibold text-brown shadow-sm transition hover:bg-warm md:mx-0"
           >
-            <div className="text-4xl mb-6 group-hover:scale-110 transition-transform inline-block">{feature.icon}</div>
-            <h3 className="text-3xl mb-4 italic text-slate-800">{feature.title}</h3>
-            <p className="text-lg font-light text-slate-500 leading-relaxed">{feature.description}</p>
-          </div>
-        ))}
-      </div>
+            View services <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Reveal>
 
-      <div className="mt-20 text-center">
-        <p className="text-brown font-serif italic text-2xl">&quot;The world is a friendlier place with paws.&quot;</p>
+        <div className="grid items-stretch gap-6 lg:grid-cols-[0.88fr_1.12fr]">
+          <Reveal className="relative min-h-[470px] overflow-hidden rounded-[44px] bg-sand">
+            <ImageFallback
+              src={STOCK_IMAGES.grooming}
+              fallback={STOCK_IMAGES.dog}
+              alt="Gentle grooming care"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-ink/5 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 rounded-[28px] bg-white/92 p-5 backdrop-blur">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-caramel">Trusted Care</p>
+              <p className="mt-2 font-serif text-3xl font-semibold not-italic leading-tight text-ink">
+                Find the right service for your pet in a few steps.
+              </p>
+            </div>
+            <div className="absolute left-6 top-6 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-xl">
+              Verified providers
+            </div>
+          </Reveal>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+          {cards.map((card, index) => (
+            <Reveal key={card.title} delay={index * 0.06}>
+              <Link
+                to={card.path}
+                className="group relative flex min-h-[260px] h-full overflow-hidden rounded-[32px] border border-sand/50 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="relative z-10 flex max-w-[72%] flex-col">
+                  <span className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-warm text-brown transition group-hover:bg-brown group-hover:text-white">
+                    <card.Icon className="h-6 w-6" />
+                  </span>
+                  <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-caramel">
+                    {card.category}
+                  </span>
+                  <h3 className="text-2xl font-semibold not-italic text-ink">{card.title}</h3>
+                  <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted">{card.description}</p>
+                  <span className="mt-auto inline-flex items-center gap-2 pt-6 text-sm font-semibold text-brown">
+                    View details <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                  </span>
+                </div>
+                <div className="absolute -bottom-6 -right-6 h-36 w-36 overflow-hidden rounded-full border-[10px] border-cream sm:h-40 sm:w-40">
+                  <ImageFallback
+                    src={card.image}
+                    fallback={DEFAULT_CARE_CARDS[index].image}
+                    alt={card.title}
+                    className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                  />
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+          </div>
+        </div>
       </div>
     </section>
   );
 };
 
-export const FeaturedProducts = ({ onProductClick }: { onProductClick?: (id: string) => void }) => {
+export const AICareStory = () => (
+  <section className="overflow-hidden bg-white px-4 py-20 sm:px-6 sm:py-28">
+    <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.02fr_0.98fr]">
+      <Reveal className="relative min-h-[510px] sm:min-h-[590px]">
+        <div className="absolute left-0 top-0 h-[78%] w-[70%] overflow-hidden rounded-[38px]">
+          <ImageFallback
+            src={STOCK_IMAGES.care}
+            fallback={STOCK_IMAGES.dog}
+            alt="A dog receiving attentive everyday care"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="absolute bottom-0 right-0 h-[46%] w-[48%] overflow-hidden rounded-[30px] border-[8px] border-white">
+          <ImageFallback
+            src={STOCK_IMAGES.cat}
+            fallback={STOCK_IMAGES.dog}
+            alt="A relaxed cat at home"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="absolute right-4 top-10 rounded-3xl bg-forest px-5 py-5 text-white shadow-xl sm:right-10">
+          <Bot className="mb-3 h-6 w-6 text-sand" />
+          <p className="font-serif text-2xl font-semibold not-italic">AI Care</p>
+          <p className="mt-1 text-sm text-white/70">Tips anytime</p>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.08}>
+        <Eyebrow>AI Pet Care</Eyebrow>
+        <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
+          Smart care for your pet
+        </h2>
+        <p className="mt-7 text-base leading-relaxed text-muted sm:text-lg">
+          Save pet information, find services, and ask the AI assistant for quick care suggestions. For serious symptoms,
+          please contact a vet.
+        </p>
+
+        <div className="mt-9 space-y-5">
+          {[
+            { Icon: ShieldCheck, title: "Trusted providers", text: "Find clinics and care services listed on the platform." },
+            { Icon: Bot, title: "AI assistant", text: "Ask simple questions about daily care, food, grooming, and next steps." },
+            { Icon: Sparkles, title: "All in one place", text: "Shop, community, and breeding features are connected." },
+          ].map(({ Icon, title, text }) => (
+            <div key={title} className="flex gap-4">
+              <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-warm text-brown">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-semibold text-ink">{title}</span>
+                <span className="mt-1 block text-sm leading-relaxed text-muted">{text}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <Link
+          to="/services"
+          className="mt-10 inline-flex items-center gap-2 rounded-full bg-brown px-7 py-4 font-semibold text-white transition hover:bg-brown-dark"
+        >
+          Explore services <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Reveal>
+    </div>
+  </section>
+);
+
+type BreedingListing = {
+  _id: string;
+  title: string;
+  description: string;
+  images?: string[];
+  pet?: {
+    name?: string;
+    species?: string;
+    breed?: string;
+    gender?: string;
+    age?: number;
+    avatarUrl?: string;
+  };
+};
+
+function breedingFallback(species?: string) {
+  return species?.toLowerCase() === "cat" ? STOCK_IMAGES.cat : STOCK_IMAGES.dog;
+}
+
+export const FeaturedBreeding = () => {
+  const [listings, setListings] = useState<BreedingListing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiClient
+      .get("/breeding")
+      .then((response) => setListings((response.data?.listings || []).slice(0, 4)))
+      .catch(() => setListings([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <section className="bg-warm px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="max-w-2xl">
+            <Eyebrow>Breeding</Eyebrow>
+            <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
+              Find a good match
+            </h2>
+          </div>
+          <Link to="/breeding" className="inline-flex items-center gap-2 font-semibold text-brown">
+            View listings <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Reveal>
+
+        {loading ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="animate-pulse overflow-hidden rounded-[28px] bg-white">
+                <div className="aspect-[4/4.5] bg-sand/70" />
+                <div className="space-y-3 p-5">
+                  <div className="h-3 w-2/5 rounded bg-sand" />
+                  <div className="h-6 w-4/5 rounded bg-sand" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : listings.length > 0 ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {listings.map((listing, index) => {
+              const pet = listing.pet;
+              const fallback = breedingFallback(pet?.species);
+              const image = listing.images?.[0] || pet?.avatarUrl;
+              return (
+                <Reveal key={listing._id} delay={index * 0.06}>
+                  <Link
+                    to="/breeding"
+                    className="group block overflow-hidden rounded-[34px] border border-white/70 bg-cream p-3 transition hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="relative aspect-[4/4.4] overflow-hidden rounded-[28px] bg-white">
+                      <ImageFallback
+                        src={image}
+                        fallback={fallback}
+                        alt={pet?.name || listing.title}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                      />
+                      {pet?.gender ? (
+                        <span className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brown shadow-sm">
+                          {pet.gender}
+                        </span>
+                      ) : null}
+                      <span className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-blush text-white shadow-sm">
+                        <Heart className="h-4 w-4 fill-current" />
+                      </span>
+                    </div>
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-caramel">
+                        {pet?.breed || pet?.species || "Companion"}
+                        {pet?.age !== undefined ? ` | ${pet.age} years` : ""}
+                      </p>
+                      <h3 className="mt-2 line-clamp-2 text-xl font-semibold not-italic text-ink">
+                        {pet?.name || listing.title}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-sm text-muted">{listing.title}</p>
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brown">
+                        View match <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </Link>
+                </Reveal>
+              );
+            })}
+          </div>
+        ) : (
+          <Reveal className="grid overflow-hidden rounded-[36px] bg-white lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="p-9 sm:p-14">
+              <PawPrint className="h-8 w-8 text-caramel" />
+              <h3 className="mt-6 font-serif text-3xl font-semibold not-italic text-ink">
+                Approved matches will appear here
+              </h3>
+              <p className="mt-4 max-w-lg leading-relaxed text-muted">
+                Browse breeding listings or create a listing for your registered pet.
+              </p>
+              <Link
+                to="/breeding"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-brown px-6 py-3.5 font-semibold text-white"
+              >
+                View breeding <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <ImageFallback
+              src={STOCK_IMAGES.dog}
+              fallback={STOCK_IMAGES.cat}
+              alt="Pet companion"
+              className="h-72 w-full object-cover lg:h-full"
+            />
+          </Reveal>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      try {
-        setLoading(true);
-        const [hotProducts, latestProducts] = await Promise.all([
-          productService.getHotProducts(),
-          productService.getLatestProducts(),
-        ]);
-
-        const merged = [...hotProducts, ...latestProducts];
-        const unique = merged.filter((product, index, arr) => arr.findIndex((p) => p._id === product._id) === index);
-        setProducts(unique.slice(0, 6));
-      } catch (error) {
-        console.error("Error fetching featured products:", error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFeaturedProducts();
+    Promise.all([productService.getHotProducts(), productService.getLatestProducts()])
+      .then(([hot, latest]) => {
+        const unique = [...hot, ...latest].filter(
+          (product, index, all) => all.findIndex((entry) => entry._id === product._id) === index,
+        );
+        setProducts(unique.slice(0, 4));
+      })
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+    <section className="bg-cream px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-px bg-brown" />
-              <span className="text-xs uppercase tracking-[0.12em] text-brown font-semibold">Featured Products</span>
-            </div>
-            <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight">
-              Selected <span className="text-brown italic font-normal">exclusively</span>
-              <br />
-              for your beloved pet
+            <Eyebrow>Shop</Eyebrow>
+            <h2 className="font-serif text-4xl font-semibold not-italic text-ink sm:text-6xl">
+              Products for daily pet care
             </h2>
           </div>
-          <Link to="/products" className="text-brown font-medium text-[15px] flex items-center gap-1.5 hover:gap-2.5 transition-all">
-            View all →
+          <Link to="/products" className="inline-flex items-center gap-2 font-semibold text-brown">
+            View shop <ArrowRight className="h-4 w-4" />
           </Link>
-        </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {loading
-            ? [...Array(5)].map((_, idx) => (
-                <div key={idx} className="animate-pulse bg-white rounded-3xl overflow-hidden border border-sand">
-                  <div className="aspect-square bg-sand" />
-                  <div className="p-6">
-                    <div className="h-3 w-20 bg-sand rounded mb-3" />
-                    <div className="h-6 w-4/5 bg-sand rounded mb-4" />
-                    <div className="h-5 w-24 bg-sand rounded" />
-                  </div>
-                </div>
-              ))
-            : products.map((product) => (
-                <div
-                  key={product._id}
-                  className="bg-white rounded-3xl overflow-hidden border border-sand group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-sand"
-                  onClick={() => onProductClick?.(product._id)}
-                >
-                  <div className="relative bg-warm aspect-square transition-transform duration-500 group-hover:scale-[1.02]">
-                    <img
-                      src={
-                        product.images[0] ||
-                        "https://images.unsplash.com/photo-1548767797-d8c844163c4c?q=80&w=600&auto=format&fit=crop"
-                      }
-                      alt={product.name}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                    {product.isHot && (
-                      <div className="absolute top-4 left-4 bg-brown text-white px-3 py-1 rounded-full text-[11px] font-semibold">
-                        Hot
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6">
-                    <div className="text-[11px] uppercase tracking-widest text-gray-500 mb-1.5">{product.category}</div>
-                    <div className="text-brown text-xs mb-2">
-                      ★ {product.averageRating.toFixed(1)} ({product.totalReviews})
-                    </div>
-                    <h3 className="text-xl font-serif font-bold text-gray-900 leading-tight mb-2 line-clamp-2">{product.name}</h3>
-                    <div className="flex items-center justify-between mt-4">
-                      <div>
-                        <span className="text-lg font-bold text-brown">{formatVnd(product.price)}</span>
-                      </div>
-                      <Link
-                        to={`/products/${product._id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-9 h-9 bg-brown text-white rounded-full inline-flex items-center justify-center text-xl transition-all hover:bg-brown-dark hover:rotate-90"
-                        aria-label={`View ${product.name}`}
-                      >
-                        +
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+        {loading ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="h-[500px] animate-pulse rounded-[34px] bg-sand/60" />
+            <div className="grid gap-5 sm:grid-cols-2">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="h-60 animate-pulse rounded-[28px] bg-sand/60" />
               ))}
-        </div>
+            </div>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+            <Reveal>
+              <Link to={`/products/${products[0]._id}`} className="group block overflow-hidden rounded-[34px] bg-white">
+                <div className="relative aspect-[5/4] overflow-hidden">
+                  <ImageFallback
+                    src={products[0].images?.[0]}
+                    fallback={STOCK_IMAGES.product}
+                    alt={products[0].name}
+                    className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                  />
+                  {products[0].isHot && (
+                    <span className="absolute left-5 top-5 rounded-full bg-brown px-4 py-2 text-xs font-semibold text-white">
+                      Popular
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-end justify-between gap-4 p-7">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-caramel">{products[0].category}</p>
+                    <h3 className="mt-2 text-3xl font-semibold not-italic text-ink">{products[0].name}</h3>
+                  </div>
+                  <p className="shrink-0 font-semibold text-brown">{formatVnd(products[0].price)}</p>
+                </div>
+              </Link>
+            </Reveal>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {products.slice(1).map((product, index) => (
+                <Reveal key={product._id} delay={(index + 1) * 0.05}>
+                  <Link to={`/products/${product._id}`} className="group block h-full overflow-hidden rounded-[28px] bg-white">
+                    <div className="aspect-square overflow-hidden">
+                      <ImageFallback
+                        src={product.images?.[0]}
+                        fallback={STOCK_IMAGES.product}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <h3 className="line-clamp-1 text-xl font-semibold not-italic text-ink">{product.name}</h3>
+                      <p className="mt-2 font-semibold text-brown">{formatVnd(product.price)}</p>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Reveal className="flex flex-col items-center justify-center rounded-[34px] bg-white px-6 py-16 text-center">
+            <ShoppingBag className="h-8 w-8 text-caramel" />
+            <h3 className="mt-5 text-3xl font-semibold not-italic text-ink">Explore pet products</h3>
+            <p className="mt-3 max-w-lg text-muted">Find products for play, comfort, and everyday care.</p>
+            <Link to="/products" className="mt-7 rounded-full bg-brown px-7 py-3.5 font-semibold text-white">
+              Open shop
+            </Link>
+          </Reveal>
+        )}
       </div>
     </section>
   );
 };
 
-const SPA_SERVICES = [
-  { icon: "🛁", name: "Bath & Shampoo", amount: 90000 },
-  { icon: "✂️", name: "Haircut", amount: 160000 },
-  { icon: "💅", name: "Nails & Ears", amount: 55000 },
-  { icon: "⭐", name: "Full Package", amount: 390000 },
-];
+type BlogPreview = {
+  _id: string;
+  title: string;
+  category?: string;
+  image?: string;
+  images?: string[];
+  views?: number;
+  author?: { name?: string };
+};
 
-const TIME_SLOTS = ["8:00", "9:30", "11:00", "13:30", "15:00", "16:30"];
+export const CommunityJournal = () => {
+  const [posts, setPosts] = useState<BlogPreview[]>([]);
 
-export const SpaBooking = () => {
-  const [selectedSlot, setSelectedSlot] = useState("9:30");
+  useEffect(() => {
+    apiClient
+      .get("/blogs/latest")
+      .then((response) => setPosts((response.data?.blogs || []).slice(0, 3)))
+      .catch(() => setPosts([]));
+  }, []);
 
   return (
-    <section className="py-24">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 rounded-[40px] bg-gradient-to-r from-warm to-cream px-6 py-14 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-16 lg:py-20">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-px bg-brown" />
-            <span className="text-xs uppercase tracking-[0.12em] text-brown font-semibold">Book a Spa</span>
-          </div>
-          <h2 className="text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight mb-4">
-            Care for your pet
-            <br />
-            <span className="text-brown italic font-normal">as you wish</span>
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="mb-12 text-center">
+          <Eyebrow>Community</Eyebrow>
+          <h2 className="font-serif text-4xl font-semibold not-italic text-ink sm:text-6xl">
+            Stories and care tips
           </h2>
-          <p className="text-gray-600 text-[16px] font-light max-w-md leading-relaxed mb-10">
-            Flexible schedules, dedicated staff, clean &amp; safe environment.
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted">
+            Read recent posts from pet owners in the PNetAI community.
           </p>
+        </Reveal>
 
-          <div className="grid grid-cols-2 gap-4">
-            {SPA_SERVICES.map((s, idx) => (
-              <div
-                key={idx}
-                className="bg-white border border-sand p-5 rounded-2xl cursor-pointer hover:border-caramel hover:-translate-y-0.5 transition-all group"
-              >
-                <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div>
-                <div className="text-[14px] font-semibold text-gray-900">{s.name}</div>
-                <div className="text-[13px] text-brown font-medium">From {formatVnd(s.amount)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-brown to-brown-dark rounded-[28px] p-10 text-white shadow-2xl">
-          <h3 className="text-2xl font-serif font-semibold mb-8">Quick Booking</h3>
-
-          <div className="space-y-5">
-            <div>
-              <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Service</label>
-              <select className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors appearance-none">
-                <option className="text-gray-900">Basic Bath</option>
-                <option className="text-gray-900">Grooming</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Your Pet</label>
-              <select className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors appearance-none">
-                <option className="text-gray-900">Mochi - Poodle</option>
-                <option className="text-gray-900">Bong - British Shorthair</option>
-                <option className="text-gray-900">+ Add new pet</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Appointment Date</label>
-                <input
-                  type="date"
-                  className="w-full bg-white/10 border border-white/20 text-white p-3 rounded-xl outline-none focus:border-white transition-colors"
-                  defaultValue="2025-04-10"
+        {posts.length > 0 ? (
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <Reveal>
+              <Link to={`/feeds/${posts[0]._id}`} className="group relative block h-[500px] overflow-hidden rounded-[34px]">
+                <ImageFallback
+                  src={posts[0].image || posts[0].images?.[0]}
+                  fallback={STOCK_IMAGES.community}
+                  alt={posts[0].title}
+                  className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                 />
-              </div>
-              <div>
-                <label className="block text-[11px] opacity-60 uppercase tracking-widest mb-2">Select Time</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TIME_SLOTS.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedSlot(slot)}
-                      className={`text-[11px] p-2 rounded-lg border border-white/15 transition-all ${
-                        selectedSlot === slot
-                          ? "bg-white text-brown-dark border-white"
-                          : "bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100"
-                      }`}
-                      disabled={slot === "16:30"}
-                      style={slot === "16:30" ? { opacity: 0.3, cursor: "not-allowed" } : {}}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent" />
+                <div className="absolute bottom-0 p-8 text-white">
+                  <p className="text-xs font-bold uppercase tracking-widest text-sand">{posts[0].category || "Community"}</p>
+                  <h3 className="mt-3 font-serif text-4xl font-semibold not-italic">{posts[0].title}</h3>
+                  <p className="mt-4 text-sm text-white/75">By {posts[0].author?.name || "PNetAI community"}</p>
                 </div>
-              </div>
+              </Link>
+            </Reveal>
+            <div className="grid gap-5">
+              {posts.slice(1).map((post, index) => (
+                <Reveal key={post._id} delay={(index + 1) * 0.07}>
+                  <Link to={`/feeds/${post._id}`} className="group grid overflow-hidden rounded-[28px] bg-cream sm:grid-cols-[42%_58%]">
+                    <ImageFallback
+                      src={post.image || post.images?.[0]}
+                      fallback={index === 0 ? STOCK_IMAGES.cat : STOCK_IMAGES.dog}
+                      alt={post.title}
+                      className="h-52 w-full object-cover transition duration-700 group-hover:scale-105 sm:h-56"
+                    />
+                    <div className="p-6">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-caramel">{post.category || "Pet Life"}</p>
+                      <h3 className="mt-3 line-clamp-3 text-2xl font-semibold not-italic text-ink">{post.title}</h3>
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brown">
+                        Read post <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+              {posts.length < 3 ? (
+                <Link
+                  to="/feeds"
+                  className="flex min-h-36 items-center justify-center gap-2 rounded-[28px] border border-dashed border-sand text-brown"
+                >
+                  <BookOpen className="h-5 w-5" /> See more posts
+                </Link>
+              ) : null}
             </div>
           </div>
-
-          <button className="w-full bg-brown hover:bg-brown-dark text-white py-4 rounded-2xl font-semibold mt-10 transition-all hover:-translate-y-0.5 shadow-lg shadow-brown-dark/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel/70 focus-visible:ring-offset-2 focus-visible:ring-offset-brown-dark">
-            Confirm Booking
-          </button>
-        </div>
+        ) : (
+          <Reveal className="relative overflow-hidden rounded-[38px]">
+            <ImageFallback
+              src={STOCK_IMAGES.community}
+              fallback={STOCK_IMAGES.dog}
+              alt="Pets enjoying time with their community"
+              className="h-[440px] w-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-ink/75 to-transparent p-8 sm:p-12">
+              <div className="max-w-xl text-white">
+                <h3 className="font-serif text-4xl font-semibold not-italic">Join our pet community</h3>
+                <p className="mt-4 text-white/75">Share moments and read helpful posts from other pet owners.</p>
+                <Link to="/feeds" className="mt-7 inline-flex rounded-full bg-white px-6 py-3 font-semibold text-brown">
+                  Open community
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+        )}
       </div>
     </section>
   );
 };
 
-const REVIEWS = [
-  {
-    quote:
-      '"PNetAI has completely changed how I care for Mochi. From booking a spa to buying food, everything is so convenient and reliable!"',
-    author: "Alice Nguyen",
-    pet: "Mochi's owner - Poodle, 2 years old",
-    avatar: "👩",
-    isBig: true,
-  },
-  {
-    quote: '"Super fast delivery, 100% authentic products. My cat Bong loves the interactive toy!"',
-    author: "David Tran",
-    pet: "Bong's owner - British Shorthair",
-    avatar: "👨",
-  },
-  {
-    quote: '"The spa staff are very gentle, my dog is no longer afraid of bathing!"',
-    author: "Helen Le",
-    pet: "Butter's owner - Golden Retriever",
-    avatar: "👩",
-  },
-];
-
-export const Testimonials = () => {
-  return (
-    <section className="bg-gradient-to-r from-brown to-forest py-24 text-white overflow-hidden relative">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="flex flex-col lg:flex-row justify-between items-end gap-10 mb-16">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-px bg-white/80" />
-              <span className="text-xs uppercase tracking-[0.12em] text-white/90 font-semibold">Testimonials</span>
-            </div>
-            <h2 className="text-4xl lg:text-5xl font-serif font-bold leading-tight">
-              What our <span className="text-sand italic font-normal">customers say</span> about us
-            </h2>
-          </div>
-          <p className="text-white/50 text-[16px] font-light max-w-sm">
-            Over 2,000 5-star reviews from pet owners nationwide.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {REVIEWS.map((r, idx) => (
-            <div
-              key={idx}
-              className={`rounded-3xl p-8 border border-white/10 transition-all hover:bg-white/10 group ${
-                r.isBig ? "lg:col-span-2 bg-white/20 border-white/30" : "bg-white/10"
-              }`}
-            >
-              <div className="text-yellow-200 text-sm mb-4">★★★★★</div>
-              <p className={`font-serif italic opacity-90 leading-tight mb-8 ${r.isBig ? "text-2xl lg:text-3xl" : "text-xl"}`}>
-                {r.quote}
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-caramel to-sage text-gray-800 flex items-center justify-center text-xl">
-                  {r.avatar}
-                </div>
-                <div>
-                  <div className="text-[14px] font-semibold">{r.author}</div>
-                  <div className="text-[12px] opacity-40">{r.pet}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-export const Newsletter = () => {
-  return (
-    <section className="py-24">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-10 rounded-[40px] bg-gradient-to-r from-warm to-cream px-6 py-14 sm:px-8 lg:flex-row lg:gap-12 lg:px-16 lg:py-20">
-        <div className="max-w-md">
-          <h2 className="text-4xl font-serif font-bold text-gray-900 leading-[1.15] mb-4">
-            Receive <br />
-            <span className="text-brown italic font-normal">exclusive offers</span> every week
+export const HomeCallToAction = () => (
+  <section className="bg-white px-4 pb-20 pt-4 sm:px-6 sm:pb-28">
+    <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-forest">
+      <div className="grid items-stretch lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="p-9 text-white sm:p-14 lg:p-16">
+          <Eyebrow light>Start With PNetAI</Eyebrow>
+          <h2 className="font-serif text-4xl font-semibold not-italic leading-tight sm:text-5xl">
+            A simple place for your pet&apos;s needs
           </h2>
-          <p className="text-gray-600 text-[15px] font-light">Care tips, discount vouchers, and the latest news from PNetAI.</p>
+          <p className="mt-5 max-w-md leading-relaxed text-white/72">
+            Find care services, shop products, connect with other pet owners, and manage your pet&apos;s needs in one place.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link to="/register" className="rounded-full bg-caramel px-7 py-4 font-semibold text-white transition hover:bg-white hover:text-brown">
+              Join PNetAI
+            </Link>
+            <Link to="/services" className="rounded-full border border-white/30 px-7 py-4 font-semibold text-white transition hover:bg-white/10">
+              Find services
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:min-w-[400px]">
-          <input
-            type="email"
-            placeholder="Your email address..."
-            className="flex-1 bg-white border border-sand px-6 py-4 rounded-full outline-none focus:border-caramel transition-all text-gray-900"
+        <div className="relative min-h-80">
+          <ImageFallback
+            src={STOCK_IMAGES.grooming}
+            fallback={STOCK_IMAGES.dog}
+            alt="Gentle pet care"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-          <button className="bg-brown hover:bg-brown-dark text-white px-8 py-4 rounded-full font-bold transition-all hover:-translate-y-0.5 shadow-md">
-            Subscribe →
-          </button>
+          <div className="absolute bottom-6 left-6 flex items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink shadow-lg">
+            <MapPin className="h-4 w-4 text-brown" />
+            Find care near you
+          </div>
         </div>
       </div>
-    </section>
-  );
-};
+    </Reveal>
+  </section>
+);

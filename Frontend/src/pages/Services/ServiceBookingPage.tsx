@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { 
-  MapPin, 
   ChevronRight,   
   Loader2, 
   ChevronLeft,
@@ -9,7 +8,6 @@ import {
   Plus,
   Building2,
   Info,
-  ShieldCheck,
   AlertTriangle
 } from "lucide-react";
 import { serviceService, Service } from "../../services/service.service";
@@ -31,7 +29,7 @@ import {
 } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
-type BookingStep = 1 | 2 | 3 | 4;
+type BookingStep = 1 | 2 | 3;
 type AddPetForm = {
   name: string;
   species: "Dog" | "Cat" | "Bird" | "Rabbit" | "Hamster" | "Other";
@@ -67,14 +65,13 @@ const generateTimeSlots = (startStr: string, endStr: string, interval: number = 
 
 export default function ServiceBookingPage() {
   const { serviceId } = useParams();
+  const navigate = useNavigate();
 
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"info" | "wizard">("info");
   
   // Wizard State
   const [step, setStep] = useState<BookingStep>(1);
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(addDays(startOfToday(), 1));
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [bookingNote, setBookingNote] = useState<string>("");
@@ -93,11 +90,25 @@ export default function ServiceBookingPage() {
     age: undefined,
   });
 
-  const [providerServices, setProviderServices] = useState<Service[]>([]);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
-  const bookablePets = useMemo(
-    () => pets.filter((pet) => pet.moderationStatus !== "disabled"),
-    [pets]
+  const filteredPets = useMemo(() => {
+    const speciesList = ["dog", "cat", "bird", "rabbit", "hamster", "other"];
+    const serviceSpeciesTags = service?.tags?.filter(tag => 
+      speciesList.includes(tag.toLowerCase())
+    ) || [];
+
+    if (serviceSpeciesTags.length === 0) {
+      return pets;
+    }
+
+    return pets.filter(pet => 
+      serviceSpeciesTags.some(tag => tag.toLowerCase() === pet.species?.toLowerCase())
+    );
+  }, [pets, service]);
+
+  const bookableFilteredPets = useMemo(
+    () => filteredPets.filter((pet) => pet.moderationStatus !== "disabled"),
+    [filteredPets]
   );
   const selectedPet = useMemo(
     () => pets.find((pet) => pet._id === selectedPetId) || null,
@@ -111,23 +122,21 @@ export default function ServiceBookingPage() {
   }, [serviceId]);
 
   useEffect(() => {
-    if (isLoggedIn && view === "wizard") {
+    if (isLoggedIn) {
       petService.getMyPets().then(setPets).catch(() => setPets([]));
     }
-  }, [isLoggedIn, view]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
-    if (view !== "wizard") return;
-
     const timer = window.setInterval(() => {
       setCurrentTime(new Date());
     }, 60_000);
 
     return () => window.clearInterval(timer);
-  }, [view]);
+  }, []);
 
   useEffect(() => {
-    if (!service?._id || view !== "wizard") return;
+    if (!service?._id) return;
 
     const month = currentMonth.getMonth();
     const year = currentMonth.getFullYear();
@@ -143,27 +152,20 @@ export default function ServiceBookingPage() {
         setOccupiedSlots(next);
       })
       .catch(() => setOccupiedSlots({}));
-  }, [service?._id, currentMonth, view]);
+  }, [service?._id, currentMonth]);
 
   useEffect(() => {
-    if (selectedPetId && pets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
+    if (selectedPetId && filteredPets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
       return;
     }
-    setSelectedPetId(bookablePets[0]?._id || null);
-  }, [bookablePets, pets, selectedPetId]);
+    setSelectedPetId(bookableFilteredPets[0]?._id || null);
+  }, [bookableFilteredPets, filteredPets, selectedPetId]);
 
   const fetchService = async (id: string) => {
     try {
       setLoading(true);
       const data = await serviceService.getServiceById(id);
       setService(data);
-      if (data.features?.length) setSelectedSpecialty(data.features[0]);
-      
-      const pId = typeof data.providerId === 'object' ? data.providerId?._id : data.providerId;
-      if (pId) {
-        const pResponse = await serviceService.getServices({ providerId: pId });
-        setProviderServices(pResponse.services);
-      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -270,123 +272,6 @@ export default function ServiceBookingPage() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-[#FBF9F2]"><Loader2 className="w-10 h-10 animate-spin text-caramel" /></div>;
   if (!service) return <div className="p-20 text-center text-ink font-serif italic text-lg">Facility registration record not found.</div>;
 
-  const renderInfoView = () => (
-    <div className="bg-[#FBF9F2] min-h-screen pb-40 font-sans text-ink">
-      {/* Main Header Profile */}
-      <div className="bg-white">
-         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row items-end gap-12">
-            <div className="relative group">
-               <div className="h-44 w-44 rounded-[3.5rem] bg-white border border-sand p-1 shadow-2xl overflow-hidden relative group-hover:scale-105 transition-transform duration-700">
-                  <img src={service.images[0] || ""} alt="" className="w-full h-full object-cover rounded-[3rem] grayscale-[0.2] group-hover:grayscale-0 transition-opacity" />
-               </div>
-               <div className="absolute -top-3 -right-3 h-10 w-10 bg-caramel rounded-2xl flex items-center justify-center text-white shadow-xl z-20">
-                  <ShieldCheck className="w-5 h-5" />
-               </div>
-            </div>
-            <div className="flex-1 min-w-0">
-               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-caramel mb-4 italic">
-                  {service.providerName} • Certified Provider
-               </p>
-               <h1 className="text-4xl md:text-6xl font-serif font-bold italic text-ink mb-6 tracking-tighter leading-none">
-                  {service.title}
-               </h1>
-               <div className="flex flex-wrap items-center gap-4">
-                  <button className="flex items-center gap-2.5 px-8 py-3 bg-warm text-ink rounded-full text-[11px] font-black uppercase tracking-widest border border-sand hover:bg-caramel hover:text-white transition-all">
-                     <MapPin className="w-4 h-4" /> {(service as any).providerAddress || service.location?.address || "Accredited Location"}
-                  </button>
-               </div>
-            </div>
-         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 pt-14 grid gap-16">
-         <div className="bg-white rounded-[4.5rem] overflow-hidden shadow-2xl border border-sand/50 group">
-            <div className="aspect-[21/9] bg-warm relative overflow-hidden">
-               <img src={service.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[3s]" />
-               <div className="absolute inset-0 bg-ink/10" />
-            </div>
-            <div className="py-10 bg-white flex justify-center border-t border-dashed border-sand/30">
-               <button 
-                 onClick={() => setView("wizard")}
-                 className="group flex items-center gap-4 px-12 py-4 bg-caramel text-white rounded-full font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-caramel/10 hover:bg-ink transition-all hover:-translate-y-1"
-               >
-                 Book Appointment Now
-                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-               </button>
-            </div>
-         </div>
-
-         <div className="grid md:grid-cols-2 gap-24">
-            <section>
-               <div className="flex items-center gap-6 mb-8">
-                  {typeof service.providerId === 'object' && (service.providerId as any).avatarUrl && (
-                     <div className="w-16 h-16 rounded-2xl overflow-hidden border border-sand/50 shadow-sm">
-                        <img src={(service.providerId as any).avatarUrl} alt="" className="w-full h-full object-cover" />
-                     </div>
-                  )}
-                  <div>
-                    <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/30 italic">Official Provider</h3>
-                    <p className="text-xs font-bold text-ink uppercase tracking-widest mt-1">{service.providerName}</p>
-                  </div>
-               </div>
-               <p className="text-xl font-serif font-bold italic text-ink leading-[1.7] opacity-80">
-                  {typeof service.providerId === 'object' && (service.providerId as any).description 
-                    ? (service.providerId as any).description 
-                    : service.description || "A premier healthcare facility certified under the PNetAI global excellence standards."}
-               </p>
-            </section>
-            
-             <section className="bg-white rounded-[3.5rem] p-12 border border-sand/30 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-caramel/5 rounded-full blur-3xl -translate-y-20 translate-x-20" />
-                <h3 className="text-[12px] font-black uppercase tracking-[0.4em] text-muted/20 mb-10 italic underline underline-offset-8">Provider Credentials</h3>
-                <div className="grid gap-6">
-                   <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
-                      <MapPin className="w-5 h-5 text-caramel shrink-0 mt-0.5" />
-                      <div>
-                         <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Full Address</p>
-                         <p className="text-sm font-bold text-ink">{(service as any).providerAddress || "Address not specified"}</p>
-                      </div>
-                   </div>
-
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
-                         <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                            <Check className="w-4 h-4 text-caramel" />
-                         </div>
-                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Contact Phone</p>
-                            <p className="text-sm font-bold text-ink">{typeof service.providerId === 'object' ? service.providerId?.phone || "Not provided" : "Verified Partner"}</p>
-                         </div>
-                      </div>
-                      <div className="flex items-start gap-4 p-4 bg-warm/20 rounded-3xl border border-sand/20">
-                         <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                            <ShieldCheck className="w-4 h-4 text-caramel" />
-                         </div>
-                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted/40 mb-1">Email Registry</p>
-                            <p className="text-sm font-bold text-ink truncate max-w-[150px]">{typeof service.providerId === 'object' ? service.providerId?.email : "service@pnetai.com"}</p>
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="mt-4 pt-6 border-t border-sand/10">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted/30 mb-4">Operational Schedule</h4>
-                      <div className="grid gap-3">
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                          <div key={day} className="flex justify-between items-center group cursor-default">
-                             <span className="text-[10px] font-black uppercase tracking-widest text-muted/20 group-hover:text-caramel transition-colors">{day}</span>
-                             <span className="text-[11px] font-bold text-ink tracking-tight">08:00 AM — 08:00 PM</span>
-                          </div>
-                        ))}
-                      </div>
-                   </div>
-                </div>
-             </section>
-         </div>
-      </div>
-    </div>
-  );
-
   const renderWizardView = () => {
     const days = eachDayOfInterval({ 
       start: startOfMonth(currentMonth), 
@@ -398,7 +283,7 @@ export default function ServiceBookingPage() {
         <header className="bg-white px-10 py-7 flex items-center justify-between border-b border-sand/30 sticky top-0 z-50">
            <div className="max-w-7xl mx-auto w-full flex items-center gap-6">
               <button 
-                onClick={() => { if (step > 1) setStep((step-1) as BookingStep); else setView("info"); }} 
+                onClick={() => { if (step > 1) setStep((step-1) as BookingStep); else navigate(-1); }} 
                 className="h-14 w-14 rounded-[1.5rem] bg-warm flex items-center justify-center text-ink hover:bg-ink hover:text-white transition shadow-sm border border-sand/50"
               >
                  <ChevronLeft className="w-6 h-6" />
@@ -415,10 +300,9 @@ export default function ServiceBookingPage() {
               {/* English Wizard Stepper */}
               <div className="px-10 py-4 bg-warm border-b border-sand/30 flex items-center justify-between">
                  {[
-                   { s: 1, l: "Specialty" },
-                   { s: 2, l: "Date" },
-                   { s: 3, l: "Timebox" },
-                   { s: 4, l: "Profile" }
+                   { s: 1, l: "Date" },
+                   { s: 2, l: "Timebox" },
+                   { s: 3, l: "Profile" }
                  ].filter(item => item.s <= step).map(item => (
                     <div key={item.s} className={`flex flex-col items-center gap-3 group animate-in fade-in slide-in-from-left-4 duration-500`}>
                        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center border-2 transition-all ${step === item.s ? "border-ink bg-ink text-white" : "bg-emerald-500 border-emerald-500 text-white"}`}>
@@ -429,54 +313,7 @@ export default function ServiceBookingPage() {
                  ))}
               </div>
                <div className="p-8 min-h-[400px]">
-                  {step === 1 && (
-                     <div className="space-y-10">
-                        <div className="border-b border-sand pb-6">
-                           <h3 className="text-3xl font-serif font-bold italic text-ink">Service Selection</h3>
-                           <p className="text-[10px] font-black uppercase tracking-widest text-caramel mt-2 italic">Select from our certified care packages</p>
-                        </div>
-                        
-                        <div className="grid gap-4">
-                           {providerServices.map(s => (
-                             <button 
-                               key={s._id} 
-                               onClick={() => { 
-                                 setService(s);
-                                 setSelectedSpecialty(s.title); 
-                                 setStep(2); 
-                               }} 
-                               className={`group flex items-center justify-between p-8 rounded-[2rem] border-2 transition-all relative overflow-hidden ${service?._id === s._id ? "border-caramel bg-warm/50 shadow-2xl scale-[1.02]" : "border-sand/30 bg-white hover:border-caramel/20"}`}
-                             >
-                                <div className="relative z-10 flex items-center gap-8">
-                                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${service?._id === s._id ? "bg-caramel text-white" : "bg-warm text-muted/20"}`}>
-                                      <Info className="w-6 h-6" />
-                                   </div>
-                                   <div>
-                                      <p className="text-xl font-bold text-ink mb-1">{s.title}</p>
-                                      <div className="flex gap-4 items-center">
-                                         <p className="text-[12px] font-black uppercase tracking-widest text-caramel">{formatVnd(s.basePrice)}</p>
-                                         <span className="w-1 h-1 rounded-full bg-sand" />
-                                         <p className="text-[10px] font-bold text-muted/40 italic">{s.duration} Minutes</p>
-                                      </div>
-                                   </div>
-                                </div>
-                                <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${service?._id === s._id ? "bg-ink text-white" : "bg-warm text-muted/20"}`}>
-                                   <ChevronRight className="w-5 h-5" />
-                                </div>
-                                {service?._id === s._id && <div className="absolute top-0 right-0 w-32 h-32 bg-caramel/5 rounded-full blur-3xl" />}
-                             </button>
-                           ))}
-                        </div>
-                        {providerServices.length === 0 && (
-                           <div className="py-20 text-center">
-                              <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted/20" />
-                              <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-muted/30 italic">Indexing facility offerings...</p>
-                           </div>
-                        )}
-                     </div>
-                  )}
-
-                 {step === 2 && (
+                 {step === 1 && (
                     <div className="space-y-6">
                        <h3 className="text-xl font-serif font-bold italic text-ink">Select appointment date...</h3>
                        <div className="max-w-sm mx-auto">
@@ -509,7 +346,7 @@ export default function ServiceBookingPage() {
                     </div>
                  )}
 
-                 {step === 3 && (
+                 {step === 2 && (
                     <div className="space-y-6">
                        <h3 className="text-xl font-serif font-bold italic text-ink">Authorized session time...</h3>
                        <div className="space-y-8">
@@ -615,13 +452,13 @@ export default function ServiceBookingPage() {
                           })()}
                        </div>
                      </div>
-                  )}
+                 )}
 
-                 {step === 4 && (
+                 {step === 3 && (
                     <div className="space-y-6">
                        <h3 className="text-xl font-serif font-bold italic text-ink">Companion authorization...</h3>
                        <div className="grid md:grid-cols-2 gap-4">
-                          {pets.map(pet => {
+                          {filteredPets.map(pet => {
                              const sel = selectedPetId === pet._id;
                              const disabledByModeration = pet.moderationStatus === "disabled";
                              return (
@@ -668,7 +505,7 @@ export default function ServiceBookingPage() {
                           </button>
                        </div>
 
-                       {pets.length > 0 && bookablePets.length === 0 && (
+                       {filteredPets.length > 0 && bookableFilteredPets.length === 0 && (
                          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
                            All existing pet profiles are temporarily disabled for booking. Please update the requested information or add a new valid pet profile.
                          </div>
@@ -685,14 +522,12 @@ export default function ServiceBookingPage() {
                        </div>
                     </div>
                  )}
-
-
               </div>
 
               <div className="p-6 bg-warm/50 flex justify-between items-center border-t border-sand/30">
-                 <button onClick={() => { if (step > 1) setStep((step-1) as BookingStep); else setView("info"); }} className="px-8 py-3 rounded-full border border-sand text-[10px] font-black uppercase tracking-widest text-muted/40 hover:bg-white hover:text-ink transition shadow-sm">Back</button>
-                 {step < 4 ? (
-                   <button onClick={() => setStep((step+1) as BookingStep)} disabled={!isLoggedIn || (step === 3 && !selectedTime)} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-caramel transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
+                 <button onClick={() => { if (step > 1) setStep((step-1) as BookingStep); else navigate(-1); }} className="px-8 py-3 rounded-full border border-sand text-[10px] font-black uppercase tracking-widest text-muted/40 hover:bg-white hover:text-ink transition shadow-sm">Back</button>
+                 {step < 3 ? (
+                   <button onClick={() => setStep((step+1) as BookingStep)} disabled={!isLoggedIn || (step === 2 && !selectedTime)} className="group flex items-center gap-4 px-10 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-caramel transition-all disabled:opacity-20 disabled:pointer-events-none shadow-xl">
                       Next Step
                       <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                    </button>
@@ -714,30 +549,24 @@ export default function ServiceBookingPage() {
                  </h4>
                  
                  <div className="space-y-6 mb-8">
-                    {(step > 1 && selectedSpecialty) ? (
+                    {service?.title && (
                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                           <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-2">Facility Specialty</p>
-                          <p className="text-lg font-bold text-white tracking-tight">{selectedSpecialty}</p>
+                          <p className="text-lg font-bold text-white tracking-tight">{service.title}</p>
                        </motion.div>
-                    ) : (
-                       <div className="py-10 text-center border border-dashed border-white/5 rounded-2xl">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-white/10 italic">Select service to view details</p>
-                       </div>
                     )}
                     
-                    {step >= 2 && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                         <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-2">Date & Time</p>
-                         <p className="text-lg font-bold text-caramel tracking-tight leading-tight">
-                            {format(selectedDate, 'MMM d, yyyy')}
-                         </p>
-                         {step >= 3 && selectedTime && (
-                           <p className="text-sm font-bold text-white/40 tracking-tight mt-1">{selectedTime}</p>
-                         )}
-                      </motion.div>
-                    )}
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                       <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-2">Date & Time</p>
+                       <p className="text-lg font-bold text-caramel tracking-tight leading-tight">
+                          {format(selectedDate, 'MMM d, yyyy')}
+                       </p>
+                       {selectedTime && (
+                         <p className="text-sm font-bold text-white/40 tracking-tight mt-1">{selectedTime}</p>
+                       )}
+                    </motion.div>
 
-                    {step >= 4 && selectedPetId && (
+                    {selectedPetId && (
                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-6 border-t border-white/5">
                          <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Companion Profile</p>
                          <p className="text-lg font-bold text-warm/90 tracking-tight">{pets.find(p => p._id === selectedPetId)?.name}</p>
@@ -745,14 +574,12 @@ export default function ServiceBookingPage() {
                     )}
                  </div>
 
-                 {step > 1 && (
-                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-8 border-t-2 border-dashed border-white/5 space-y-3">
-                      <div className="flex justify-between items-baseline pt-4 text-2xl font-black text-white">
-                         <span className="text-[9px] font-black text-caramel uppercase tracking-[0.3em] mr-3 italic">Total Sync:</span>
-                         <span className="tracking-tighter">{formatVnd(service.basePrice)}</span>
-                      </div>
-                   </motion.div>
-                 )}
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-8 border-t-2 border-dashed border-white/5 space-y-3">
+                    <div className="flex justify-between items-baseline pt-4 text-2xl font-black text-white">
+                       <span className="text-[9px] font-black text-caramel uppercase tracking-[0.3em] mr-3 italic">Total Sync:</span>
+                       <span className="tracking-tighter">{formatVnd(service.basePrice)}</span>
+                    </div>
+                 </motion.div>
               </div>
 
               <div className="bg-white rounded-[2rem] p-8 border border-sand/40 shadow-sm flex items-start gap-4">
@@ -772,7 +599,7 @@ export default function ServiceBookingPage() {
 
   return (
     <AnimatePresence mode="wait">
-      {view === "info" ? renderInfoView() : renderWizardView()}
+      {renderWizardView()}
       {isAddingPet && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={() => setIsAddingPet(false)} />

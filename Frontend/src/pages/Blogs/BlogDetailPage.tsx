@@ -325,11 +325,11 @@ export default function BlogDetailPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="relative aspect-[16/9] rounded-[3.5rem] overflow-hidden shadow-2xl shadow-ink/10 border-[12px] border-white ring-1 ring-sand/50">
+            <div className="relative aspect-[16/9] rounded-[3.5rem] overflow-hidden shadow-2xl shadow-ink/10 border-[12px] border-white ring-1 ring-sand/50 bg-sand/10">
               {activeImage ? (
-                  <img src={activeImage} alt={blog.title} className="w-full h-full object-cover transition-all duration-500" />
+                  <img src={activeImage} alt={blog.title} className="w-full h-full object-contain transition-all duration-500" />
               ) : blog.image ? (
-                  <img src={blog.image} alt={blog.title} className="w-full h-full object-cover transition-all duration-500" />
+                  <img src={blog.image} alt={blog.title} className="w-full h-full object-contain transition-all duration-500" />
               ) : (
                   <div className="w-full h-full bg-warm flex items-center justify-center text-muted/20">
                       <BookOpen className="w-24 h-24" />

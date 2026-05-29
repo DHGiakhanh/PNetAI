@@ -65,7 +65,20 @@ type BlogPost = {
   views: number;
 };
 
-const renderCollage = (post: BlogPost) => {
+const normalizeBlogText = (html: string) => {
+  return html
+    .replace(/\r\n|\r/g, '\n')
+    .replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, '\n')
+    .replace(/<\/p>|<\/div>|<\/li>|<\/blockquote>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li>/gi, '- ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\u00A0/g, ' ')
+    .trim();
+};
+
+const renderCollage = (post: BlogPost, onImageOpen: (images: string[], index: number) => void) => {
   const allImages: string[] = [];
   if (post.image) allImages.push(post.image);
   if (post.images) {
@@ -79,64 +92,100 @@ const renderCollage = (post: BlogPost) => {
 
   if (count === 1) {
     return (
-      <Link to={`/feeds/${post._id}`} className="block aspect-[16/10] overflow-hidden relative group">
-        <img src={allImages[0]} alt={post.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
-      </Link>
+      <button
+        type="button"
+        onClick={() => onImageOpen(allImages, 0)}
+        className="block aspect-[16/10] overflow-hidden relative group bg-sand/10 w-full text-left"
+      >
+        <img src={allImages[0]} alt={post.title} className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-[1.02]" />
+      </button>
     );
   }
 
   if (count === 2) {
     return (
-      <Link to={`/feeds/${post._id}`} className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
-        <div className="overflow-hidden group relative">
+      <div className="grid grid-cols-2 gap-1 aspect-[16/10] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => onImageOpen(allImages, 0)}
+          className="overflow-hidden group relative w-full text-left"
+        >
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        </div>
-        <div className="overflow-hidden group relative">
+        </button>
+        <button
+          type="button"
+          onClick={() => onImageOpen(allImages, 1)}
+          className="overflow-hidden group relative w-full text-left"
+        >
           <img src={allImages[1]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        </div>
-      </Link>
+        </button>
+      </div>
     );
   }
 
   if (count === 3) {
     return (
-      <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
-        <div className="col-span-2 overflow-hidden group relative">
+      <div className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => onImageOpen(allImages, 0)}
+          className="col-span-2 overflow-hidden group relative w-full text-left"
+        >
           <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        </div>
+        </button>
         <div className="col-span-1 grid grid-rows-2 gap-1">
-          <div className="overflow-hidden group relative h-full">
+          <button
+            type="button"
+            onClick={() => onImageOpen(allImages, 1)}
+            className="overflow-hidden group relative h-full w-full text-left"
+          >
             <img src={allImages[1]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-          </div>
-          <div className="overflow-hidden group relative h-full">
+          </button>
+          <button
+            type="button"
+            onClick={() => onImageOpen(allImages, 2)}
+            className="overflow-hidden group relative h-full w-full text-left"
+          >
             <img src={allImages[2]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-          </div>
+          </button>
         </div>
-      </Link>
+      </div>
     );
   }
 
   // 4 or more images
   const remaining = count - 3;
   return (
-    <Link to={`/feeds/${post._id}`} className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
-      <div className="col-span-2 overflow-hidden group relative">
+    <div className="grid grid-cols-3 gap-1 aspect-[16/10] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onImageOpen(allImages, 0)}
+        className="col-span-2 overflow-hidden group relative w-full text-left"
+      >
         <img src={allImages[0]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-      </div>
+      </button>
       <div className="col-span-1 grid grid-rows-2 gap-1">
-        <div className="overflow-hidden group relative h-full">
+        <button
+          type="button"
+          onClick={() => onImageOpen(allImages, 1)}
+          className="overflow-hidden group relative h-full w-full text-left"
+        >
           <img src={allImages[1]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-        </div>
-        <div className="overflow-hidden group relative h-full">
+        </button>
+        <button
+          type="button"
+          onClick={() => onImageOpen(allImages, 2)}
+          className="overflow-hidden group relative h-full w-full text-left"
+        >
           <img src={allImages[2]} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
           {remaining > 0 && (
             <div className="absolute inset-0 bg-ink/60 flex items-center justify-center text-white font-bold text-lg backdrop-blur-[2px]">
               +{remaining}
             </div>
           )}
-        </div>
+        </button>
       </div>
-    </Link>
+    </div>
   );
 };
 
@@ -150,17 +199,40 @@ export default function BlogsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [trendingPosts, setTrendingPosts] = useState<BlogPost[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openImageLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeImageLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxImages([]);
+    setLightboxIndex(0);
+  };
+
+  const showPrevLightboxImage = () => {
+    setLightboxIndex(prev => (prev === 0 ? lightboxImages.length - 1 : prev - 1));
+  };
+
+  const showNextLightboxImage = () => {
+    setLightboxIndex(prev => (prev === lightboxImages.length - 1 ? 0 : prev + 1));
+  };
 
   // Liking & commenting states
   const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>({});
   const [submittingComments, setSubmittingComments] = useState<{ [key: string]: boolean }>({});
 
-  // Comments load-more states
-  const [visibleCommentsCount, setVisibleCommentsCount] = useState<{ [postId: string]: number }>({});
-  // Comment replies states
-  const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
-  const [replyInputs, setReplyInputs] = useState<{ [commentId: string]: string }>({});
-  const [submittingReplies, setSubmittingReplies] = useState<{ [commentId: string]: boolean }>({});
+  // Comment modal states
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [commentModalPost, setCommentModalPost] = useState<BlogPost | null>(null);
+  const [commentModalSort, setCommentModalSort] = useState<'all' | 'latest'>('all');
+  const [expandedCommentReplies, setExpandedCommentReplies] = useState<string[]>([]);
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -266,34 +338,6 @@ export default function BlogsPage() {
     }
   };
 
-  const handleReplySubmit = async (postId: string, commentId: string) => {
-    if (!isLoggedIn) {
-      toast.error("Please log in to reply.");
-      return;
-    }
-    const text = replyInputs[commentId] || "";
-    if (!text.trim()) return;
-
-    try {
-      setSubmittingReplies(prev => ({ ...prev, [commentId]: true }));
-      const res = await apiClient.post(`/blogs/${postId}/comment/${commentId}/reply`, { text });
-      
-      setPosts(prev => 
-        prev.map(post => 
-          post._id === postId ? { ...post, comments: res.data.comments } : post
-        )
-      );
-      
-      setReplyInputs(prev => ({ ...prev, [commentId]: "" }));
-      setReplyingCommentId(null);
-      toast.success("Reply posted!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to post reply.");
-    } finally {
-      setSubmittingReplies(prev => ({ ...prev, [commentId]: false }));
-    }
-  };
-
   const handleLikeToggle = async (postId: string) => {
     if (!isLoggedIn) {
       toast.error("Please log in to like posts.");
@@ -372,6 +416,45 @@ export default function BlogsPage() {
   useEffect(() => {
     fetchTrending();
   }, []);
+
+  useEffect(() => {
+    if (!commentModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [commentModalOpen]);
+
+  const openCommentModal = (post: BlogPost) => {
+    setCommentModalPost(post);
+    setCommentModalSort('all');
+    setExpandedCommentReplies([]);
+    setCommentModalOpen(true);
+  };
+
+  const closeCommentModal = () => {
+    setCommentModalOpen(false);
+    setCommentModalPost(null);
+    setExpandedCommentReplies([]);
+  };
+
+  const toggleCommentReplies = (commentId: string) => {
+    setExpandedCommentReplies(prev =>
+      prev.includes(commentId)
+        ? prev.filter(id => id !== commentId)
+        : [...prev, commentId]
+    );
+  };
 
   const handleReportSubmit = async () => {
     if (!reportReason.trim() || !selectedPostId) return;
@@ -529,19 +612,31 @@ export default function BlogsPage() {
                           {post.title}
                         </h3>
                       </Link>
-                      <p className="text-muted/70 text-xs leading-relaxed font-medium">
-                        {post.content.replace(/<[^>]*>/g, '').substring(0, 180)}
-                        {post.content.replace(/<[^>]*>/g, '').length > 180 && (
-                          <Link to={`/feeds/${post._id}`} className="text-caramel hover:text-rust font-bold ml-1 hover:underline">
-                            ... Read More
-                          </Link>
-                        )}
+                      <p className="text-muted/70 text-sm leading-relaxed font-medium whitespace-pre-line">
+                        {expandedPostIds.includes(post._id)
+                          ? normalizeBlogText(post.content)
+                          : `${normalizeBlogText(post.content).substring(0, 180)}${normalizeBlogText(post.content).length > 180 ? '...' : ''}`}
                       </p>
+                      {post.content.replace(/<[^>]*>/g, '').length > 180 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedPostIds(prev =>
+                              prev.includes(post._id)
+                                ? prev.filter(id => id !== post._id)
+                                : [...prev, post._id]
+                            );
+                          }}
+                          className="text-caramel hover:text-rust font-bold ml-1 hover:underline"
+                        >
+                          {expandedPostIds.includes(post._id) ? 'Show less' : 'Read More'}
+                        </button>
+                      )}
                     </div>
 
                     {/* Card Media Collage */}
                     <div className="border-t border-b border-sand/15 overflow-hidden bg-[#FBF9F2]/30">
-                      {renderCollage(post)}
+                        {renderCollage(post, openImageLightbox)}
                     </div>
 
                     {/* Interactive Action Bar */}
@@ -558,10 +653,14 @@ export default function BlogsPage() {
                           <Heart className={`w-4 h-4 ${post.likes?.includes(currentUserId) ? "fill-current text-red-500" : "text-muted/40"}`} />
                           <span>{post.likes?.length || 0} Likes</span>
                         </button>
-                        <Link to={`/feeds/${post._id}`} className="flex items-center gap-1.5 hover:text-caramel transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => openCommentModal(post)}
+                          className="flex items-center gap-1.5 hover:text-caramel transition-colors"
+                        >
                           <MessageSquare className="w-4 h-4 text-muted/40 hover:text-caramel" />
                           <span>{post.comments?.length || 0} Comments</span>
-                        </Link>
+                        </button>
                         <button 
                           onClick={() => {
                             const postUrl = `${window.location.origin}/feeds/${post._id}`;
@@ -583,139 +682,94 @@ export default function BlogsPage() {
                     </div>
 
                     {/* Inline Comments Section */}
-                    {post.comments && post.comments.length > 0 && (() => {
-                      const visibleCount = visibleCommentsCount[post._id] || 5;
-                      return (
-                        <div className="px-5 pb-4 pt-3 border-t border-sand/10 space-y-3 bg-[#FBF9F2]/20">
-                          <p className="text-[9px] font-bold text-muted/40 uppercase tracking-wider">Comments</p>
-                          <div className="space-y-3">
-                            {post.comments.slice(0, visibleCount).map((comment) => (
-                              <div key={comment._id} className="space-y-2">
-                                <div className="flex gap-2.5 items-start text-xs">
-                                  <div 
-                                    onClick={() => setSelectedUserId(comment.user._id)}
-                                    className="w-7 h-7 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
-                                  >
-                                    {comment.user?.avatarUrl ? (
-                                      <img src={comment.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <User className="w-3.5 h-3.5 text-caramel/40" />
+                    {post.comments && post.comments.length > 0 && (
+                      <div className="px-5 pb-4 pt-3 border-t border-sand/10 space-y-3 bg-[#FBF9F2]/20">
+                        <p className="text-[9px] font-bold text-muted/40 uppercase tracking-wider">Comments preview</p>
+                        <div className="space-y-3">
+                          {post.comments.slice(0, 2).map((comment) => (
+                            <div key={comment._id} className="space-y-2">
+                              <div className="flex gap-2.5 items-start text-xs">
+                                <div 
+                                  onClick={() => setSelectedUserId(comment.user._id)}
+                                  className="w-7 h-7 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                                >
+                                  {comment.user?.avatarUrl ? (
+                                    <img src={comment.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <User className="w-3.5 h-3.5 text-caramel/40" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="bg-[#FBF9F2] border border-sand/40 rounded-2xl px-3.5 py-2 inline-block max-w-full">
+                                    <p 
+                                      onClick={() => setSelectedUserId(comment.user._id)}
+                                      className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
+                                    >
+                                      {comment.user?.name || "User"}
+                                    </p>
+                                    <p className="text-muted/80 leading-relaxed font-medium break-words">{comment.text}</p>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-[8px] text-muted/40 font-bold uppercase tracking-wider mt-1 ml-2">
+                                    <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                    {comment.replies && comment.replies.length > 0 && (
+                                      <button 
+                                        type="button"
+                                        onClick={() => toggleCommentReplies(comment._id)}
+                                        className="text-caramel hover:underline cursor-pointer"
+                                      >
+                                        {expandedCommentReplies.includes(comment._id) ? 'Hide replies' : `Show replies (${comment.replies.length})`}
+                                      </button>
                                     )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="bg-[#FBF9F2] border border-sand/40 rounded-2xl px-3.5 py-2 inline-block max-w-full">
-                                      <p 
-                                        onClick={() => setSelectedUserId(comment.user._id)}
-                                        className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
-                                      >
-                                        {comment.user?.name || "User"}
-                                      </p>
-                                      <p className="text-muted/80 leading-relaxed font-medium break-words">{comment.text}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-[8px] text-muted/40 font-bold uppercase tracking-wider mt-1 ml-2">
-                                      <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
-                                      {isLoggedIn && (
-                                        <button 
-                                          type="button"
-                                          onClick={() => setReplyingCommentId(comment._id === replyingCommentId ? null : comment._id)}
-                                          className="text-caramel hover:underline cursor-pointer"
-                                        >
-                                          Reply
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
                                 </div>
-
-                                {/* Replies list */}
-                                {comment.replies && comment.replies.length > 0 && (
-                                  <div className="ml-9 pl-4 border-l-2 border-sand/35 space-y-2">
-                                    {comment.replies.map((reply) => (
-                                      <div key={reply._id} className="flex gap-2 items-start text-xs">
-                                        <div 
-                                          onClick={() => setSelectedUserId(reply.user._id)}
-                                          className="w-6 h-6 rounded-full bg-warm border border-sand/35 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
-                                        >
-                                          {reply.user?.avatarUrl ? (
-                                            <img src={reply.user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                          ) : (
-                                            <User className="w-3 h-3 text-caramel/40" />
-                                          )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="bg-[#FBF9F2]/70 border border-sand/30 rounded-xl px-3 py-1.5 inline-block max-w-full">
-                                            <p 
-                                              onClick={() => setSelectedUserId(reply.user._id)}
-                                              className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
-                                            >
-                                              {reply.user?.name || "User"}
-                                            </p>
-                                            <p className="text-muted/80 leading-relaxed font-medium break-words">{reply.text}</p>
-                                          </div>
-                                          <p className="text-[7.5px] text-muted/40 font-bold uppercase tracking-wider mt-0.5 ml-1">
-                                            {new Date(reply.createdAt).toLocaleDateString()}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Inline reply input */}
-                                {replyingCommentId === comment._id && (
-                                  <div className="ml-9 pl-4 border-l-2 border-sand/35">
-                                    <form 
-                                      onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handleReplySubmit(post._id, comment._id);
-                                      }}
-                                      className="flex items-center gap-2.5 bg-[#FBF9F2]/50 border border-sand/40 rounded-xl px-3 py-1.5 hover:border-caramel/30 focus-within:border-caramel/45 focus-within:bg-white transition-colors"
-                                    >
-                                      <div className="w-5 h-5 rounded-full bg-sand/30 flex items-center justify-center overflow-hidden shrink-0">
-                                        {currentUser.avatarUrl ? (
-                                          <img src={currentUser.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                          <User className="w-3 text-muted/50" />
-                                        )}
-                                      </div>
-                                      <input
-                                        type="text"
-                                        value={replyInputs[comment._id] || ""}
-                                        onChange={(e) => setReplyInputs(prev => ({ ...prev, [comment._id]: e.target.value }))}
-                                        placeholder="Write a reply..."
-                                        disabled={submittingReplies[comment._id]}
-                                        className="flex-1 bg-transparent text-[11px] text-ink outline-none placeholder:text-muted/40 placeholder:font-medium disabled:cursor-not-allowed"
-                                      />
-                                      <button 
-                                        type="submit"
-                                        disabled={submittingReplies[comment._id] || !(replyInputs[comment._id] || "").trim()}
-                                        className="text-caramel hover:text-rust disabled:opacity-40 transition-colors shrink-0 p-0.5 rounded-full"
-                                      >
-                                        {submittingReplies[comment._id] ? (
-                                          <Loader2 className="w-3 h-3 animate-spin text-caramel" />
-                                        ) : (
-                                          <Send className="w-3 h-3 transform rotate-45" />
-                                        )}
-                                      </button>
-                                    </form>
-                                  </div>
-                                )}
                               </div>
-                            ))}
+                              {expandedCommentReplies.includes(comment._id) && comment.replies && comment.replies.length > 0 && (
+                                <div className="ml-9 pl-4 border-l-2 border-sand/35 space-y-2">
+                                  {comment.replies.map((reply) => (
+                                    <div key={reply._id} className="flex gap-2 items-start text-xs">
+                                      <div 
+                                        onClick={() => setSelectedUserId(reply.user._id)}
+                                        className="w-6 h-6 rounded-full bg-warm border border-sand/35 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                                      >
+                                        {reply.user?.avatarUrl ? (
+                                          <img src={reply.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <User className="w-3 h-3 text-caramel/40" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="bg-[#FBF9F2]/70 border border-sand/30 rounded-xl px-3 py-1.5 inline-block max-w-full">
+                                          <p 
+                                            onClick={() => setSelectedUserId(reply.user._id)}
+                                            className="font-bold text-ink leading-tight mb-0.5 cursor-pointer hover:text-caramel transition-colors"
+                                          >
+                                            {reply.user?.name || "User"}
+                                          </p>
+                                          <p className="text-muted/80 leading-relaxed font-medium break-words">{reply.text}</p>
+                                        </div>
+                                        <p className="text-[7.5px] text-muted/40 font-bold uppercase tracking-wider mt-0.5 ml-1">
+                                          {new Date(reply.createdAt).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
 
-                            {post.comments.length > visibleCount && (
-                              <button 
-                                type="button"
-                                onClick={() => setVisibleCommentsCount(prev => ({ ...prev, [post._id]: visibleCount + 5 }))}
-                                className="text-[10px] font-bold text-caramel hover:text-rust block mt-3 hover:underline ml-9 cursor-pointer text-left"
-                              >
-                                Load more comments ({post.comments.length - visibleCount} remaining)
-                              </button>
-                            )}
-                          </div>
+                          {post.comments.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => openCommentModal(post)}
+                              className="text-[10px] font-bold text-caramel hover:text-rust block mt-3 hover:underline ml-9 cursor-pointer text-left"
+                            >
+                              View all {post.comments.length} comments
+                            </button>
+                          )}
                         </div>
-                      );
-                    })()}
+                      </div>
+                    )}
 
                     {/* Inline Comment Input Form */}
                     <div className="px-5 pb-5 pt-3 border-t border-sand/10">
@@ -880,6 +934,167 @@ export default function BlogsPage() {
         </div>
 
       </div>
+
+      {/* Comments Modal */}
+      <AnimatePresence>
+        {commentModalOpen && commentModalPost && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeCommentModal}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-xl overflow-hidden bg-white border border-sand/50 shadow-2xl rounded-[2.5rem] p-4 z-10 max-h-[88vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between gap-4 mb-4 border-b border-sand/15 pb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-muted/50 font-bold">Comments</p>
+                  <h3 className="font-serif text-2xl font-bold italic text-ink mt-2">{commentModalPost.title}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeCommentModal}
+                  className="rounded-full p-2 text-muted hover:bg-sand/30 hover:text-ink transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="min-h-0 overflow-y-auto space-y-5">
+                <div className="rounded-[2rem] border border-sand/30 bg-[#FBF9F2] p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center">
+                      {commentModalPost.author.avatarUrl ? (
+                        <img src={commentModalPost.author.avatarUrl} alt={commentModalPost.author.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-5 h-5 text-caramel/40" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted/50">{commentModalPost.author.name}</p>
+                      <p className="text-[11px] text-muted/50 mt-1">{new Date(commentModalPost.createdAt).toLocaleDateString()}</p>
+                      <p className="text-sm text-muted/80 mt-4 leading-relaxed whitespace-pre-line">{normalizeBlogText(commentModalPost.content)}</p>
+                    </div>
+                  </div>
+                  {(commentModalPost.image || commentModalPost.images?.length) && (
+                    <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-sand/40 bg-white">
+                      {renderCollage(commentModalPost, openImageLightbox)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-[2rem] border border-sand/30 bg-white overflow-hidden">
+                  <div className="flex flex-col gap-3 px-5 py-4 border-b border-sand/15 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.3em] text-muted/70">Sort by</div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCommentModalSort('all')}
+                        className={`px-4 py-2 rounded-full text-[11px] font-bold transition-all ${commentModalSort === 'all' ? 'bg-caramel text-white' : 'bg-[#FBF9F2] text-muted/80 hover:bg-[#f4e9d8]'}`}
+                      >
+                        All Comments
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCommentModalSort('latest')}
+                        className={`px-4 py-2 rounded-full text-[11px] font-bold transition-all ${commentModalSort === 'latest' ? 'bg-caramel text-white' : 'bg-[#FBF9F2] text-muted/80 hover:bg-[#f4e9d8]'}`}
+                      >
+                        Latest
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-4 px-4 py-4">
+                    {(commentModalPost.comments || [])
+                      .slice()
+                      .sort((a, b) =>
+                        commentModalSort === 'all'
+                          ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                          : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                      )
+                      .map((comment) => (
+                      <div key={comment._id} className="space-y-3 bg-[#FBF9F2] rounded-[2rem] border border-sand/30 p-4">
+                      <div className="flex items-start gap-3">
+                        <div 
+                          onClick={() => setSelectedUserId(comment.user._id)}
+                          className="w-9 h-9 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                        >
+                          {comment.user?.avatarUrl ? (
+                            <img src={comment.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-4 h-4 text-caramel/40" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p 
+                              onClick={() => setSelectedUserId(comment.user._id)}
+                              className="font-bold text-ink leading-tight cursor-pointer hover:text-caramel transition-colors"
+                            >
+                              {comment.user?.name || 'User'}
+                            </p>
+                            <span className="text-[10px] text-muted/50 uppercase tracking-[0.2em] font-bold">
+                              {new Date(comment.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted/80 leading-relaxed mt-2 whitespace-pre-wrap">{comment.text}</p>
+                          {comment.replies && comment.replies.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleCommentReplies(comment._id)}
+                              className="text-[11px] font-bold text-caramel hover:text-rust mt-3"
+                            >
+                              {expandedCommentReplies.includes(comment._id) ? `Hide replies (${comment.replies.length})` : `Show replies (${comment.replies.length})`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {expandedCommentReplies.includes(comment._id) && comment.replies && comment.replies.length > 0 && (
+                        <div className="ml-12 border-l-2 border-sand/40 pl-4 space-y-3 mt-3">
+                          {comment.replies.map((reply) => (
+                            <div key={reply._id} className="flex items-start gap-3 text-sm">
+                              <div 
+                                onClick={() => setSelectedUserId(reply.user._id)}
+                                className="w-8 h-8 rounded-full bg-warm border border-sand/40 overflow-hidden flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                              >
+                                {reply.user?.avatarUrl ? (
+                                  <img src={reply.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="w-3.5 h-3.5 text-caramel/40" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="bg-white border border-sand/30 rounded-2xl px-3.5 py-2">
+                                  <p 
+                                    onClick={() => setSelectedUserId(reply.user._id)}
+                                    className="font-bold text-ink leading-tight cursor-pointer hover:text-caramel transition-colors"
+                                  >
+                                    {reply.user?.name || 'User'}
+                                  </p>
+                                  <p className="text-muted/80 leading-relaxed mt-1">{reply.text}</p>
+                                </div>
+                                <p className="text-[9px] text-muted/50 uppercase tracking-[0.2em] font-bold mt-1 ml-1">
+                                  {new Date(reply.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Report Modal */}
       <AnimatePresence>
@@ -1110,6 +1325,53 @@ export default function BlogsPage() {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-[3rem] overflow-hidden shadow-2xl">
+              <button
+                type="button"
+                onClick={closeImageLightbox}
+                className="absolute top-4 right-4 z-10 rounded-full bg-white/90 p-3 text-ink shadow-lg hover:bg-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="relative h-full min-h-[360px] bg-black flex items-center justify-center">
+                <img
+                  src={lightboxImages[lightboxIndex]}
+                  alt="Preview"
+                  className="max-h-[82vh] max-w-full object-contain"
+                />
+                {lightboxImages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={showPrevLightboxImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink shadow-lg hover:bg-white"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={showNextLightboxImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-3 text-ink shadow-lg hover:bg-white"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

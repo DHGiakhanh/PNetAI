@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,7 +7,6 @@ import {
   PawPrint,
   RefreshCw,
   Search,
-  Send,
   ShieldAlert,
   X,
 } from "lucide-react";
@@ -17,8 +16,6 @@ import { Pet, petService } from "@/services/pet.service";
 
 const speciesOptions = ["", "Dog", "Cat", "Bird", "Rabbit", "Hamster", "Other"];
 const moderationOptions = ["", "active", "flagged", "disabled"];
-const defaultCorrectionMessage = "Please verify/update this pet information.";
-
 const statusClasses: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-100",
   flagged: "bg-amber-50 text-amber-700 border-amber-100",
@@ -36,8 +33,6 @@ export default function AdminPetsPage() {
   const [healthStatus, setHealthStatus] = useState("");
   const [moderationStatus, setModerationStatus] = useState("");
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
-  const [moderationPet, setModerationPet] = useState<Pet | null>(null);
-  const [correctionPet, setCorrectionPet] = useState<Pet | null>(null);
   const [moderationSummary, setModerationSummary] = useState({ active: 0, flagged: 0, disabled: 0 });
   const pageSize = 10;
 
@@ -89,7 +84,7 @@ export default function AdminPetsPage() {
           <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-caramel">Trust & Safety</p>
           <h1 className="font-serif text-4xl font-bold italic text-ink">Pet Registry Moderation</h1>
           <p className="mt-2 max-w-2xl text-sm font-medium text-muted">
-            Review pet records, flag suspicious profiles, and ask owners to correct important information.
+            Review pet records and owner information across the platform.
           </p>
         </div>
         <button
@@ -233,22 +228,6 @@ export default function AdminPetsPage() {
                             <Eye className="h-4 w-4" />
                             View
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setModerationPet(pet)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-amber-200 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50"
-                          >
-                            <ShieldAlert className="h-4 w-4" />
-                            Moderate
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCorrectionPet(pet)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-caramel/30 px-3 py-2 text-xs font-bold text-brown hover:bg-warm"
-                          >
-                            <Send className="h-4 w-4" />
-                            Request
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -269,28 +248,6 @@ export default function AdminPetsPage() {
       />
 
       {selectedPet && <PetDetailModal pet={selectedPet} onClose={() => setSelectedPet(null)} />}
-      {moderationPet && (
-        <ModerationModal
-          pet={moderationPet}
-          onClose={() => setModerationPet(null)}
-          onSaved={(pet) => {
-            setPets((prev) => prev.map((item) => (item._id === pet._id ? pet : item)));
-            setModerationPet(null);
-            toast.success("Pet moderation updated.");
-          }}
-        />
-      )}
-      {correctionPet && (
-        <CorrectionModal
-          pet={correctionPet}
-          onClose={() => setCorrectionPet(null)}
-          onSent={(pet) => {
-            setPets((prev) => prev.map((item) => (item._id === pet._id ? pet : item)));
-            setCorrectionPet(null);
-            toast.success("Correction request sent.");
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -354,154 +311,6 @@ function PetDetailModal({ pet, onClose }: { pet: Pet; onClose: () => void }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ModerationModal({
-  pet,
-  onClose,
-  onSaved,
-}: {
-  pet: Pet;
-  onClose: () => void;
-  onSaved: (pet: Pet) => void;
-}) {
-  const [status, setStatus] = useState<"active" | "flagged" | "disabled">((pet.moderationStatus || "active") as "active" | "flagged" | "disabled");
-  const [reason, setReason] = useState(pet.moderationReason || "");
-  const [note, setNote] = useState(pet.moderationNote || "");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      setSaving(true);
-      const updated = await petService.updatePetModeration(pet._id, {
-        moderationStatus: status,
-        moderationReason: reason,
-        moderationNote: note,
-      });
-      onSaved(updated);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Could not update moderation.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <ModalFrame title={`Moderate ${pet.name}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase tracking-widest text-muted">Status</label>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as "active" | "flagged" | "disabled")}
-            className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold outline-none focus:border-caramel"
-          >
-            <option value="active">Active</option>
-            <option value="flagged">Flagged</option>
-            <option value="disabled">Disabled</option>
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase tracking-widest text-muted">Reason</label>
-          <input
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold outline-none focus:border-caramel"
-            placeholder="Fake pet, spam, abuse..."
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase tracking-widest text-muted">Internal note</label>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold outline-none focus:border-caramel"
-            placeholder="Add context for future moderation review."
-          />
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="rounded-full border border-sand px-5 py-2 text-sm font-semibold hover:bg-warm">
-            Cancel
-          </button>
-          <button type="submit" disabled={saving} className="rounded-full bg-ink px-6 py-2 text-sm font-semibold text-white hover:bg-caramel disabled:opacity-60">
-            {saving ? "Saving..." : "Save moderation"}
-          </button>
-        </div>
-      </form>
-    </ModalFrame>
-  );
-}
-
-function CorrectionModal({
-  pet,
-  onClose,
-  onSent,
-}: {
-  pet: Pet;
-  onClose: () => void;
-  onSent: (pet: Pet) => void;
-}) {
-  const [message, setMessage] = useState(pet.correctionRequestMessage || defaultCorrectionMessage);
-  const [sending, setSending] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      setSending(true);
-      const updated = await petService.requestPetCorrection(pet._id, message);
-      onSent(updated);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Could not send correction request.");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <ModalFrame title={`Request correction: ${pet.name}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <p className="rounded-2xl border border-sand bg-warm/30 p-4 text-sm font-semibold text-muted">
-          This sends an in-app notification and email to {pet.user?.email || "the owner"}.
-        </p>
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase tracking-widest text-muted">Message to owner</label>
-          <textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            rows={5}
-            required
-            className="w-full rounded-xl border border-sand bg-warm/30 px-4 py-3 text-sm font-semibold outline-none focus:border-caramel"
-          />
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="rounded-full border border-sand px-5 py-2 text-sm font-semibold hover:bg-warm">
-            Cancel
-          </button>
-          <button type="submit" disabled={sending} className="rounded-full bg-caramel px-6 py-2 text-sm font-semibold text-white hover:bg-ink disabled:opacity-60">
-            {sending ? "Sending..." : "Send request"}
-          </button>
-        </div>
-      </form>
-    </ModalFrame>
-  );
-}
-
-function ModalFrame({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-3xl border border-sand bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="font-serif text-2xl font-bold italic text-ink">{title}</h2>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-sand hover:bg-warm">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        {children}
       </div>
     </div>
   );

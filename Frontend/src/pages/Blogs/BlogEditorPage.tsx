@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from "framer-motion";
 // @ts-ignore
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { useMemo, useRef, useCallback } from "react";
 import { ImageCropperModal } from "@/components/shared/ImageCropperModal";
 
 const CATEGORIES = [
@@ -30,6 +29,15 @@ const CATEGORIES = [
   "Success Stories"
 ];
 
+type BlogFormData = {
+  title: string;
+  content: string;
+  category: string;
+  image: string;
+  images: string[];
+  status: "draft" | "pending" | "approved";
+};
+
 export default function BlogEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -37,14 +45,15 @@ export default function BlogEditorPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BlogFormData>({
     title: "",
     content: "",
     category: CATEGORIES[0],
     image: "",
     images: [] as string[],
-    status: "draft" as "draft" | "pending"
+    status: "draft"
   });
+  const [originalBlog, setOriginalBlog] = useState<BlogFormData | null>(null);
   
   const [cropper, setCropper] = useState({ open: false, image: "" });
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -106,14 +115,16 @@ export default function BlogEditorPage() {
         try {
           const res = await apiClient.get(`/blogs/${id}`);
           const blog = res.data.blog;
-          setFormData({
+          const loadedBlog: BlogFormData = {
             title: blog.title,
             content: blog.content,
             category: blog.category,
             image: blog.image || "",
             images: blog.images || [],
-            status: blog.status === 'approved' ? 'pending' : (blog.status as "draft" | "pending")
-          });
+            status: blog.status === 'approved' ? 'approved' : (blog.status as "draft" | "pending")
+          };
+          setFormData(loadedBlog);
+          setOriginalBlog(loadedBlog);
         } catch (error) {
           toast.error("Could not load article for editing.");
           navigate("/my-feeds");
@@ -190,6 +201,24 @@ export default function BlogEditorPage() {
     if (!formData.title || !formData.content) {
       toast.error("Article needs a soul (Title & Content).");
       return;
+    }
+
+    const isUnchangedEdit = isEdit && originalBlog && (
+      originalBlog.title === formData.title &&
+      originalBlog.content === formData.content &&
+      originalBlog.category === formData.category &&
+      originalBlog.image === formData.image &&
+      JSON.stringify(originalBlog.images) === JSON.stringify(formData.images)
+    );
+
+    if (isUnchangedEdit) {
+      const originalStatus = originalBlog!.status;
+      const skipApproval = originalStatus === submitStatus || (originalStatus === 'approved' && submitStatus === 'pending');
+      if (skipApproval) {
+        toast.success("No changes detected. Returning to your posts.");
+        navigate("/my-feeds");
+        return;
+      }
     }
 
     try {

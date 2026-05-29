@@ -56,6 +56,7 @@ import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
 import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
 import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
+import AdminUserPostsPage from "@/pages/Admin/AdminUserPostsPage";
 import RefundRequestsPage from "@/pages/Admin/RefundRequestsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
 import MyOrdersPage from "@/pages/Orders/MyOrdersPage";
@@ -77,6 +78,7 @@ export default function AppRoutes() {
         <Route element={<AdminRoute />}>
           <Route index element={<AdminDashboard />} />
           <Route path="orders-ledger" element={<AdminOrdersPage />} />
+          <Route path="user-posts" element={<AdminUserPostsPage />} />
           <Route path="users/sales" element={<SalesManagementPage />} />
           <Route path="users/providers" element={<ProvidersManagementPage />} />
           <Route path="users/owners" element={<OwnersManagementPage />} />
