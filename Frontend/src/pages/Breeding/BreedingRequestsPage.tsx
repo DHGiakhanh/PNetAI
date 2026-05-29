@@ -18,14 +18,16 @@ import apiClient from "@/utils/api.service";
 import { toast } from "react-hot-toast";
 import { useChatWindows } from "@/context/ChatWindowContext";
 import { MiniProfileModal } from "@/components/social/MiniProfileModal";
+import { PetPassportModal } from "@/components/pets/PetPassportModal";
+import { Pet } from "@/services/pet.service";
 
-type Pet = {
+type BreedingRequestPet = {
   _id: string;
   name: string;
   species: string;
-  breed: string;
-  gender: string;
-  age: number;
+  breed?: string;
+  gender?: string;
+  age?: number;
   avatarUrl?: string;
 };
 
@@ -40,7 +42,7 @@ type UserInfo = {
 type BreedingListing = {
   _id: string;
   title: string;
-  pet: Pet;
+  pet: BreedingRequestPet;
   user: UserInfo;
 };
 
@@ -48,7 +50,7 @@ type BreedingRequest = {
   _id: string;
   listing: BreedingListing;
   requester: UserInfo;
-  requesterPet: Pet;
+  requesterPet: BreedingRequestPet;
   message: string;
   status: "pending" | "accepted" | "rejected";
   createdAt: string;
@@ -62,7 +64,61 @@ export default function BreedingRequestsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [hiddenListingIds, setHiddenListingIds] = useState<Set<string>>(new Set());
+  const [passportPet, setPassportPet] = useState<Pet | null>(null);
   const { openChatWithUser } = useChatWindows();
+
+  const openPetPassport = async (petId: string) => {
+    try {
+      const response = await apiClient.get(`/breeding/pets/${petId}/passport`);
+      setPassportPet(response.data?.pet || null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Không thể tải passport.");
+    }
+  };
+
+  const PetCard = ({
+    title,
+    pet,
+    onClick,
+  }: {
+    title: string;
+    pet?: BreedingRequestPet | null;
+    onClick?: () => void;
+  }) => {
+    const placeholder =
+      "https://images.unsplash.com/photo-1525253086316-d0c936c814f8?q=80&w=500&auto=format&fit=crop";
+
+    return (
+      <button
+        type="button"
+        onClick={pet?._id ? onClick : undefined}
+        disabled={!pet?._id}
+        className="group w-full rounded-[2rem] border border-sand/50 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-caramel/20 disabled:cursor-default disabled:opacity-70"
+      >
+        <div className="flex items-center gap-4">
+          <div className="h-20 w-20 overflow-hidden rounded-[1.5rem] bg-[#F9F5EE] ring-1 ring-sand/40">
+            <img
+              src={pet?.avatarUrl || placeholder}
+              alt={pet?.name || "Unknown pet"}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted mb-1">{title}</p>
+            <h3 className="text-xl font-serif font-bold text-ink">{pet?.name || "No pet available"}</h3>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-muted">
+              {pet ? `${pet.species} • ${pet.breed || "Mixed"}` : "No details"}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-muted">
+          <span className="rounded-full bg-sand/20 px-3 py-1">{pet?.gender || "Unknown"}</span>
+          <span className="rounded-full bg-sand/20 px-3 py-1">{pet?.age != null ? `${pet.age}Y` : "Age unknown"}</span>
+        </div>
+        <p className="mt-4 text-[10px] font-bold text-caramel">Nhấn để xem Pet Passport</p>
+      </button>
+    );
+  };
 
   const fetchIncoming = async () => {
     try {
@@ -214,20 +270,17 @@ export default function BreedingRequestsPage() {
                       </span>
                     </div>
 
-                    {/* Compatibility card comparison */}
-                    <div className="grid grid-cols-2 gap-4 max-w-md p-4 bg-[#FBF9F2] rounded-2xl border border-sand/30">
-                      <div>
-                        <p className="text-[10px] text-muted/40 font-bold uppercase tracking-wider mb-1">Requester's Pet</p>
-                        <p className="text-xs font-bold text-ink">{req.requesterPet.name}</p>
-                        <p className="text-[10px] font-medium text-muted/60">{req.requesterPet.species} &bull; {req.requesterPet.breed}</p>
-                        <p className="text-[10px] font-bold text-caramel">{req.requesterPet.gender}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted/40 font-bold uppercase tracking-wider mb-1">Your Pet Target</p>
-                        <p className="text-xs font-bold text-ink">{req.listing.pet?.name || "N/A"}</p>
-                        <p className="text-[10px] font-medium text-muted/60">{req.listing.pet?.species} &bull; {req.listing.pet?.breed}</p>
-                        <p className="text-[10px] font-bold text-ink">{req.listing.pet?.gender || "N/A"}</p>
-                      </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PetCard
+                        title="Requester's Pet"
+                        pet={req.requesterPet}
+                        onClick={() => openPetPassport(req.requesterPet._id)}
+                      />
+                      <PetCard
+                        title="Your Pet Target"
+                        pet={req.listing.pet}
+                        onClick={() => req.listing.pet?._id && openPetPassport(req.listing.pet._id)}
+                      />
                     </div>
 
                     {/* Proposal message */}
@@ -367,20 +420,20 @@ export default function BreedingRequestsPage() {
                     </div>
 
                     {/* Comparison Card */}
-                    <div className="grid grid-cols-2 gap-4 max-w-md p-4 bg-[#FBF9F2] rounded-2xl border border-sand/30">
-                      <div>
-                        <p className="text-[10px] text-muted/40 font-bold uppercase tracking-wider mb-1">Your Pet (Requester)</p>
-                        <p className="text-xs font-bold text-ink">{req.requesterPet.name}</p>
-                        <p className="text-[10px] font-medium text-muted/60">{req.requesterPet.species} &bull; {req.requesterPet.breed}</p>
-                        <p className="text-[10px] font-bold text-caramel">{req.requesterPet.gender}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted/40 font-bold uppercase tracking-wider mb-1">Target Partner Pet</p>
-                        <p className="text-xs font-bold text-ink">{req.listing?.pet?.name || "N/A"}</p>
-                        <p className="text-[10px] font-medium text-muted/60">{req.listing?.pet?.species} &bull; {req.listing?.pet?.breed}</p>
-                        <p className="text-[10px] font-bold text-ink">{req.listing?.pet?.gender || "N/A"}</p>
-                      </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PetCard
+                        title="Your Pet (Requester)"
+                        pet={req.requesterPet}
+                        onClick={() => openPetPassport(req.requesterPet._id)}
+                      />
+                      <PetCard
+                        title="Target Partner Pet"
+                        pet={req.listing?.pet}
+                        onClick={() => req.listing?.pet?._id && openPetPassport(req.listing.pet._id)}
+                      />
                     </div>
+
+                    {/* Sent message */}
 
                     {/* Sent message */}
                     <div className="bg-[#FBF9F2] p-4 rounded-xl text-xs font-medium italic text-ink/75 leading-relaxed">
@@ -449,6 +502,10 @@ export default function BreedingRequestsPage() {
           />
         )}
       </AnimatePresence>
+
+      {passportPet && (
+        <PetPassportModal pet={passportPet} onClose={() => setPassportPet(null)} />
+      )}
     </main>
   );
 }

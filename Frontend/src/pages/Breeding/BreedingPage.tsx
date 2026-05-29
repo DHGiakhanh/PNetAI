@@ -7,26 +7,19 @@ import {
   Loader2, 
   X, 
   ImageIcon, 
-  ChevronRight, 
   MessageSquare,
   Sparkles,
-  Info
+  Info,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import apiClient from "@/utils/api.service";
 import { authService } from "@/services/auth.service";
 import { toast } from "react-hot-toast";
 import { MiniProfileModal } from "@/components/social/MiniProfileModal";
-
-type Pet = {
-  _id: string;
-  name: string;
-  species: string;
-  breed: string;
-  gender: "Male" | "Female" | "Unknown";
-  age: number;
-  avatarUrl?: string;
-};
+import { PetPassportModal } from "@/components/pets/PetPassportModal";
+import { Pet } from "@/services/pet.service";
+import { formatUserDistrictProvince } from "@/utils/address";
 
 type UserInfo = {
   _id: string;
@@ -34,6 +27,10 @@ type UserInfo = {
   email: string;
   avatarUrl?: string;
   phone?: string;
+  address?: string;
+  location?: {
+    addressName?: string;
+  };
 };
 
 type BreedingListing = {
@@ -59,10 +56,10 @@ export default function BreedingPage() {
 
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [requestModalOpen, setRequestModalOpen] = useState(false);
-  
-  // Active/selected listing for requesting breeding
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<BreedingListing | null>(null);
+  const [passportPet, setPassportPet] = useState<Pet | null>(null);
+  const [loadingPassport, setLoadingPassport] = useState(false);
 
   // Forms state
   const [newListing, setNewListing] = useState({
@@ -197,7 +194,7 @@ export default function BreedingPage() {
       setSubmitting(true);
       await apiClient.post(`/breeding/${selectedListing._id}/request`, requestData);
       toast.success("Breeding request sent successfully!");
-      setRequestModalOpen(false);
+      setDetailModalOpen(false);
       setRequestData({ requesterPetId: "", message: "" });
       setSelectedListing(null);
     } catch (error: any) {
@@ -205,6 +202,41 @@ export default function BreedingPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openListingDetail = (listing: BreedingListing) => {
+    setSelectedListing(listing);
+    setRequestData({ requesterPetId: "", message: "" });
+    setDetailModalOpen(true);
+  };
+
+  const closeListingDetail = () => {
+    setDetailModalOpen(false);
+    setSelectedListing(null);
+    setRequestData({ requesterPetId: "", message: "" });
+  };
+
+  const openPetPassport = async (petId: string) => {
+    try {
+      setLoadingPassport(true);
+      const response = await apiClient.get(`/breeding/pets/${petId}/passport`);
+      setPassportPet(response.data?.pet || null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Không thể tải passport.");
+    } finally {
+      setLoadingPassport(false);
+    }
+  };
+
+  const getListingImages = (listing: BreedingListing) => {
+    const images: string[] = [];
+    listing.images?.forEach((img) => {
+      if (img) images.push(img);
+    });
+    if (images.length === 0 && listing.pet.avatarUrl) {
+      images.push(listing.pet.avatarUrl);
+    }
+    return images;
   };
 
   return (
@@ -319,10 +351,20 @@ export default function BreedingPage() {
             {listings.map((list) => {
               const isOwnListing = list.user?._id === currentUserId;
               return (
-                <article key={list._id} className="group bg-white rounded-[3rem] overflow-hidden border border-sand/50 transition-all duration-700 hover:shadow-2xl hover:shadow-ink/5 flex flex-col h-full hover:border-caramel/30">
-                  
-                  {/* Image Display */}
-                  <div className="block aspect-[16/11] overflow-hidden relative bg-warm">
+                <article
+                  key={list._id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openListingDetail(list)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openListingDetail(list);
+                    }
+                  }}
+                  className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[3rem] border border-sand/50 bg-white transition-all duration-700 hover:border-caramel/30 hover:shadow-2xl hover:shadow-ink/5"
+                >
+                  <div className="relative block aspect-[16/11] overflow-hidden bg-warm">
                     {list.images && list.images.length > 0 ? (
                       <img
                         src={list.images[0]}
@@ -370,10 +412,13 @@ export default function BreedingPage() {
                     </p>
 
                     {/* Owner & Action */}
-                    <div className="mt-auto pt-6 border-t border-sand/30 flex items-center justify-between">
-                      <div 
-                        onClick={() => list.user?._id && setSelectedUserId(list.user._id)}
-                        className="flex items-center gap-3 cursor-pointer hover:opacity-85 hover:text-caramel transition-all"
+                    <div className="mt-auto flex items-center justify-between border-t border-sand/30 pt-6">
+                      <div
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (list.user?._id) setSelectedUserId(list.user._id);
+                        }}
+                        className="flex min-w-0 cursor-pointer items-center gap-3 transition-all hover:text-caramel hover:opacity-85"
                       >
                         <div className="w-9 h-9 rounded-full bg-warm overflow-hidden border border-sand/40 flex items-center justify-center">
                           {list.user?.avatarUrl ? (
@@ -386,32 +431,18 @@ export default function BreedingPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-ink/80 leading-none">{list.user?.name || "Pet Parent"}</p>
-                          <p
-                            className="truncate text-[9px] font-medium text-muted/50 leading-none mt-1"
-                            title={list.user?.phone || list.user?.email || ""}
-                          >
-                            {list.user?.phone || list.user?.email || ""}
+                          <p className="mt-1 flex items-center gap-1 truncate text-[9px] font-medium leading-none text-muted/50">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {formatUserDistrictProvince(list.user)}
                           </p>
                         </div>
                       </div>
 
-                      {isLoggedIn && !isOwnListing && (
-                        <button 
-                          onClick={() => {
-                            setSelectedListing(list);
-                            setRequestModalOpen(true);
-                          }}
-                          className="shrink-0 whitespace-nowrap px-5 py-2.5 bg-warm text-caramel hover:bg-ink hover:text-white rounded-full text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95"
-                        >
-                          Send Request
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {isOwnListing && (
-                        <span className="text-[10px] font-bold text-muted/40 uppercase tracking-widest">
+                      {isOwnListing ? (
+                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted/40">
                           Your Ad
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </article>
@@ -563,138 +594,177 @@ export default function BreedingPage() {
         )}
       </AnimatePresence>
 
-      {/* Send Request Modal */}
+      {/* Listing detail + breeding request */}
       <AnimatePresence>
-        {requestModalOpen && selectedListing && (
+        {detailModalOpen && selectedListing && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => {
-                setRequestModalOpen(false);
-                setSelectedListing(null);
-              }}
+              onClick={closeListingDetail}
               className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden bg-white border border-sand/50 shadow-2xl rounded-[2.5rem] p-8 z-10"
+              onClick={(event) => event.stopPropagation()}
+              className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[2.5rem] border border-sand/50 bg-white p-8 shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-rose-500">
-                    <Heart className="w-6 h-6 fill-rose-500" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-500">
+                    <Heart className="h-6 w-6 fill-rose-500" />
                   </div>
                   <div>
                     <h3 className="font-serif text-2xl font-bold italic text-ink">Breeding Request</h3>
-                    <p className="text-xs text-muted/50 font-medium">Send matching request with your pet.</p>
+                    <p className="text-xs font-medium text-muted/50">Send matching request with your pet.</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => {
-                    setRequestModalOpen(false);
-                    setSelectedListing(null);
-                  }} 
-                  className="p-2 hover:bg-warm rounded-full text-muted transition-colors"
+                <button
+                  type="button"
+                  onClick={closeListingDetail}
+                  className="rounded-full p-2 text-muted transition-colors hover:bg-warm"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Target Pet Details */}
-              <div className="mb-6 p-4 bg-[#FBF9F2] rounded-2xl border border-sand/30 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-warm overflow-hidden flex-shrink-0">
-                  {selectedListing.pet.avatarUrl ? (
-                    <img src={selectedListing.pet.avatarUrl} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-sm font-bold text-caramel uppercase">
-                      {selectedListing.pet.name[0]}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs text-muted/50 font-bold uppercase tracking-widest">Partner target</p>
-                  <p className="text-sm font-serif font-bold italic text-ink">
-                    {selectedListing.pet.name} ({selectedListing.pet.species} &bull; {selectedListing.pet.breed || "No breed"} &bull; {selectedListing.pet.gender})
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto pr-1">
+                <section className="rounded-2xl border border-sand/30 bg-[#FBF9F2] p-5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-caramel">
+                    {selectedListing.pet.breed || "Unknown Breed"} • {selectedListing.pet.age} Years Old
+                  </span>
+                  <h4 className="mt-2 font-serif text-2xl font-bold italic text-ink">{selectedListing.title}</h4>
+                  <p className="mt-4 whitespace-pre-line text-sm font-medium leading-relaxed text-muted/80">
+                    {selectedListing.description}
                   </p>
-                </div>
-              </div>
 
-              <form onSubmit={handleRequestSubmit} className="space-y-6">
-                
-                {/* Select Requester Pet */}
-                <div>
-                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
-                    Select Your Compatible Pet <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={requestData.requesterPetId}
-                    onChange={(e) => setRequestData(prev => ({ ...prev, requesterPetId: e.target.value }))}
-                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50"
-                  >
-                    <option value="">-- Choose one of your pets --</option>
-                    {myPets
-                      .filter(p => p.species === selectedListing.pet.species && p.gender !== "Unknown" && p.gender !== selectedListing.pet.gender)
-                      .map(p => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} ({p.breed || "No breed"} &bull; {p.gender})
-                        </option>
+                  {getListingImages(selectedListing).length > 0 ? (
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      {getListingImages(selectedListing).map((image) => (
+                        <img
+                          key={image}
+                          src={image}
+                          alt={selectedListing.title}
+                          className="aspect-[4/3] w-full rounded-2xl border border-sand/40 object-cover"
+                        />
                       ))}
-                  </select>
-                  
-                  {/* Compatibility Hint text */}
-                  <p className="text-[10px] text-muted/40 font-medium mt-1.5 leading-relaxed">
-                    Note: To be compatible, your pet must be of the <strong>same species</strong> ({selectedListing.pet.species}) and of the <strong>opposite gender</strong> ({selectedListing.pet.gender === "Male" ? "Female" : "Male"}). Only matching pets are listed above.
-                  </p>
-                </div>
+                    </div>
+                  ) : null}
+                </section>
 
-                {/* Message */}
-                <div>
-                  <label className="block text-xs font-bold text-ink/75 uppercase tracking-wider mb-2">
-                    Message to Owner <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={requestData.message}
-                    onChange={(e) => setRequestData(prev => ({ ...prev, message: e.target.value }))}
-                    placeholder="Hello! I would love to breed my pet with yours. Let's talk!"
-                    className="w-full px-4 py-3 bg-[#FBF9F2] border border-sand/50 rounded-2xl text-sm focus:outline-none focus:border-caramel/50 resize-none font-sans"
-                  />
-                </div>
-
-                <div className="flex gap-4 pt-4 border-t border-sand/30">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRequestModalOpen(false);
-                      setSelectedListing(null);
-                    }}
-                    className="flex-1 px-6 py-3 border border-sand text-ink text-sm font-bold rounded-2xl hover:bg-[#FBF9F2] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex-1 px-8 py-3 bg-rose-500 text-white text-sm font-bold rounded-2xl hover:bg-rose-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                <button
+                  type="button"
+                  onClick={() => openPetPassport(selectedListing.pet._id)}
+                  disabled={loadingPassport}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-sand/30 bg-[#FBF9F2] p-4 text-left transition-all hover:border-caramel/40 hover:bg-warm/40 disabled:opacity-60"
+                >
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-warm">
+                    {selectedListing.pet.avatarUrl ? (
+                      <img src={selectedListing.pet.avatarUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      "Send Request"
+                      <div className="flex h-full w-full items-center justify-center text-sm font-bold uppercase text-caramel">
+                        {selectedListing.pet.name[0]}
+                      </div>
                     )}
-                  </button>
-                </div>
-              </form>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted/50">Partner target</p>
+                    <p className="text-sm font-serif font-bold italic text-ink">
+                      {selectedListing.pet.name} ({selectedListing.pet.species} •{" "}
+                      {selectedListing.pet.breed || "No breed"} • {selectedListing.pet.gender})
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-caramel">Nhấn để xem Pet Passport</p>
+                  </div>
+                  {loadingPassport ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-caramel" /> : null}
+                </button>
+
+                {isLoggedIn && selectedListing.user?._id !== currentUserId ? (
+                  <form onSubmit={handleRequestSubmit} className="space-y-6 border-t border-sand/30 pt-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink/75">
+                        Select Your Compatible Pet <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={requestData.requesterPetId}
+                        onChange={(event) =>
+                          setRequestData((prev) => ({ ...prev, requesterPetId: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-sand/50 bg-[#FBF9F2] px-4 py-3 text-sm focus:border-caramel/50 focus:outline-none"
+                      >
+                        <option value="">-- Choose one of your pets --</option>
+                        {myPets
+                          .filter(
+                            (pet) =>
+                              pet.species === selectedListing.pet.species &&
+                              pet.gender !== "Unknown" &&
+                              pet.gender !== selectedListing.pet.gender,
+                          )
+                          .map((pet) => (
+                            <option key={pet._id} value={pet._id}>
+                              {pet.name} ({pet.breed || "No breed"} • {pet.gender})
+                            </option>
+                          ))}
+                      </select>
+                      <p className="mt-1.5 text-[10px] font-medium leading-relaxed text-muted/40">
+                        Note: To be compatible, your pet must be of the <strong>same species</strong> (
+                        {selectedListing.pet.species}) and of the <strong>opposite gender</strong> (
+                        {selectedListing.pet.gender === "Male" ? "Female" : "Male"}).
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink/75">
+                        Message to Owner <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={requestData.message}
+                        onChange={(event) =>
+                          setRequestData((prev) => ({ ...prev, message: event.target.value }))
+                        }
+                        placeholder="Hello! I would love to breed my pet with yours. Let's talk!"
+                        className="w-full resize-none rounded-2xl border border-sand/50 bg-[#FBF9F2] px-4 py-3 font-sans text-sm focus:border-caramel/50 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={closeListingDetail}
+                        className="flex-1 rounded-2xl border border-sand px-6 py-3 text-sm font-bold text-ink transition-colors hover:bg-[#FBF9F2]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-500 px-8 py-3 text-sm font-bold text-white transition-all hover:bg-rose-600 disabled:opacity-50"
+                      >
+                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Request"}
+                      </button>
+                    </div>
+                  </form>
+                ) : selectedListing.user?._id === currentUserId ? (
+                  <p className="rounded-2xl border border-sand/30 bg-warm/30 px-4 py-3 text-center text-xs font-bold uppercase tracking-widest text-muted/60">
+                    Đây là bài đăng của bạn
+                  </p>
+                ) : (
+                  <p className="rounded-2xl border border-sand/30 bg-warm/30 px-4 py-3 text-center text-sm font-medium text-muted/70">
+                    Đăng nhập để gửi yêu cầu phối giống.
+                  </p>
+                )}
+              </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {passportPet ? <PetPassportModal pet={passportPet} onClose={() => setPassportPet(null)} /> : null}
 
       {/* Mini Profile Modal */}
       <AnimatePresence>

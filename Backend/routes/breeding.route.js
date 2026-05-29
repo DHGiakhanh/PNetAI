@@ -24,10 +24,24 @@ router.get('/', async (req, res) => {
 
         const listings = await db.BreedingListing.find(filter)
             .populate('pet')
-            .populate('user', 'name avatarUrl email phone')
+            .populate('user', 'name avatarUrl email phone address location')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ listings });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Public pet passport for any pet ID provided by the client
+router.get('/pets/:petId/passport', async (req, res) => {
+    try {
+        const pet = await db.Pet.findById(req.params.petId);
+        if (!pet) {
+            return res.status(404).json({ message: 'Pet passport is not available.' });
+        }
+
+        res.status(200).json({ pet });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
