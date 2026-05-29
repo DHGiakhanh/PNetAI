@@ -15,7 +15,40 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/booking.service";
 import { petService } from "@/services/pet.service";
+import { formatVnd } from "@/utils/currency";
 import { toast } from "react-hot-toast";
+
+const bookingStatusStyles: Record<string, { badge: string; dot: string }> = {
+  completed: {
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    dot: "border-emerald-100 bg-emerald-500",
+  },
+  cancelled: {
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
+    dot: "border-rose-100 bg-rose-500",
+  },
+  pending: {
+    badge: "border-amber-200 bg-amber-50 text-amber-700",
+    dot: "border-amber-100 bg-amber-500",
+  },
+  confirmed: {
+    badge: "border-sky-200 bg-sky-50 text-sky-700",
+    dot: "border-sky-100 bg-sky-500",
+  },
+};
+
+const getBookingStatusStyle = (status?: string) =>
+  bookingStatusStyles[status?.toLowerCase() || ""] ?? {
+    badge: "border-sand bg-warm text-muted",
+    dot: "border-sand bg-caramel",
+  };
+
+const formatBookingStatus = (status?: string) => {
+  if (!status) return "Unknown";
+  return status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
 
 export const CustomerDirectory = () => {
   const [loading, setLoading] = useState(true);
@@ -74,6 +107,8 @@ export const CustomerDirectory = () => {
 
   const selectedCustomer = customers.find(c => c._id === selectedId);
   const selectedPet = selectedCustomerPets.find((pet) => pet._id === selectedPetId) || null;
+  const medicalHistoryRecords = selectedPet?.medicalHistoryRecords ?? [];
+  const recentMedicalHistoryRecords = medicalHistoryRecords.slice().reverse();
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -207,7 +242,7 @@ export const CustomerDirectory = () => {
                       <div className="bg-white rounded-[3rem] border border-sand p-10 shadow-sm">
                          <div className="flex items-center justify-between mb-8">
                             <h3 className="text-sm font-black uppercase tracking-widest text-muted flex items-center gap-3">
-                               <Dog className="w-4 h-4" /> Companions
+                               <Dog className="w-4 h-4" /> Pet(s)
                             </h3>
                          </div>
 
@@ -244,10 +279,24 @@ export const CustomerDirectory = () => {
                          </div>
                       </div>
 
-                      <div className="bg-white rounded-[3rem] border border-sand p-10 shadow-sm">
-                         <div className="flex items-center gap-3 mb-8">
-                            <StickyNote className="w-4 h-4 text-caramel" />
-                            <h3 className="text-sm font-black uppercase tracking-widest text-muted">Atelier Clinical Notes</h3>
+                      <div className="bg-white rounded-[3rem] border border-sand p-8 shadow-sm h-full min-h-[420px] flex flex-col">
+                         <div className="flex items-start justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-10 w-10 rounded-2xl bg-warm flex items-center justify-center shrink-0">
+                                 <StickyNote className="w-4 h-4 text-caramel" />
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-muted">Clinical Notes</h3>
+                                <p className="mt-1 text-xs font-serif italic text-muted/70 truncate">
+                                  {selectedPet ? `${selectedPet.name}'s recent clinical history` : "Select a companion to view notes"}
+                                </p>
+                              </div>
+                            </div>
+                            {medicalHistoryRecords.length > 0 && (
+                              <span className="shrink-0 rounded-full bg-warm px-3 py-1 text-[10px] font-black uppercase tracking-widest text-caramel">
+                                {medicalHistoryRecords.length} notes
+                              </span>
+                            )}
                          </div>
 {/* 
                          <textarea 
@@ -264,52 +313,86 @@ export const CustomerDirectory = () => {
                             <Save className="w-4 h-4" /> Store Memorandum
                          </button>
 */}
-                         {(selectedPet?.medicalHistoryRecords?.length || 0) > 0 && (
-                           <div className="mt-6 rounded-2xl border border-sand/30 bg-warm/20 p-4">
-                             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-muted">Recent Medical History</p>
-                             <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
-                               {selectedPet.medicalHistoryRecords
-                                 .slice()
-                                 .reverse()
-                                 .slice(0, 8)
-                                 .map((record: any, index: number) => (
-                                   <div key={record._id || `${record.createdAt}-${index}`} className="rounded-xl bg-white p-3 border border-sand/40">
-                                     <p className="text-xs font-medium text-ink">{record.note}</p>
-                                     <p className="mt-1 text-[10px] font-semibold text-muted">
+                         <div className="flex-1 min-h-[280px] border-t border-sand/40 pt-5 flex flex-col">
+                           <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-muted">Recent Medical History</p>
+                           {recentMedicalHistoryRecords.length > 0 ? (
+                             <div className="max-h-[320px] space-y-3 overflow-y-auto overscroll-contain pr-2 custom-scrollbar lg:max-h-[360px]">
+                               {recentMedicalHistoryRecords.map((record: any, index: number) => (
+                                   <div key={record._id || `${record.createdAt}-${index}`} className="rounded-2xl bg-[#FBF9F2]/70 p-4 border border-sand/40">
+                                     <p className="text-sm font-medium text-ink leading-relaxed">{record.note}</p>
+                                     <p className="mt-2 text-[10px] font-semibold text-muted">
                                        {record.providerName || "Clinic"} · {record.createdAt ? new Date(record.createdAt).toLocaleString() : ""}
                                      </p>
-                                   </div>
-                                 ))}
-                             </div>
-                           </div>
-                         )}
+                                 </div>
+                               ))}
+                               </div>
+                            ) : (
+                              <div className="flex-1 rounded-[2rem] border border-dashed border-sand/50 bg-[#FBF9F2]/40 flex items-center justify-center p-8 text-center">
+                                <p className="text-xs font-serif italic text-muted">
+                                  {selectedPet ? "No medical history has been recorded for this companion yet." : "Choose a companion profile to review clinical notes."}
+                                </p>
+                              </div>
+                            )}
+                         </div>
                       </div>
                    </div>
 
                    {/* History Timeline */}
-                   <div className="bg-white rounded-[3rem] border border-sand p-10 shadow-sm">
-                      <div className="flex items-center gap-3 mb-10">
-                         <History className="w-5 h-5 text-caramel" />
-                         <h3 className="text-sm font-black uppercase tracking-widest text-muted">Service Audit</h3>
+                   <div className="bg-white rounded-[3rem] border border-sand p-8 shadow-sm">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
+                         <div className="flex items-center gap-3">
+                            <div className="h-11 w-11 rounded-2xl bg-warm flex items-center justify-center">
+                              <History className="w-5 h-5 text-caramel" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-black uppercase tracking-widest text-muted">Service Audit</h3>
+                              <p className="mt-1 text-xs font-serif italic text-muted/70">Booking history and payment summary</p>
+                            </div>
+                         </div>
+                         <span className="w-fit rounded-full bg-warm px-4 py-2 text-[10px] font-black uppercase tracking-widest text-caramel">
+                            {selectedCustomer.bookings?.length || 0} records
+                         </span>
                       </div>
 
-                      <div className="space-y-12 relative before:absolute before:left-6 before:top-2 before:bottom-0 before:w-px before:bg-sand/40">
-                         {selectedCustomer.bookings?.map((item: any) => (
-                           <div key={item._id} className="relative pl-16">
-                              <div className={`absolute left-4 top-2 w-4 h-4 rounded-full bg-white border-4 z-10 shadow-sm ${item.status === 'completed' ? 'border-emerald-400' : 'border-caramel'}`}></div>
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                                 <p className="text-sm font-bold text-ink">{item.service?.title} ({item.status})</p>
-                                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-widest">
-                                    <Clock className="w-3.5 h-3.5" /> {new Date(item.bookingDate).toLocaleDateString()}
-                                 </div>
-                              </div>
-                              <div className="p-6 rounded-2xl bg-warm/30 border border-sand/30">
-                                 <p className="text-xs font-medium text-muted leading-relaxed italic">Patient: {item.pet?.name} — Paid: VND {item.totalAmount?.toLocaleString()}</p>
-                              </div>
+                      <div className="relative space-y-4 before:absolute before:left-5 before:top-3 before:bottom-3 before:w-px before:bg-sand/60">
+                         {selectedCustomer.bookings?.map((item: any) => {
+                           const statusStyle = getBookingStatusStyle(item.status);
+                           return (
+                           <div key={item._id} className="relative pl-12">
+                              <div className={`absolute left-[13px] top-6 h-4 w-4 rounded-full border-4 shadow-sm ${statusStyle.dot}`}></div>
+                               <div className="rounded-[2rem] border border-sand/50 bg-[#FBF9F2]/50 p-5 transition hover:border-caramel/40 hover:bg-white">
+                                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                     <div className="min-w-0">
+                                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                                           <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusStyle.badge}`}>
+                                              {formatBookingStatus(item.status)}
+                                           </span>
+                                        </div>
+                                        <p className="text-base font-bold text-ink leading-snug">{item.service?.title || "Untitled service"}</p>
+                                     </div>
+                                     <div className="flex items-center gap-2 rounded-full border border-sand/50 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted">
+                                        <Clock className="w-3.5 h-3.5 text-caramel" />
+                                        {item.bookingDate ? new Date(item.bookingDate).toLocaleDateString() : "No date"}
+                                     </div>
+                                  </div>
+                                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                     <div className="rounded-2xl border border-sand/40 bg-white p-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Patient</p>
+                                        <p className="mt-1 text-sm font-bold text-ink">{item.pet?.name || "Unassigned"}</p>
+                                     </div>
+                                     <div className="rounded-2xl border border-sand/40 bg-white p-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Paid</p>
+                                        <p className="mt-1 text-sm font-bold text-ink">{formatVnd(item.totalAmount || 0)}</p>
+                                     </div>
+                                  </div>
+                            </div>
                            </div>
-                         ))}
+                           );
+                         })}
                          {(!selectedCustomer.bookings || selectedCustomer.bookings.length === 0) && (
-                            <p className="pl-16 text-xs font-serif italic text-muted">No treatment records found.</p>
+                            <div className="rounded-[2rem] border border-dashed border-sand/60 bg-[#FBF9F2]/40 p-10 text-center">
+                              <p className="text-xs font-serif italic text-muted">No treatment records found.</p>
+                            </div>
                          )}
                       </div>
                    </div>
