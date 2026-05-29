@@ -1,6 +1,7 @@
 const express = require("express");
 const bcryptjs = require("bcryptjs");
 const multer = require("multer");
+const sharp = require("sharp");
 const db = require("../models");
 const verifyToken = require("../middlewares/verifyToken");
 const { cloudinary } = require("../config/cloudinary");
@@ -31,6 +32,23 @@ const fileExtensionByMimeType = {
     "image/png": "png",
     "image/webp": "webp",
     "application/pdf": "pdf"
+};
+
+const normalizeImageBuffer = async (buffer, maxWidth = 2048, quality = 78) => {
+    const transformer = sharp(buffer, { failOnError: false }).rotate().toColorspace("srgb");
+    const metadata = await transformer.metadata();
+
+    if (metadata.width && metadata.width > maxWidth) {
+        transformer.resize({ width: maxWidth, withoutEnlargement: true });
+    }
+
+    return transformer
+        .jpeg({
+            quality,
+            chromaSubsampling: "4:2:0",
+            mozjpeg: true,
+        })
+        .toBuffer();
 };
 
 // Get User Profile
@@ -286,11 +304,13 @@ router.post('/upload', verifyToken, (req, res, next) => {
             return res.status(400).json({ message: "Invalid file type. Only standard image formats (JPG, PNG, WEBP) are supported." });
         }
 
+        const optimizedBuffer = await normalizeImageBuffer(req.file.buffer);
         const uploadResult = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 {
                     folder: "pnetai/general",
                     resource_type: "image",
+                    format: "jpg",
                 },
                 (error, result) => {
                     if (error) {
@@ -300,7 +320,7 @@ router.post('/upload', verifyToken, (req, res, next) => {
                     resolve(result);
                 }
             );
-            stream.end(req.file.buffer);
+            stream.end(optimizedBuffer);
         });
 
         return res.status(200).json({
@@ -334,11 +354,13 @@ router.post('/upload-avatar', verifyToken, (req, res, next) => {
             return res.status(400).json({ message: "Portraits must be in image format (JPG, PNG, WEBP)." });
         }
 
+        const optimizedBuffer = await normalizeImageBuffer(req.file.buffer);
         const uploadResult = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 {
                     folder: "pnetai/avatars",
                     resource_type: "image",
+                    format: "jpg",
                 },
                 (error, result) => {
                     if (error) {
@@ -348,7 +370,7 @@ router.post('/upload-avatar', verifyToken, (req, res, next) => {
                     resolve(result);
                 }
             );
-            stream.end(req.file.buffer);
+            stream.end(optimizedBuffer);
         });
 
         const user = await db.User.findById(req.userId);
