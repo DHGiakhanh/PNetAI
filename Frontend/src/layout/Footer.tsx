@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-sand bg-gradient-to-r from-warm via-white to-cream">
@@ -11,10 +13,10 @@ export default function Footer() {
               🐾 PNetAI
             </p>
             <h3 className="mt-4 font-serif text-3xl font-bold italic text-ink">
-              Better care for every pet, every day.
+              A simple place to care for your pet.
             </h3>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-              Trusted products, smart booking, and a warm community for modern pet parents.
+              Find services, products, breeding listings, and community posts in one platform.
             </p>
           </div>
 
@@ -23,24 +25,24 @@ export default function Footer() {
               <div>
                 <p className="text-sm font-bold text-ink">Explore</p>
                 <div className="mt-3 space-y-2 text-sm text-muted">
-                  <a className="block transition hover:text-brown">Home</a>
-                  <a className="block transition hover:text-brown">Shop</a>
-                  <a className="block transition hover:text-brown">Services</a>
+                  <Link to="/" className="block transition hover:text-brown">Home</Link>
+                  <Link to="/products" className="block transition hover:text-brown">Products</Link>
+                  <Link to="/services" className="block transition hover:text-brown">Services</Link>
                 </div>
               </div>
               <div>
-                <p className="text-sm font-bold text-ink">Support</p>
+                <p className="text-sm font-bold text-ink">Community</p>
                 <div className="mt-3 space-y-2 text-sm text-muted">
-                  <a className="block transition hover:text-brown">Help Center</a>
-                  <a className="block transition hover:text-brown">Contact</a>
-                  <a className="block transition hover:text-brown">FAQs</a>
+                  <Link to="/breeding" className="block transition hover:text-brown">Breeding</Link>
+                  <Link to="/feeds" className="block transition hover:text-brown">Community</Link>
+                  <Link to="/register" className="block transition hover:text-brown">Join PNetAI</Link>
                 </div>
               </div>
               <div>
                 <p className="text-sm font-bold text-ink">Legal</p>
                 <div className="mt-3 space-y-2 text-sm text-muted">
-                  <a className="block transition hover:text-brown">Privacy Policy</a>
-                  <a className="block transition hover:text-brown">Terms of Service</a>
+                  <a className="block transition hover:text-brown">Privacy</a>
+                  <a className="block transition hover:text-brown">Terms</a>
                 </div>
               </div>
             </div>
@@ -49,7 +51,7 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-sand pt-6 text-sm text-muted sm:flex-row">
           <p>© 2026 PNetAI. All rights reserved.</p>
-          <p className="text-muted/80">Made with care for pet lovers.</p>
+          <p className="text-muted/80">Built for pet owners and their pets.</p>
         </div>
       </div>
     </footer>
