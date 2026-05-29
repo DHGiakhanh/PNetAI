@@ -87,7 +87,32 @@ export default function ServicesPage() {
     return R * c;
   };
 
-  const facilities = useMemo(() => services, [services]);
+
+   const facilities = useMemo(() => {
+    if (userLocation && locationStatus === "granted") {
+      return [...services].sort((a, b) => {
+        const aCoord = a.providerLocation?.coordinates;
+        const bCoord = b.providerLocation?.coordinates;
+        if (!aCoord && !bCoord) return 0;
+        if (!aCoord) return 1;
+        if (!bCoord) return -1;
+        const distA = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          aCoord[1],
+          aCoord[0]
+        );
+        const distB = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          bCoord[1],
+          bCoord[0]
+        );
+        return distA - distB;
+      });
+    }
+    return services;
+  }, [services, userLocation, locationStatus]);
 
   const toneMap: Record<string, { bg: string; text: string }> = {
     Veterinary:   { bg: "bg-emerald-50",  text: "text-emerald-600" },
