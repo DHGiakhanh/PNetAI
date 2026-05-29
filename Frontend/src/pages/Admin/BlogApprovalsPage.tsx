@@ -313,9 +313,10 @@ export default function BlogApprovalsPage() {
                    </div>
                 )}
 
-                <div className="prose prose-2xl mx-auto whitespace-pre-wrap text-2xl md:text-3xl text-ink leading-[1.7] italic text-ink/80">
-                  {selectedBlog.content}
-                </div>
+                <div
+                  className="prose prose-2xl mx-auto text-2xl md:text-3xl text-ink leading-[1.7] italic text-ink/80"
+                  dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+                />
 
                 <div className="mt-40 p-12 bg-warm/20 rounded-[4rem] border border-sand/30">
                    <h4 className="text-2xl font-serif font-bold italic text-ink mb-6">About the Author</h4>
