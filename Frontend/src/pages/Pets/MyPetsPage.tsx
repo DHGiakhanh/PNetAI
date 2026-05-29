@@ -81,19 +81,23 @@ const selectStyles: StylesConfig<SelectOption, false> = {
   singleValue: (base) => ({ ...base, color: "#2C2418" }),
 };
 
-const getModerationCopy = (status?: Pet["moderationStatus"]) => {
+const getModerationCopy = (status?: Pet["moderationStatus"], message?: string) => {
   if (status === "disabled") {
     return {
       label: "Booking Disabled",
       className: "border-rose-200 bg-rose-50 text-rose-700",
-      message: "This pet profile is temporarily disabled for booking. Please review the requested corrections.",
+      message:
+        message ||
+        "This pet profile is temporarily disabled for booking. Please review the requested corrections.",
     };
   }
   if (status === "flagged") {
     return {
       label: "Needs Review",
       className: "border-amber-200 bg-amber-50 text-amber-700",
-      message: "This pet profile has been flagged for review. Please verify that the information is accurate.",
+      message:
+        message ||
+        "This pet profile has been flagged for review. Please verify that the information is accurate.",
     };
   }
   return null;
@@ -244,6 +248,10 @@ export default function MyPetsPage() {
   };
 
   const sortedPets = useMemo(() => [...pets].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || "") * -1), [pets]);
+  const editingModerationCopy = getModerationCopy(
+    editing?.moderationStatus,
+    editing?.correctionRequestMessage || editing?.moderationReason || editing?.moderationNote
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm to-cream px-4 pb-24 pt-8 sm:px-6 lg:px-8">
@@ -263,16 +271,22 @@ export default function MyPetsPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {loading
             ? [...Array(3)].map((_, idx) => <div key={idx} className="h-72 animate-pulse rounded-3xl bg-sand/70" />)
-            : sortedPets.map((pet) => (
+            : sortedPets.map((pet) => {
+                const moderationCopy = getModerationCopy(
+                  pet.moderationStatus,
+                  pet.correctionRequestMessage || pet.moderationReason || pet.moderationNote
+                );
+
+                return (
                 <article
                   key={pet._id}
                   className="group overflow-hidden rounded-3xl border border-sand bg-white shadow-sm transition hover:-translate-y-1 hover:border-caramel/60 hover:shadow-lg"
                 >
                   <div className="relative bg-[#f3ead8] px-5 pb-8 pt-5">
-                    {getModerationCopy(pet.moderationStatus) ? (
-                      <span className={`absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${getModerationCopy(pet.moderationStatus)?.className}`}>
+                    {moderationCopy ? (
+                      <span className={`absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${moderationCopy.className}`}>
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        {getModerationCopy(pet.moderationStatus)?.label}
+                        {moderationCopy.label}
                       </span>
                     ) : null}
                     <span className="absolute right-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-sand">
@@ -345,7 +359,8 @@ export default function MyPetsPage() {
                     </div>
                   </div>
                 </article>
-              ))}
+                );
+              })}
 
           {!loading ? (
             <button
@@ -405,12 +420,12 @@ export default function MyPetsPage() {
                       </div>
                     </div>
 
-                    {getModerationCopy(editing?.moderationStatus) ? (
-                      <div className={`mt-6 flex items-start gap-3 rounded-2xl border p-4 text-sm font-semibold ${getModerationCopy(editing?.moderationStatus)?.className}`}>
+                    {editingModerationCopy ? (
+                      <div className={`mt-6 flex items-start gap-3 rounded-2xl border p-4 text-sm font-semibold ${editingModerationCopy.className}`}>
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
                         <div>
-                          <p className="font-black uppercase tracking-widest">{getModerationCopy(editing?.moderationStatus)?.label}</p>
-                          <p className="mt-1">{editing?.correctionRequestMessage || getModerationCopy(editing?.moderationStatus)?.message}</p>
+                          <p className="font-black uppercase tracking-widest">{editingModerationCopy.label}</p>
+                          <p className="mt-1">{editingModerationCopy.message}</p>
                         </div>
                       </div>
                     ) : null}
