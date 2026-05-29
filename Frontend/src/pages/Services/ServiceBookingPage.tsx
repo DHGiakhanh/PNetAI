@@ -95,9 +95,24 @@ export default function ServiceBookingPage() {
 
   const [providerServices, setProviderServices] = useState<Service[]>([]);
   const isLoggedIn = Boolean(localStorage.getItem("token"));
-  const bookablePets = useMemo(
-    () => pets.filter((pet) => pet.moderationStatus !== "disabled"),
-    [pets]
+  const filteredPets = useMemo(() => {
+    const speciesList = ["dog", "cat", "bird", "rabbit", "hamster", "other"];
+    const serviceSpeciesTags = service?.tags?.filter(tag => 
+      speciesList.includes(tag.toLowerCase())
+    ) || [];
+
+    if (serviceSpeciesTags.length === 0) {
+      return pets;
+    }
+
+    return pets.filter(pet => 
+      serviceSpeciesTags.some(tag => tag.toLowerCase() === pet.species?.toLowerCase())
+    );
+  }, [pets, service]);
+
+  const bookableFilteredPets = useMemo(
+    () => filteredPets.filter((pet) => pet.moderationStatus !== "disabled"),
+    [filteredPets]
   );
   const selectedPet = useMemo(
     () => pets.find((pet) => pet._id === selectedPetId) || null,
@@ -146,11 +161,11 @@ export default function ServiceBookingPage() {
   }, [service?._id, currentMonth, view]);
 
   useEffect(() => {
-    if (selectedPetId && pets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
+    if (selectedPetId && filteredPets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
       return;
     }
-    setSelectedPetId(bookablePets[0]?._id || null);
-  }, [bookablePets, pets, selectedPetId]);
+    setSelectedPetId(bookableFilteredPets[0]?._id || null);
+  }, [bookableFilteredPets, filteredPets, selectedPetId]);
 
   const fetchService = async (id: string) => {
     try {
@@ -621,7 +636,7 @@ export default function ServiceBookingPage() {
                     <div className="space-y-6">
                        <h3 className="text-xl font-serif font-bold italic text-ink">Companion authorization...</h3>
                        <div className="grid md:grid-cols-2 gap-4">
-                          {pets.map(pet => {
+                          {filteredPets.map(pet => {
                              const sel = selectedPetId === pet._id;
                              const disabledByModeration = pet.moderationStatus === "disabled";
                              return (
@@ -668,7 +683,7 @@ export default function ServiceBookingPage() {
                           </button>
                        </div>
 
-                       {pets.length > 0 && bookablePets.length === 0 && (
+                       {filteredPets.length > 0 && bookableFilteredPets.length === 0 && (
                          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
                            All existing pet profiles are temporarily disabled for booking. Please update the requested information or add a new valid pet profile.
                          </div>
