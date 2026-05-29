@@ -489,7 +489,7 @@ export default function BlogDetailPage() {
                 <div className="space-y-12">
                   {blog.comments.map(comment => (
                     <div key={comment._id} className="space-y-6">
-                      <div className="flex gap-6 group">
+                        <div className="flex gap-6 group">
                         <div 
                           onClick={() => setSelectedUserId(comment.user._id)}
                           className="w-14 h-14 rounded-2xl bg-warm flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden border border-sand cursor-pointer"

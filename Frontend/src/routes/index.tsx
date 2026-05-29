@@ -55,7 +55,6 @@ import ServiceProviderApprovalsPage from "@/pages/Sale/ServiceProviderApprovalsP
 import SalePendingApprovalsPage from "@/pages/Sale/SalePendingApprovalsPage";
 import SaleLayout from "@/layout/SaleLayout";
 import SaleProfilePage from "@/pages/Sale/SaleProfilePage";
-import AdminBlogApprovalsPage from "@/pages/Admin/BlogApprovalsPage";
 import AdminUserPostsPage from "@/pages/Admin/AdminUserPostsPage";
 import RefundRequestsPage from "@/pages/Admin/RefundRequestsPage";
 import MyBookingsPage from "@/pages/Orders/MyBookingsPage";
@@ -86,7 +85,6 @@ export default function AppRoutes() {
           <Route path="finance/transactions" element={<FinanceTransactionsPage />} />
           <Route path="finance/refunds" element={<RefundRequestsPage />} />
           <Route path="finance/payouts" element={<div className="p-20 text-center text-xs font-bold uppercase tracking-widest text-muted">Payout / Ledger Ledger Module Coming Soon</div>} />
-          <Route path="blogs/approvals" element={<AdminBlogApprovalsPage />} />
           <Route path="social/reports" element={<AdminReportsPage />} />
           <Route path="breeding/approvals" element={<AdminBreedingPage />} />
           

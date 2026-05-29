@@ -12,6 +12,7 @@ import {
   Search,
   User,
   X,
+  XCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -236,6 +237,7 @@ export default function AdminUserPostsPage() {
   const [commentsSort, setCommentsSort] = useState<"all" | "latest">("all");
   const [expandedReplies, setExpandedReplies] = useState<string[]>([]);
   const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [statusSummary, setStatusSummary] = useState<PostStatusSummary>(defaultStatusSummary);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
@@ -290,6 +292,25 @@ export default function AdminUserPostsPage() {
       setCommentsSort("all");
       setExpandedReplies([]);
       setDetailPost(blog);
+    }
+  };
+
+  const handleReview = async (postId: string, status: "approved" | "rejected") => {
+    try {
+      setReviewingId(postId);
+      await apiClient.put(`/admin/blogs/${postId}/review`, {
+        status,
+        reviewNote: "",
+      });
+      toast.success(`Post ${status === "approved" ? "approved" : "rejected"} successfully.`);
+      await fetchPosts();
+      if (detailPost?._id === postId) {
+        setDetailPost({ ...detailPost, status });
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || `Could not ${status} post.`);
+    } finally {
+      setReviewingId(null);
     }
   };
 
@@ -388,6 +409,7 @@ export default function AdminUserPostsPage() {
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-muted">Trạng thái</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-muted">Ngày đăng</th>
                 <th className="px-5 py-4 text-right text-[10px] font-black uppercase tracking-widest text-muted">Thao tác</th>
+                <th className="px-5 py-4 text-right text-[10px] font-black uppercase tracking-widest text-muted">Duyệt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sand/40">
@@ -444,7 +466,7 @@ export default function AdminUserPostsPage() {
                         {new Date(post.createdAt).toLocaleDateString("vi-VN")}
                       </td>
                       <td className="px-5 py-4">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
                           <button
                             type="button"
                             disabled={isLoadingRow}
@@ -455,6 +477,32 @@ export default function AdminUserPostsPage() {
                             View
                           </button>
                         </div>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {post.status === "pending" ? (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              disabled={reviewingId === post._id}
+                              onClick={() => handleReview(post._id, "rejected")}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                              title="Reject"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={reviewingId === post._id}
+                              onClick={() => handleReview(post._id, "approved")}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+                              title="Approve"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted/50">—</span>
+                        )}
                       </td>
                     </tr>
                   );
