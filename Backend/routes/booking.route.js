@@ -375,7 +375,7 @@ router.get("/my", verifyToken, async (req, res) => {
                     select: 'name'
                 }
             })
-            .populate('pet', 'name avatarUrl species breed medicalHistoryRecords')
+            .populate('pet', 'name avatarUrl species breed gender age medicalHistoryRecords')
             .sort({ bookingDate: -1 });
 
         // Filter out bookings where service or pet might have been deleted
