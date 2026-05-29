@@ -7,7 +7,6 @@ import {
   PawPrint,
   RefreshCw,
   Search,
-  ShieldAlert,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -15,7 +14,9 @@ import Pagination from "@/components/common/Pagination";
 import { Pet, petService } from "@/services/pet.service";
 
 const speciesOptions = ["", "Dog", "Cat", "Bird", "Rabbit", "Hamster", "Other"];
-const moderationOptions = ["", "active", "flagged", "disabled"];
+const moderationOptions = ["", "active", "disabled"];
+const disabledModerationReason =
+  "This pet profile is temporarily disabled for booking due to suspicious or spam activity. Please review and update the profile information.";
 const statusClasses: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-100",
   flagged: "bg-amber-50 text-amber-700 border-amber-100",
@@ -33,6 +34,7 @@ export default function AdminPetsPage() {
   const [healthStatus, setHealthStatus] = useState("");
   const [moderationStatus, setModerationStatus] = useState("");
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [togglingPetId, setTogglingPetId] = useState<string | null>(null);
   const [moderationSummary, setModerationSummary] = useState({ active: 0, flagged: 0, disabled: 0 });
   const pageSize = 10;
 
@@ -77,6 +79,36 @@ export default function AdminPetsPage() {
     if (fresh) setSelectedPet(fresh);
   }, [pets, selectedPetId]);
 
+  const handleToggleModeration = async (pet: Pet) => {
+    const currentStatus = pet.moderationStatus === "disabled" ? "disabled" : "active";
+    const nextStatus = currentStatus === "disabled" ? "active" : "disabled";
+    const confirmed = window.confirm(
+      nextStatus === "disabled"
+        ? `Disable booking for ${pet.name}? This pet will no longer be bookable.`
+        : `Reactivate booking for ${pet.name}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setTogglingPetId(pet._id);
+      const updatedPet = await petService.updatePetModeration(pet._id, {
+        moderationStatus: nextStatus,
+        moderationReason: nextStatus === "disabled" ? disabledModerationReason : "",
+        moderationNote: nextStatus === "disabled" ? "Disabled from admin pet registry." : "",
+      });
+
+      setPets((prev) => prev.map((item) => (item._id === updatedPet._id ? updatedPet : item)));
+      if (selectedPet?._id === updatedPet._id) setSelectedPet(updatedPet);
+      toast.success(nextStatus === "disabled" ? "Pet booking disabled." : "Pet booking reactivated.");
+      await fetchPets();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not update pet moderation.");
+    } finally {
+      setTogglingPetId(null);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -97,10 +129,9 @@ export default function AdminPetsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {[
           { label: "Active pets", value: moderationSummary.active, icon: CheckCircle2 },
-          { label: "Flagged pets", value: moderationSummary.flagged, icon: ShieldAlert },
           { label: "Disabled pets", value: moderationSummary.disabled, icon: AlertTriangle },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-sand bg-white p-5 shadow-sm">
@@ -183,6 +214,7 @@ export default function AdminPetsPage() {
               ) : (
                 pets.map((pet) => {
                   const status = pet.moderationStatus || "active";
+                  const isToggling = togglingPetId === pet._id;
                   return (
                     <tr key={pet._id} className="hover:bg-warm/20">
                       <td className="px-5 py-4">
@@ -211,9 +243,15 @@ export default function AdminPetsPage() {
                         <p className="text-xs text-muted">{pet.weightKg || 0} kg</p>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusClasses[status] || statusClasses.active}`}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleModeration(pet)}
+                          disabled={isToggling}
+                          title={status === "disabled" ? "Reactivate booking" : "Disable booking"}
+                          className={`inline-flex min-w-[82px] justify-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest transition hover:shadow-sm disabled:cursor-wait disabled:opacity-70 ${statusClasses[status] || statusClasses.active}`}
+                        >
                           {status}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-5 py-4 text-xs font-semibold text-muted">
                         {pet.updatedAt ? new Date(pet.updatedAt).toLocaleDateString() : "-"}
