@@ -127,6 +127,33 @@ export default function FloatingChatAgent() {
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_WELCOME_MESSAGE]);
   const [isTyping, setIsTyping] = useState(false);
+  const [hasActiveUserChat, setHasActiveUserChat] = useState(false);
+
+  // Dispatch event when chatbot opens/closes
+  useEffect(() => {
+    const event = new CustomEvent("chatbot:toggle", { detail: { open: isOpen } });
+    window.dispatchEvent(event);
+  }, [isOpen]);
+
+  // Listen to user chat open/close state
+  useEffect(() => {
+    const handleUserChatToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ hasActiveChat: boolean }>;
+      setHasActiveUserChat(customEvent.detail.hasActiveChat);
+    };
+
+    window.addEventListener("userchat:toggle", handleUserChatToggle as EventListener);
+    return () => {
+      window.removeEventListener("userchat:toggle", handleUserChatToggle as EventListener);
+    };
+  }, []);
+
+  // Auto close chatbot if a user chat window is opened/maximized
+  useEffect(() => {
+    if (hasActiveUserChat) {
+      setIsOpen(false);
+    }
+  }, [hasActiveUserChat]);
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -431,7 +458,10 @@ export default function FloatingChatAgent() {
         onClick={() => setIsOpen((prev) => !prev)}
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.96 }}
-        className="pointer-events-auto group fixed bottom-5 right-5 grid h-14 w-14 place-items-center rounded-2xl bg-ink text-white shadow-[0_18px_45px_rgba(44,36,24,0.28)] transition hover:bg-caramel sm:bottom-6 sm:right-6"
+        className={cn(
+          "pointer-events-auto group fixed bottom-5 right-5 grid h-14 w-14 place-items-center rounded-2xl bg-ink text-white shadow-[0_18px_45px_rgba(44,36,24,0.28)] transition hover:bg-caramel sm:bottom-6 sm:right-6",
+          hasActiveUserChat && "max-sm:hidden"
+        )}
         aria-label={isOpen ? "Đóng trợ lý AI" : "Mở trợ lý AI"}
         title={isOpen ? "Đóng trợ lý AI" : "Mở trợ lý AI"}
       >

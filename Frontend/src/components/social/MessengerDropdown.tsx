@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MessageSquare,
   UserCheck,
@@ -37,6 +37,8 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchedUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
   }, [activeTab]);
 
   const loadTabData = async () => {
+    if (activeTab === "search") return;
     setLoading(true);
     try {
       if (activeTab === "chats") {
@@ -72,25 +75,63 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
         setSentRequests(sent);
       }
     } catch (error) {
-      toast.error("Không thể tải dữ liệu.");
+      toast.error("Unable to load data.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Auto search suggestions as the user types
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const data = await socialService.searchUsers(trimmed);
+        setSearchResults(data);
+      } catch (error) {
+        // Fail silently
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
   // Search logic
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
 
-    setLoading(true);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    setSearchLoading(true);
     try {
-      const data = await socialService.searchUsers(searchQuery);
+      const data = await socialService.searchUsers(trimmed);
       setSearchResults(data);
     } catch (error) {
-      toast.error("Lỗi khi tìm kiếm thành viên.");
+      toast.error("Failed to search members.");
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
   };
 
@@ -99,12 +140,12 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
     setActionLoading(userId);
     try {
       await socialService.sendFriendRequest(userId);
-      toast.success("Đã gửi yêu cầu kết bạn!");
+      toast.success("Friend request sent!");
       setSearchResults((prev) =>
         prev.map((u) => (u._id === userId ? { ...u, friendshipStatus: "pending_sent" } : u))
       );
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi gửi yêu cầu.");
+      toast.error(error.response?.data?.message || "Failed to send request.");
     } finally {
       setActionLoading(null);
     }
@@ -114,13 +155,13 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
     setActionLoading(userId);
     try {
       await socialService.cancelFriendRequest(userId);
-      toast.success("Đã hủy yêu cầu kết bạn.");
+      toast.success("Friend request cancelled.");
       setSearchResults((prev) =>
         prev.map((u) => (u._id === userId ? { ...u, friendshipStatus: "none" } : u))
       );
       setSentRequests((prev) => prev.filter((r) => r.recipient._id !== userId));
     } catch (error) {
-      toast.error("Lỗi hủy yêu cầu.");
+      toast.error("Failed to cancel request.");
     } finally {
       setActionLoading(null);
     }
@@ -130,13 +171,13 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
     setActionLoading(userId);
     try {
       await socialService.acceptFriendRequest(userId);
-      toast.success("Đã chấp nhận kết bạn!");
+      toast.success("Friend request accepted!");
       setPendingRequests((prev) => prev.filter((r) => r.requester._id !== userId));
       setSearchResults((prev) =>
         prev.map((u) => (u._id === userId ? { ...u, friendshipStatus: "friends" } : u))
       );
     } catch (error) {
-      toast.error("Lỗi khi chấp nhận kết bạn.");
+      toast.error("Failed to accept friend request.");
     } finally {
       setActionLoading(null);
     }
@@ -146,25 +187,25 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
     setActionLoading(userId);
     try {
       await socialService.rejectFriendRequest(userId);
-      toast.success("Đã từ chối kết bạn.");
+      toast.success("Friend request declined.");
       setPendingRequests((prev) => prev.filter((r) => r.requester._id !== userId));
       setSearchResults((prev) =>
         prev.map((u) => (u._id === userId ? { ...u, friendshipStatus: "none" } : u))
       );
     } catch (error) {
-      toast.error("Lỗi khi từ chối.");
+      toast.error("Failed to decline request.");
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleUnfriend = async (friendId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy kết bạn với người này không?")) return;
+    if (!window.confirm("Are you sure you want to unfriend this user?")) return;
 
     setActionLoading(friendId);
     try {
       await socialService.unfriend(friendId);
-      toast.success("Đã hủy kết bạn thành công.");
+      toast.success("Unfriended successfully.");
       // Remove from friends list
       setFriends((prev) => prev.filter((f) => f._id !== friendId));
       // Update search results list if present
@@ -172,7 +213,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
         prev.map((u) => (u._id === friendId ? { ...u, friendshipStatus: "none" } : u))
       );
     } catch (error) {
-      toast.error("Lỗi khi hủy kết bạn.");
+      toast.error("Failed to unfriend.");
     } finally {
       setActionLoading(null);
     }
@@ -198,10 +239,10 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
       <div className="flex border-b border-sand/35 dark:border-slate-800/80 px-2 gap-0.5">
         {(["chats", "friends", "requests", "search"] as SubTab[]).map((tab) => {
           const tabLabels = {
-            chats: "Trò chuyện",
-            friends: "Bạn bè",
-            requests: "Lời mời",
-            search: "Tìm kiếm",
+            chats: "Chats",
+            friends: "Friends",
+            requests: "Requests",
+            search: "Search",
           };
           const isActive = activeTab === tab;
 
@@ -236,7 +277,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
               conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center h-full py-12">
                   <MessageCircle className="h-8 w-8 text-caramel/20 dark:text-slate-700 mb-2" />
-                  <p className="text-xs text-muted dark:text-slate-500 italic">Chưa có tin nhắn nào</p>
+                  <p className="text-xs text-muted dark:text-slate-500 italic">No messages yet</p>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -288,7 +329,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                             </span>
                           </div>
                           <p className={`text-[11px] truncate ${hasUnread ? "text-ink font-bold dark:text-white" : "text-muted dark:text-slate-400"}`}>
-                            {convo.lastMessage?.text || (convo.lastMessage?.attachments?.length ? "📸 Đã gửi một ảnh" : "Bắt đầu cuộc trò chuyện")}
+                            {convo.lastMessage?.text || (convo.lastMessage?.attachments?.length ? "📸 Sent an image" : "Start a conversation")}
                           </p>
                         </div>
                         {hasUnread && (
@@ -306,7 +347,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
               friends.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center h-full py-12">
                   <MessageSquareX className="h-8 w-8 text-caramel/20 dark:text-slate-700 mb-2" />
-                  <p className="text-xs text-muted dark:text-slate-500 italic">Chưa có bạn bè nào</p>
+                  <p className="text-xs text-muted dark:text-slate-500 italic">No friends yet</p>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -355,7 +396,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                           }}
                           disabled={actionLoading === friend._id}
                           className="p-1.5 rounded-lg border border-sand bg-white text-muted hover:text-rust hover:border-rust/45 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-red-400 transition"
-                          title="Hủy kết bạn"
+                          title="Unfriend"
                         >
                           <UserMinus className="h-3.5 w-3.5" />
                         </button>
@@ -371,49 +412,59 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
               (pendingRequests.length === 0 && sentRequests.length === 0) ? (
                 <div className="flex flex-col items-center justify-center text-center h-full py-12">
                   <UserCheck className="h-8 w-8 text-caramel/20 dark:text-slate-700 mb-2" />
-                  <p className="text-xs text-muted dark:text-slate-500 italic">Không có lời mời kết bạn nào</p>
+                  <p className="text-xs text-muted dark:text-slate-500 italic">No friend requests yet</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Received */}
                   {pendingRequests.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-400 mb-2 px-1">Nhận được</h4>
-                      <div className="space-y-1.5">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-400 mb-2 px-1">Received</h4>
+                      <div className="space-y-2">
                         {pendingRequests.map((req) => (
                           <div
                             key={req._id}
-                            className="flex items-center justify-between p-2.5 rounded-xl border border-sand/50 bg-warm/5 dark:border-slate-800 dark:bg-slate-950/20"
+                            className="flex items-start gap-3 p-3 rounded-2xl border border-sand/50 bg-[#FBF9F2]/40 dark:border-slate-800 dark:bg-slate-950/20"
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="relative shrink-0 mt-0.5">
                               {req.requester.avatarUrl ? (
                                 <img
                                   src={req.requester.avatarUrl}
                                   alt="Avatar"
-                                  className="h-8 w-8 rounded-full object-cover border border-sand dark:border-slate-850"
+                                  className="h-12 w-12 rounded-full object-cover border border-sand/70 dark:border-slate-800"
                                 />
                               ) : (
-                                <span className="grid h-8 w-8 place-items-center rounded-full bg-brown/10 text-brown text-xs font-bold border border-sand dark:border-slate-850">
+                                <span className="grid h-12 w-12 place-items-center rounded-full bg-brown/10 text-brown text-sm font-bold border border-sand/70 dark:border-slate-800">
                                   {getInitials(req.requester.name)}
                                 </span>
                               )}
-                              <span className="text-xs font-bold text-ink dark:text-white truncate max-w-[100px]">{req.requester.name}</span>
                             </div>
-                            <div className="flex gap-1.5 shrink-0">
-                              <button
-                                onClick={() => handleAcceptRequest(req.requester._id)}
-                                disabled={actionLoading === req.requester._id}
-                                className="px-2.5 py-1 text-[10px] font-black uppercase rounded-lg bg-brown text-white hover:bg-ink dark:bg-amber-800 transition"
-                              >
-                                Đồng ý
-                              </button>
-                              <button
-                                onClick={() => handleRejectRequest(req.requester._id)}
-                                disabled={actionLoading === req.requester._id}
-                                className="px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border border-sand bg-white text-gray-600 hover:bg-warm transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-350"
-                              >
-                                Từ chối
-                              </button>
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div>
+                                <p className="text-xs text-ink dark:text-slate-200 leading-normal">
+                                  <span className="font-bold">{req.requester.name}</span>
+                                  {" "}sent you a friend request.
+                                </p>
+                                <p className="text-[10px] text-muted dark:text-slate-500 mt-0.5 truncate">
+                                  {req.requester.email} · {req.requester.role === "user" ? "Customer" : (req.requester.role ? req.requester.role.charAt(0).toUpperCase() + req.requester.role.slice(1) : "")}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleAcceptRequest(req.requester._id)}
+                                  disabled={actionLoading === req.requester._id}
+                                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-brown text-white hover:bg-ink dark:bg-amber-800 transition active:scale-95 disabled:opacity-50"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={() => handleRejectRequest(req.requester._id)}
+                                  disabled={actionLoading === req.requester._id}
+                                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-sand/35 text-ink border border-sand/65 hover:bg-sand/65 dark:bg-slate-800 dark:text-slate-350 dark:border-slate-700 transition active:scale-95 disabled:opacity-50"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -424,34 +475,43 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                   {/* Sent */}
                   {sentRequests.length > 0 && (
                     <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-400 mb-2 px-1">Đã gửi</h4>
-                      <div className="space-y-1.5">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-muted dark:text-slate-400 mb-2 px-1">Sent</h4>
+                      <div className="space-y-2">
                         {sentRequests.map((req) => (
                           <div
                             key={req._id}
-                            className="flex items-center justify-between p-2.5 rounded-xl border border-sand/50 bg-warm/5 dark:border-slate-800 dark:bg-slate-950/20"
+                            className="flex items-start gap-3 p-3 rounded-2xl border border-sand/50 bg-[#FBF9F2]/20 dark:border-slate-800 dark:bg-slate-950/10"
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="relative shrink-0 mt-0.5">
                               {req.recipient.avatarUrl ? (
                                 <img
                                   src={req.recipient.avatarUrl}
                                   alt="Avatar"
-                                  className="h-8 w-8 rounded-full object-cover border border-sand dark:border-slate-850"
+                                  className="h-10 w-10 rounded-full object-cover border border-sand/70 dark:border-slate-800"
                                 />
                               ) : (
-                                <span className="grid h-8 w-8 place-items-center rounded-full bg-brown/10 text-brown text-xs font-bold border border-sand dark:border-slate-850">
+                                <span className="grid h-10 w-10 place-items-center rounded-full bg-brown/10 text-brown text-xs font-bold border border-sand/70 dark:border-slate-800">
                                   {getInitials(req.recipient.name)}
                                 </span>
                               )}
-                              <span className="text-xs font-bold text-ink dark:text-white truncate max-w-[100px]">{req.recipient.name}</span>
                             </div>
-                            <button
-                              onClick={() => handleCancelRequest(req.recipient._id)}
-                              disabled={actionLoading === req.recipient._id}
-                              className="px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border border-rust bg-white text-rust hover:bg-rust/5 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/20 transition"
-                            >
-                              Hủy
-                            </button>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-ink dark:text-slate-200 leading-normal">
+                                You sent a friend request to <span className="font-bold">{req.recipient.name}</span>.
+                              </p>
+                              <p className="text-[10px] text-muted dark:text-slate-500 mt-0.5 truncate">
+                                {req.recipient.email}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => handleCancelRequest(req.recipient._id)}
+                                  disabled={actionLoading === req.recipient._id}
+                                  className="flex-1 py-1.5 text-[10px] font-bold rounded-xl border border-rust/40 bg-white text-rust hover:bg-rust/5 dark:bg-slate-800 dark:text-red-400 dark:border-red-900/30 transition active:scale-95 disabled:opacity-50"
+                                >
+                                  Cancel Request
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -469,20 +529,24 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm tên hoặc email..."
+                    placeholder="Search by name, email or phone..."
                     className="h-9 flex-1 rounded-xl border border-sand bg-warm/10 px-3 text-xs text-ink outline-none transition focus:border-caramel focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:focus:bg-slate-950"
                   />
                   <button
                     type="submit"
                     className="h-9 px-3 text-xs font-bold rounded-xl bg-brown text-white hover:bg-ink dark:bg-amber-800 transition"
                   >
-                    Tìm
+                    Search
                   </button>
                 </form>
 
-                {searchResults.length === 0 ? (
-                  searchQuery && (
-                    <p className="text-center py-6 text-xs text-muted dark:text-slate-500 italic">Không tìm thấy kết quả</p>
+                {searchLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-caramel dark:text-amber-600" />
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  searchQuery.trim() && (
+                    <p className="text-center py-6 text-xs text-muted dark:text-slate-500 italic">No results found</p>
                   )
                 ) : (
                   <div className="divide-y divide-sand/20 dark:divide-slate-800/80 border border-sand/50 dark:border-slate-800 rounded-xl overflow-hidden bg-warm/5">
@@ -516,7 +580,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                               onClick={() => handleSendRequest(user._id)}
                               disabled={actionLoading === user._id}
                               className="p-1.5 rounded-lg bg-brown text-white hover:bg-ink dark:bg-amber-800 transition"
-                              title="Kết bạn"
+                              title="Add Friend"
                             >
                               <UserPlus className="h-4 w-4" />
                             </button>
@@ -526,7 +590,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                               onClick={() => handleCancelRequest(user._id)}
                               disabled={actionLoading === user._id}
                               className="p-1.5 rounded-lg border border-rust text-rust hover:bg-rust/5 transition"
-                              title="Hủy yêu cầu"
+                              title="Cancel Request"
                             >
                               <UserX className="h-4 w-4" />
                             </button>
@@ -538,14 +602,14 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                                 disabled={actionLoading === user._id}
                                 className="px-2 py-1 text-[10px] font-black rounded-lg bg-brown text-white hover:bg-ink"
                               >
-                                Nhận
+                                Accept
                               </button>
                               <button
                                 onClick={() => handleRejectRequest(user._id)}
                                 disabled={actionLoading === user._id}
                                 className="px-2 py-1 text-[10px] font-black rounded-lg border border-sand text-gray-500 hover:bg-warm"
                               >
-                                Hủy
+                                Decline
                               </button>
                             </div>
                           )}
@@ -557,7 +621,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                                   onClose();
                                 }}
                                 className="p-1.5 rounded-lg bg-brown text-white hover:bg-ink dark:bg-amber-800 transition"
-                                title="Nhắn tin"
+                                title="Message"
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </button>
@@ -565,7 +629,7 @@ export const MessengerDropdown: React.FC<MessengerDropdownProps> = ({ onClose })
                                 onClick={() => handleUnfriend(user._id)}
                                 disabled={actionLoading === user._id}
                                 className="p-1.5 rounded-lg border border-sand bg-white text-muted hover:text-rust hover:border-rust/45 dark:border-slate-850 dark:bg-slate-950 dark:text-slate-400 dark:hover:text-red-400 transition"
-                                title="Hủy kết bạn"
+                                title="Unfriend"
                               >
                                 <UserMinus className="h-4 w-4" />
                               </button>

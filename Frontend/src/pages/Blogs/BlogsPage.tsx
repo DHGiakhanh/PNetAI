@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   User, 
   Loader2, 
@@ -241,6 +241,8 @@ export default function BlogsPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryPostId = searchParams.get("postId");
   const isLoggedIn = Boolean(localStorage.getItem("token"));
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const currentUserId = currentUser._id || currentUser.id || "";
@@ -418,6 +420,22 @@ export default function BlogsPage() {
   }, []);
 
   useEffect(() => {
+    if (queryPostId) {
+      const fetchAndOpenPost = async () => {
+        try {
+          const res = await apiClient.get(`/blogs/${queryPostId}`);
+          if (res.data.blog) {
+            openCommentModal(res.data.blog);
+          }
+        } catch (error) {
+          console.error("Failed to fetch shared post:", error);
+        }
+      };
+      fetchAndOpenPost();
+    }
+  }, [queryPostId]);
+
+  useEffect(() => {
     if (!commentModalOpen) return;
 
     const originalOverflow = document.body.style.overflow;
@@ -440,12 +458,20 @@ export default function BlogsPage() {
     setCommentModalSort('all');
     setExpandedCommentReplies([]);
     setCommentModalOpen(true);
+    if (searchParams.get("postId") !== post._id) {
+      searchParams.set("postId", post._id);
+      setSearchParams(searchParams);
+    }
   };
 
   const closeCommentModal = () => {
     setCommentModalOpen(false);
     setCommentModalPost(null);
     setExpandedCommentReplies([]);
+    if (searchParams.has("postId")) {
+      searchParams.delete("postId");
+      setSearchParams(searchParams);
+    }
   };
 
   const toggleCommentReplies = (commentId: string) => {
@@ -607,11 +633,14 @@ export default function BlogsPage() {
 
                     {/* Card Body */}
                     <div className="p-5 space-y-3">
-                      <Link to={`/feeds/${post._id}`} className="block group">
+                      <button 
+                        onClick={() => openCommentModal(post)} 
+                        className="block group text-left outline-none"
+                      >
                         <h3 className="font-serif text-xl font-bold italic text-ink group-hover:text-caramel transition-colors leading-tight">
                           {post.title}
                         </h3>
-                      </Link>
+                      </button>
                       <p className="text-muted/70 text-sm leading-relaxed font-medium whitespace-pre-line">
                         {expandedPostIds.includes(post._id)
                           ? normalizeBlogText(post.content)
