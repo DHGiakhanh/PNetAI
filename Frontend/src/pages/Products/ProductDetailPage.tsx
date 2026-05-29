@@ -327,166 +327,160 @@ export default function ProductDetailPage() {
         </button>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-12">
+      <section className="rounded-[32px] bg-white p-6 lg:p-8 shadow-sm ring-1 ring-sand grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <div className="overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-sand">
-            <div className="relative aspect-[4/3] bg-warm">
-              {activeImage ? (
-                <img
-                  alt={product.name}
-                  src={activeImage}
-                  className="h-full w-full object-contain"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="grid h-full w-full place-items-center text-sm font-semibold text-muted">
-                  No image
-                </div>
-              )}
-            </div>
+          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-warm border border-sand/30">
+            {activeImage ? (
+              <img
+                alt={product.name}
+                src={activeImage}
+                className="h-full w-full object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center text-sm font-semibold text-muted">
+                No image
+              </div>
+            )}
+          </div>
 
-            <div className="flex gap-3 overflow-x-auto p-4">
-              {images.map((img, idx) => (
-                <button
-                  key={img}
-                  type="button"
-                  onClick={() => setActiveImageIdx(idx)}
-                  className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl ring-1 ${
-                    idx === activeImageIdx ? "ring-caramel" : "ring-sand"
-                  }`}
-                  aria-label={`View image ${idx + 1}`}
-                >
-                  <img alt="" src={img} className="h-full w-full object-contain" loading="lazy" />
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-3 overflow-x-auto py-4">
+            {images.map((img, idx) => (
+              <button
+                key={img}
+                type="button"
+                onClick={() => setActiveImageIdx(idx)}
+                className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl ring-2 ${
+                  idx === activeImageIdx ? "ring-caramel" : "ring-sand/50"
+                } transition-all`}
+                aria-label={`View image ${idx + 1}`}
+              >
+                <img alt="" src={img} className="h-full w-full object-contain" loading="lazy" />
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="lg:col-span-5">
-          <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-sand">
-            <p className="text-xs font-extrabold uppercase tracking-wide text-muted">
-              {product.category}
-            </p>
-            <h1 className="mt-2 font-serif text-3xl font-extrabold italic leading-snug text-ink">
-              {product.name}
-            </h1>
-            <p className="mt-1 text-xs font-semibold text-brown">Provided by {providerName}</p>
+          <p className="text-xs font-extrabold uppercase tracking-wide text-muted">
+            {product.category}
+          </p>
+          <h1 className="mt-2 font-serif text-3xl font-extrabold italic leading-snug text-ink">
+            {product.name}
+          </h1>
+          <p className="mt-1 text-xs font-semibold text-brown">Provided by {providerName}</p>
 
-            {product.tags && product.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {product.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full bg-warm px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-extrabold text-amber-700 ring-1 ring-amber-200">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  {displayAverageRating.toFixed(1)}
+          {product.tags && product.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {product.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-warm px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-brown ring-1 ring-sand/30"
+                >
+                  {tag}
                 </span>
-                <a href="#reviews" className="text-sm font-semibold text-muted hover:text-ink">
-                  ({displayTotalReviews} reviews)
-                </a>
-              </div>
-              <span className="text-2xl font-extrabold text-ink">{formatVnd(product.price)}</span>
+              ))}
             </div>
+          )}
 
-            <p className="mt-4 text-sm font-semibold leading-relaxed text-muted">
-              {product.description}
-            </p>
+          <div className="mt-3 flex items-center justify-between border-b border-sand/30 pb-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-extrabold text-amber-700 ring-1 ring-amber-200">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                {displayAverageRating.toFixed(1)}
+              </span>
+              <a href="#reviews" className="text-sm font-semibold text-muted hover:text-ink">
+                ({displayTotalReviews} reviews)
+              </a>
+            </div>
+            <span className="text-2xl font-extrabold text-ink">{formatVnd(product.price)}</span>
+          </div>
 
-            <div className="mt-5 grid gap-4">
-              <div>
-                <p className="font-serif text-sm font-extrabold italic text-ink">Quantity</p>
-                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-warm p-1 ring-1 ring-sand">
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus className="h-4 w-4 text-ink" />
-                  </button>
-                  <span className="min-w-10 text-center text-sm font-extrabold text-ink">
-                    {qty}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm disabled:opacity-50"
-                    aria-label="Increase quantity"
-                    disabled={qty >= product.stock}
-                  >
-                    <Plus className="h-4 w-4 text-ink" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-1 grid gap-3">
+          <div className="mt-5 grid gap-4">
+            <div>
+              <p className="font-serif text-sm font-extrabold italic text-ink">Quantity</p>
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-warm p-1 ring-1 ring-sand">
                 <button
                   type="button"
-                  onClick={handleAddToCart}
-                  disabled={addLoading || product.stock <= 0}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm"
+                  aria-label="Decrease quantity"
                 >
-                  {addLoading ? "Adding..." : "Add to cart"}
+                  <Minus className="h-4 w-4 text-ink" />
                 </button>
-                <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
-                  <ShieldCheck className="h-5 w-5 text-brown" />
-                  <p className="text-sm font-semibold text-ink">
-                    Free returns within 7 days · Community verified picks
-                  </p>
-                </div>
+                <span className="min-w-10 text-center text-sm font-extrabold text-ink">
+                  {qty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-sand hover:bg-warm disabled:opacity-50"
+                  aria-label="Increase quantity"
+                  disabled={qty >= product.stock}
+                >
+                  <Plus className="h-4 w-4 text-ink" />
+                </button>
               </div>
             </div>
 
-            <div className="mt-6">
-              <p className="font-serif text-sm font-extrabold italic text-ink">Product Info</p>
-              <div className="mt-3 grid gap-2">
-                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
-                  <span>Stock Available</span>
-                  <span className="text-xs font-extrabold text-muted">{product.stock} units</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
-                  <span>Category</span>
-                  <span className="text-xs font-extrabold text-muted">{product.category}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
-                  <span>Service Provider</span>
-                  <span className="text-xs font-extrabold text-muted">{providerName}</span>
-                </div>
-                {product.isHot && (
-                  <div className="flex items-center justify-between rounded-2xl bg-[#fff5f1] px-4 py-3 text-sm font-semibold text-rust ring-1 ring-rust/25">
-                    <span>Hot Product</span>
-                    <span className="text-xs font-extrabold text-rust">Hot</span>
-                  </div>
-                )}
-                {product.isRecommended && (
-                  <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                    <span>Recommended</span>
-                    <span className="text-xs font-extrabold text-emerald-600">Top pick</span>
-                  </div>
-                )}
+            <div className="mt-1 grid gap-3">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={addLoading || product.stock <= 0}
+                className="inline-flex w-full items-center justify-center rounded-full bg-brown px-6 py-3 text-sm font-extrabold text-white shadow-sm hover:bg-brown-dark disabled:opacity-60"
+              >
+                {addLoading ? "Adding..." : "Add to cart"}
+              </button>
+              <div className="flex items-center gap-2 rounded-2xl bg-warm p-4 ring-1 ring-sand">
+                <ShieldCheck className="h-5 w-5 text-brown" />
+                <p className="text-sm font-semibold text-ink">
+                  Free returns within 7 days · Community verified picks
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-5 rounded-[22px] bg-white p-5 shadow-sm ring-1 ring-sand">
-            <p className="font-serif text-sm font-extrabold italic text-ink">Selected</p>
-            <div className="mt-2 flex items-center justify-between text-sm font-semibold text-muted">
-              <span>Quantity</span>
-              <span className="font-extrabold text-ink">{qty}</span>
+          <div className="mt-6 border-t border-sand/30 pt-6">
+            <p className="font-serif text-sm font-extrabold italic text-ink">Product Info</p>
+            <div className="mt-3 grid gap-2">
+              <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
+                <span>Stock Available</span>
+                <span className="text-xs font-extrabold text-muted">{product.stock} units</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
+                <span>Category</span>
+                <span className="text-xs font-extrabold text-muted">{product.category}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-warm px-4 py-3 text-sm font-semibold text-ink ring-1 ring-sand">
+                <span>Service Provider</span>
+                <span className="text-xs font-extrabold text-muted">{providerName}</span>
+              </div>
+              {product.isHot && (
+                <div className="flex items-center justify-between rounded-2xl bg-[#fff5f1] px-4 py-3 text-sm font-semibold text-rust ring-1 ring-rust/25">
+                  <span>Hot Product</span>
+                  <span className="text-xs font-extrabold text-rust">Hot</span>
+                </div>
+              )}
+              {product.isRecommended && (
+                <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <span>Recommended</span>
+                  <span className="text-xs font-extrabold text-emerald-600">Top pick</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Description Section */}
+      <section className="mt-8 rounded-[32px] bg-white p-6 lg:p-8 shadow-sm ring-1 ring-sand">
+        <h2 className="font-serif text-2xl font-extrabold italic text-ink border-b border-sand/30 pb-4">
+          Product Description
+        </h2>
+        <p className="mt-6 text-sm font-semibold leading-relaxed text-muted whitespace-pre-line">
+          {product.description}
+        </p>
       </section>
 
       <section id="reviews" className="mt-10 grid gap-6 lg:grid-cols-12">

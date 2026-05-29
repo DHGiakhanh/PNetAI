@@ -365,7 +365,7 @@ export const OrdersManagement = () => {
             ) : (
               <div className="space-y-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
+                  <div className="pr-12 lg:pr-0">
                     <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-caramel">
                       <ShoppingBag className="h-4 w-4" />
                       Order Detail
@@ -378,7 +378,7 @@ export const OrdersManagement = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-2 text-left lg:text-right">
+                  <div className="space-y-2 text-left lg:text-right lg:pr-12">
                     <StatusBadge status={selectedOrder.status} />
                     <p className="text-xs font-bold uppercase tracking-widest text-muted">
                       {selectedOrder.paymentMethod} / {selectedOrder.paymentStatus}

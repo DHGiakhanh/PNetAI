@@ -74,7 +74,7 @@ export default function MyBookingsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-warm to-cream px-4 pb-16 pt-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <h1 className="font-serif text-4xl font-bold italic text-ink">My Appointments</h1>
+        <h1 className="font-serif text-4xl font-bold italic text-ink">My Booking</h1>
         <p className="mt-2 text-sm text-muted">Track your service bookings and appointment status.</p>
 
         <div className="mt-4 rounded-2xl border border-sand bg-white/90 p-4 text-sm text-ink shadow-sm">
@@ -101,16 +101,16 @@ export default function MyBookingsPage() {
 
               return (
                 <article key={booking._id} className="rounded-2xl border border-sand bg-white/90 overflow-hidden shadow-sm flex flex-col sm:flex-row">
-                <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20 flex-shrink-0">
-                  <img
-                    src={(booking.service.images && booking.service.images.length > 0) 
-                      ? booking.service.images[0] 
-                      : "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=400&auto=format&fit=crop"
-                    }
-                    alt={booking.service.title}
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                </div>
+                  <div className="w-full sm:w-48 h-48 sm:h-auto overflow-hidden bg-sand/20 flex-shrink-0">
+                    <img
+                      src={(booking.service.images && booking.service.images.length > 0)
+                        ? booking.service.images[0]
+                        : "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=400&auto=format&fit=crop"
+                      }
+                      alt={booking.service.title}
+                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                    />
+                  </div>
                   <div className="flex-1 p-6">
                     <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                       <div>
@@ -122,20 +122,20 @@ export default function MyBookingsPage() {
                         </div>
                         <p className="mb-2 text-xs font-semibold text-brown">Provided by {providerName}</p>
                         <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted">
-                           <span className="flex items-center gap-1.5">
-                             <Calendar className="w-3" />
-                             {new Date(booking.bookingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
-                           </span>
-                           <span className="flex items-center gap-1.5">
-                             <Clock className="w-3" />
-                             {booking.bookingTime}
-                           </span>
-                           {booking.service.location?.city && (
-                             <span className="flex items-center gap-1.5">
-                               <MapPin className="w-3" />
-                               {booking.service.location.city}
-                             </span>
-                           )}
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3" />
+                            {new Date(booking.bookingDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3" />
+                            {booking.bookingTime}
+                          </span>
+                          {booking.service.location?.city && (
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="w-3" />
+                              {booking.service.location.city}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -147,31 +147,31 @@ export default function MyBookingsPage() {
                     </div>
 
                     <div className="flex items-center gap-4 p-4 bg-warm/30 rounded-2xl border border-sand/30">
-                       <div className="w-10 h-10 rounded-xl bg-white border border-sand flex items-center justify-center overflow-hidden">
-                          {booking.pet.avatarUrl ? (
-                            <img src={booking.pet.avatarUrl} className="w-full h-full object-cover" />
-                          ) : (
-                            <Dog className="w-5 h-5 text-muted" />
-                          )}
-                       </div>
-                       <div>
-                          <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
-                          <p className="text-[10px] font-medium text-muted">Species: {booking.pet.species} • Breed: {booking.pet.breed || "None"}</p>
-                          <p className="text-[9px] font-medium text-muted/60 mt-0.5">Gender: {booking.pet.gender || "Unknown"} • Age: {booking.pet.age || 0} years</p>
-                       </div>
+                      <div className="w-10 h-10 rounded-xl bg-white border border-sand flex items-center justify-center overflow-hidden">
+                        {booking.pet.avatarUrl ? (
+                          <img src={booking.pet.avatarUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <Dog className="w-5 h-5 text-muted" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-ink">Appointment for {booking.pet.name}</p>
+                        <p className="text-[10px] font-medium text-muted">Species: {booking.pet.species} • Breed: {booking.pet.breed || "None"}</p>
+                        <p className="text-[9px] font-medium text-muted/60 mt-0.5">Gender: {booking.pet.gender || "Unknown"} • Age: {booking.pet.age || 0} years</p>
+                      </div>
                     </div>
 
                     {booking.status === "completed" && booking.sessionNotes && booking.sessionNotes.length > 0 && (
                       <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5">
                         <div className="flex items-center gap-2 mb-3">
-                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 italic">Atelier Clinical Observations</p>
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 italic">Atelier Clinical Observations</p>
                         </div>
                         <div className="space-y-3">
                           {booking.sessionNotes.map((note, idx) => (
                             <div key={idx} className="flex gap-3 items-start">
-                               <div className="h-5 w-5 rounded-full bg-white border border-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-600 shrink-0">{idx + 1}</div>
-                               <p className="text-xs font-medium text-emerald-800 leading-relaxed italic font-serif">"{note}"</p>
+                              <div className="h-5 w-5 rounded-full bg-white border border-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-600 shrink-0">{idx + 1}</div>
+                              <p className="text-xs font-medium text-emerald-800 leading-relaxed italic font-serif">"{note}"</p>
                             </div>
                           ))}
                         </div>

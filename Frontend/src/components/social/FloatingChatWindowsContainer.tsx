@@ -6,16 +6,24 @@ import { FloatingChatWindow } from "./FloatingChatWindow";
 export const FloatingChatWindowsContainer: React.FC = () => {
   const { openChats, minimizedChats, closeChat, toggleMinimize, maximizeChat } = useChatWindows();
   const [isMobile, setIsMobile] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
-  // Monitor window resize to adjust responsive layout
+  // Monitor window resize
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Listen to chatbot open/close state
+  useEffect(() => {
+    const handleChatbotToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open: boolean }>;
+      setIsChatbotOpen(customEvent.detail.open);
+    };
+    window.addEventListener("chatbot:toggle", handleChatbotToggle as EventListener);
+    return () => window.removeEventListener("chatbot:toggle", handleChatbotToggle as EventListener);
   }, []);
 
   // Filter conversations
@@ -31,20 +39,36 @@ export const FloatingChatWindowsContainer: React.FC = () => {
     if (activeChats.length > displayLimit) {
       const overflowCount = activeChats.length - displayLimit;
       const toMinimize = activeChats.slice(0, overflowCount);
-      toMinimize.forEach((c) => {
-        toggleMinimize(c._id);
-      });
+      toMinimize.forEach((c) => toggleMinimize(c._id));
     }
   }, [openChats, minimizedChats, displayLimit, activeChats.length]);
 
+  // Dispatch active user chat status to other components (like chatbot agent)
+  const hasActiveChat = visibleChats.length > 0;
+  useEffect(() => {
+    const event = new CustomEvent("userchat:toggle", { detail: { hasActiveChat } });
+    window.dispatchEvent(event);
+  }, [hasActiveChat]);
+
   if (openChats.length === 0) return null;
 
+  // ----- Positioning logic -----
+  // Chatbot button is at: bottom-5 right-5 (sm: bottom-6 right-6), size h-14 w-14 (56px)
+  // So bottom-20 (80px) clears the chatbot button with a small gap.
+  // When chatbot window is open on desktop, shift left by 470px to clear its 430px width.
+
+  const chatWindowsRight = isChatbotOpen && !isMobile ? "right-[470px]" : "right-4 sm:right-6";
+  const bubblesRight = isChatbotOpen && !isMobile ? "right-[470px]" : "right-4 sm:right-6";
+  const showBubbles = hiddenChats.length > 0 && !(isChatbotOpen && isMobile);
+  const showWindows = visibleChats.length > 0 && !(isChatbotOpen && isMobile);
+
   return (
-    <div className="fixed bottom-0 right-4 z-[90] flex items-end gap-3 pointer-events-none sm:right-6">
-      
-      {/* Minimized Bubbles Column */}
-      {hiddenChats.length > 0 && (
-        <div className="flex flex-col gap-2 mb-4 pointer-events-auto items-end">
+    <>
+      {/* Minimized Chat Bubbles — stacked vertically above the chatbot button */}
+      {showBubbles && (
+        <div
+          className={`fixed bottom-20 sm:bottom-24 ${bubblesRight} z-[90] flex flex-col-reverse gap-2 pointer-events-none transition-all duration-300`}
+        >
           {hiddenChats.map((convo) => {
             const other = convo.otherParticipant;
             if (!other) return null;
@@ -56,7 +80,7 @@ export const FloatingChatWindowsContainer: React.FC = () => {
               .join("");
 
             return (
-              <div key={convo._id} className="group relative">
+              <div key={convo._id} className="group relative pointer-events-auto">
                 {/* Close Button on Hover */}
                 <button
                   type="button"
@@ -85,8 +109,8 @@ export const FloatingChatWindowsContainer: React.FC = () => {
                   ) : (
                     <span className="text-sm font-black">{initials}</span>
                   )}
-                  
-                  {/* Unread dot in minimized bubble */}
+
+                  {/* Unread dot */}
                   {convo.unreadCount > 0 && (
                     <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full bg-rust border-2 border-white dark:border-slate-900 animate-pulse" />
                   )}
@@ -102,18 +126,22 @@ export const FloatingChatWindowsContainer: React.FC = () => {
         </div>
       )}
 
-      {/* Maximized Windows (Rendered side-by-side) */}
-      <div className="flex items-end gap-3 pointer-events-none">
-        {visibleChats.map((convo) => (
-          <FloatingChatWindow
-            key={convo._id}
-            conversation={convo}
-            isMinimized={false}
-            onClose={() => closeChat(convo._id)}
-            onMinimize={() => toggleMinimize(convo._id)}
-          />
-        ))}
-      </div>
-    </div>
+      {/* Maximized Chat Windows — anchored at the bottom */}
+      {showWindows && (
+        <div
+          className={`fixed bottom-0 ${chatWindowsRight} z-[90] flex items-end gap-3 pointer-events-none transition-all duration-300`}
+        >
+          {visibleChats.map((convo) => (
+            <FloatingChatWindow
+              key={convo._id}
+              conversation={convo}
+              isMinimized={false}
+              onClose={() => closeChat(convo._id)}
+              onMinimize={() => toggleMinimize(convo._id)}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 };

@@ -233,15 +233,17 @@ router.get("/friends", verifyToken, async (req, res) => {
       ],
     }).populate("requester recipient", "name email avatarUrl phone role description");
 
-    const friends = friendships.map((f) => {
-      const other = f.requester._id.toString() === req.userId ? f.recipient : f.requester;
-      const otherObj = other.toObject();
-      return {
-        ...otherObj,
-        friendshipId: f._id,
-        onlineStatus: isUserOnline(other._id) ? "online" : "offline",
-      };
-    });
+    const friends = friendships
+      .filter((f) => f.requester && f.recipient)
+      .map((f) => {
+        const other = f.requester._id.toString() === req.userId ? f.recipient : f.requester;
+        const otherObj = typeof other.toObject === "function" ? other.toObject() : other;
+        return {
+          ...otherObj,
+          friendshipId: f._id,
+          onlineStatus: isUserOnline(other._id) ? "online" : "offline",
+        };
+      });
 
     res.status(200).json({ friends });
   } catch (error) {
@@ -335,13 +337,14 @@ router.get("/users/search", verifyToken, async (req, res) => {
       return res.status(200).json({ users: [] });
     }
 
-    // Search query for matching name or email, excluding self
+    // Search query for matching name, email or phone, excluding self
     const query = {
       _id: { $ne: req.userId },
-      role: "user", // Let's restrict searching to basic users for general friends
+      role: { $ne: "admin" }, // Allow searching all non-admin users (customers, providers, shops)
       $or: [
         { name: { $regex: q, $options: "i" } },
         { email: { $regex: q, $options: "i" } },
+        { phone: { $regex: q, $options: "i" } },
       ],
     };
 

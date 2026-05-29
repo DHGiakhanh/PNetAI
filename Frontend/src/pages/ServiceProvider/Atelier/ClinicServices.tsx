@@ -2,9 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
    Calendar,
-   Clock,
-   Users,
-   Settings2,
    CheckCircle2,
    MoreVertical,
    Loader2,
@@ -17,13 +14,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/booking.service";
 import { serviceService, Service } from "@/services/service.service";
-import { authService } from "@/services/auth.service";
 import { petService } from "@/services/pet.service";
 import { toast } from "react-hot-toast";
 import { formatVnd } from "@/utils/currency";
 const AVAILABLE_TAGS = ["dog", "cat", "bird", "rabbit", "hamster", "other", "medical", "grooming", "food", "toys", "accessories", "travel"];
 
-type SubTab = 'bookings' | 'catalog' | 'config';
+type SubTab = 'bookings' | 'catalog';
 
 export const ClinicServices = () => {
    const [searchParams] = useSearchParams();
@@ -41,9 +37,7 @@ export const ClinicServices = () => {
    const [historyNote, setHistoryNote] = useState("");
    const [isFinalizing, setIsFinalizing] = useState(false);
 
-   // Config state
-   const [capacity, setCapacity] = useState(4);
-   const [hours, setHours] = useState({ start: "08:00", end: "18:00" });
+
 
    // New Service state
    const [newService, setNewService] = useState<Partial<Service>>({
@@ -70,19 +64,17 @@ export const ClinicServices = () => {
             return;
          }
 
-         const [bData, sData, profile] = await Promise.all([
+         const [bData, sData] = await Promise.all([
             bookingService.getProviderBookings(),
             serviceService.getServices({
                providerId: pId,
                search: globalSearch,
                limit: 100
-            }),
-            authService.getCurrentUser()
+            })
          ]);
          setBookings(bData);
          setServices(sData.services);
-         if (profile.operatingHours) setHours(profile.operatingHours);
-         if (profile.bookingCapacity) setCapacity(profile.bookingCapacity);
+
       } catch {
          toast.error("Records indexing failed.");
       } finally {
@@ -142,18 +134,7 @@ export const ClinicServices = () => {
       }
    };
 
-   const handleUpdateConfig = async () => {
-      try {
-         toast.loading("Optimizing facility throughput...", { id: 'cfg' });
-         await authService.updateProfile({
-            operatingHours: hours,
-            bookingCapacity: capacity
-         });
-         toast.success("Operational logic synchronized.", { id: 'cfg' });
-      } catch (error: any) {
-         toast.error(error.response?.data?.message || "Configuration failed.", { id: 'cfg' });
-      }
-   };
+
 
    const handleStatusUpdate = async (id: string, status: string) => {
       try {
@@ -167,10 +148,10 @@ export const ClinicServices = () => {
 
    const handleFinalizeSession = async () => {
       if (!completionBooking) return;
-      
+
       const rNote = recordNote.trim();
       const hNote = historyNote.trim();
-      
+
       if (!rNote && !hNote) {
          toast.error("Please provide at least one clinical note or history update.");
          return;
@@ -186,10 +167,10 @@ export const ClinicServices = () => {
          // 2. Save clinical records and history summary
          const petId = completionBooking.pet?._id;
          if (petId) {
-            await petService.addMedicalHistoryNote(petId, { 
+            await petService.addMedicalHistoryNote(petId, {
                recordNote: rNote,
                historySummary: hNote,
-               bookingId: completionBooking._id 
+               bookingId: completionBooking._id
             });
          }
 
@@ -217,6 +198,24 @@ export const ClinicServices = () => {
       return bookingTime;
    };
 
+   const isBookingTimePassed = (booking: any) => {
+      if (!booking.bookingDate || !booking.bookingTime) return false;
+      try {
+         const baseDate = new Date(booking.bookingDate);
+         const [startRaw] = booking.bookingTime.split("-");
+         if (!startRaw) return false;
+
+         const [hh, mm] = startRaw.trim().split(":").map(Number);
+         if (isNaN(hh) || isNaN(mm)) return false;
+
+         const slotStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hh, mm, 0, 0);
+         return slotStart <= new Date();
+      } catch (e) {
+         console.error(e);
+         return false;
+      }
+   };
+
    if (loading) return (
       <div className="h-96 flex flex-col items-center justify-center">
          <Loader2 className="w-10 h-10 animate-spin text-caramel opacity-20" />
@@ -241,8 +240,7 @@ export const ClinicServices = () => {
             <div className="bg-warm/40 p-1.5 rounded-[2rem] flex items-center ring-1 ring-sand/20 shadow-inner backdrop-blur-sm">
                {[
                   { id: 'bookings', label: 'Agenda', icon: Calendar },
-                  { id: 'catalog', label: 'Services', icon: Sparkles },
-                  { id: 'config', label: 'Config', icon: Settings2 }
+                  { id: 'catalog', label: 'Services', icon: Sparkles }
                ].map(tab => (
                   <button
                      key={tab.id}
@@ -353,31 +351,30 @@ export const ClinicServices = () => {
                            </div>
 
                            <div className="space-y-3">
-                               <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
-                               <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
-                                  {AVAILABLE_TAGS.map(tag => (
-                                     <button
+                              <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
+                              <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
+                                 {AVAILABLE_TAGS.map(tag => (
+                                    <button
                                        key={tag}
                                        type="button"
                                        onClick={() => {
-                                         setEditingService(prev => prev ? ({
-                                           ...prev,
-                                           tags: (prev.tags || []).includes(tag) 
-                                             ? (prev.tags || []).filter(t => t !== tag) 
-                                             : [...(prev.tags || []), tag]
-                                         }) : prev);
+                                          setEditingService(prev => prev ? ({
+                                             ...prev,
+                                             tags: (prev.tags || []).includes(tag)
+                                                ? (prev.tags || []).filter(t => t !== tag)
+                                                : [...(prev.tags || []), tag]
+                                          }) : prev);
                                        }}
-                                       className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                                         (editingService.tags || []).includes(tag)
-                                           ? "bg-ink text-white shadow-md"
-                                           : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
-                                       }`}
-                                     >
+                                       className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${(editingService.tags || []).includes(tag)
+                                             ? "bg-ink text-white shadow-md"
+                                             : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                                          }`}
+                                    >
                                        {tag}
-                                     </button>
-                                  ))}
-                               </div>
-                            </div>
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
 
                            <div className="pt-10 flex gap-4">
                               <button onClick={handleUpdateService} className="flex-[2] py-6 rounded-full bg-ink text-white font-black text-xs uppercase tracking-[0.4em] hover:bg-caramel transition shadow-2xl">Commit Protocol</button>
@@ -409,7 +406,7 @@ export const ClinicServices = () => {
                         <X className="h-5 w-5" />
                      </button>
 
-                     <div className="mb-8">
+                     <div className="mb-8 pr-12">
                         <h3 className="text-4xl font-serif font-bold italic text-ink">Pet Profile</h3>
                         <p className="mt-1 text-xs font-black uppercase tracking-widest text-caramel">
                            Booking {formatDateBadge(selectedBooking.bookingDate)} · {normalizeTimeRange(selectedBooking.bookingTime)}
@@ -469,7 +466,7 @@ export const ClinicServices = () => {
                            <div className="space-y-6">
                               <div className="rounded-[2.5rem] border border-sand/70 bg-white p-8">
                                  <p className="text-[10px] font-black uppercase tracking-widest text-muted italic mb-6 border-b border-sand pb-4">Professional History</p>
-                                 
+
                                  <div className="space-y-6">
                                     <div>
                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted/40 mb-2">Summary</p>
@@ -508,7 +505,7 @@ export const ClinicServices = () => {
 
             {activeTab === 'bookings' && (
                <div className="grid lg:grid-cols-12 gap-10">
-                  <div className="lg:col-span-8 space-y-8">
+                  <div className="lg:col-span-12 space-y-8">
                      <div className="flex items-center justify-between">
                         <h3 className="text-xl font-serif font-bold italic text-ink">Active Sessions</h3>
                         <div className="px-4 py-2 rounded-full bg-warm border border-sand text-[10px] font-black uppercase tracking-widest text-muted">{bookings.length} Registered</div>
@@ -547,25 +544,37 @@ export const ClinicServices = () => {
                                     <AnimatePresence mode="wait">
                                        {booking.status === 'pending' ? (
                                           <div className="flex gap-2">
-                                             <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'confirmed'); }} className="px-8 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl">Authorize</button>
+                                             <button
+                                                disabled={isBookingTimePassed(booking)}
+                                                onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'confirmed'); }}
+                                                className="px-8 py-3 rounded-full bg-ink text-white text-[10px] font-black uppercase tracking-widest hover:bg-caramel transition shadow-xl disabled:opacity-30 disabled:pointer-events-none"
+                                             >
+                                                {isBookingTimePassed(booking) ? "Expired" : "Authorize"}
+                                             </button>
                                              <button onClick={(event) => { event.stopPropagation(); handleStatusUpdate(booking._id, 'cancelled'); }} className="p-3 rounded-full border border-sand text-muted hover:bg-rose-50 hover:text-rose-600 transition"><Trash2 className="w-4 h-4" /></button>
                                           </div>
                                        ) : booking.status === 'confirmed' ? (
-                                          <button 
-                                            onClick={(event) => { 
-                                              event.stopPropagation(); 
-                                              setCompletionBooking(booking);
-                                              setRecordNote("");
-                                              setHistoryNote("");
-                                            }} 
-                                            className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5"
-                                          >
-                                             <CheckCircle2 className="w-4 h-4" /> Finalize Session
-                                          </button>
+                                          isBookingTimePassed(booking) ? (
+                                             <button
+                                                onClick={(event) => {
+                                                   event.stopPropagation();
+                                                   setCompletionBooking(booking);
+                                                   setRecordNote("");
+                                                   setHistoryNote("");
+                                                }}
+                                                className="px-8 py-3 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition group/done flex items-center gap-3 shadow-lg shadow-emerald-500/5"
+                                             >
+                                                <CheckCircle2 className="w-4 h-4" /> Finalize Session
+                                             </button>
+                                          ) : (
+                                             <span className="px-6 py-2.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 text-[10px] font-black uppercase tracking-widest italic shadow-lg shadow-sky-500/5">
+                                                Upcoming
+                                             </span>
+                                          )
                                        ) : (
-                                           <div className="flex flex-col items-end gap-2">
-                                              <span className="px-6 py-2.5 rounded-full bg-warm text-[10px] font-black uppercase tracking-widest text-muted/40 italic border border-sand/30">{booking.status}</span>
-                                           </div>
+                                          <div className="flex flex-col items-end gap-2">
+                                             <span className="px-6 py-2.5 rounded-full bg-warm text-[10px] font-black uppercase tracking-widest text-muted/40 italic border border-sand/30">{booking.status}</span>
+                                          </div>
                                        )}
                                     </AnimatePresence>
                                     <button onClick={(event) => event.stopPropagation()} className="p-4 rounded-full hover:bg-warm text-muted transition border border-transparent hover:border-sand group-hover:rotate-90">
@@ -583,36 +592,6 @@ export const ClinicServices = () => {
                         )}
                      </div>
                   </div>
-
-                  <div className="lg:col-span-4 space-y-10">
-                     <div className="bg-ink text-white rounded-[3rem] p-10 shadow-2xl shadow-ink/30 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-caramel/10 rounded-full blur-[4rem] group-hover:scale-150 transition-transform duration-1000" />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-10 italic">Facility Load Index</h4>
-                        <div className="space-y-10 relative z-10">
-                           <div>
-                              <div className="flex justify-between items-baseline mb-4">
-                                 <p className="text-5xl font-serif font-bold italic tracking-tighter">{(bookings.length / 12 * 100).toFixed(0)}<span className="text-xl ml-1">%</span></p>
-                                 <p className="text-[10px] font-black uppercase tracking-widest text-caramel">Clinical Pulse</p>
-                              </div>
-                              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                 <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(bookings.length / 12 * 100, 100)}%` }} className="h-full bg-gradient-to-r from-caramel to-amber-400 rounded-full" />
-                              </div>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                              <div className="p-6 bg-white/5 rounded-[1.8rem] border border-white/10 hover:bg-white/10 transition-colors">
-                                 <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Total Units</p>
-                                 <p className="text-2xl font-bold">{bookings.length}</p>
-                              </div>
-                              <div className="p-6 bg-white/5 rounded-[1.8rem] border border-white/10 hover:bg-white/10 transition-colors">
-                                 <p className="text-[9px] font-black uppercase tracking-widest text-caramel mb-2">Reserved</p>
-                                 <p className="text-2xl font-bold">{bookings.filter(b => b.status === 'pending').length}</p>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-
-
-                  </div>
                </div>
             )}
 
@@ -625,7 +604,7 @@ export const ClinicServices = () => {
                      </div>
                      {!isAdding && (
                         <button onClick={() => setIsAdding(true)} className="flex items-center gap-4 px-10 py-5 rounded-full bg-ink text-white text-[11px] font-black uppercase tracking-[0.3em] hover:bg-caramel transition shadow-xl hover:-translate-y-1">
-                           <Plus className="w-4 h-4" /> Register New Asset
+                           <Plus className="w-4 h-4" /> Add Service
                         </button>
                      )}
                   </div>
@@ -763,32 +742,31 @@ export const ClinicServices = () => {
                                  </div>
                               </div>
 
-                               <div className="space-y-3">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
-                                  <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
-                                     {AVAILABLE_TAGS.map(tag => (
-                                        <button
+                              <div className="space-y-3">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4 italic">Categorization Tags</label>
+                                 <div className="flex flex-wrap gap-2 p-6 bg-white border border-sand rounded-[2rem] shadow-sm">
+                                    {AVAILABLE_TAGS.map(tag => (
+                                       <button
                                           key={tag}
                                           type="button"
                                           onClick={() => {
-                                            setNewService(prev => ({
-                                              ...prev,
-                                              tags: (prev.tags || []).includes(tag) 
-                                                ? (prev.tags || []).filter(t => t !== tag) 
-                                                : [...(prev.tags || []), tag]
-                                            }));
+                                             setNewService(prev => ({
+                                                ...prev,
+                                                tags: (prev.tags || []).includes(tag)
+                                                   ? (prev.tags || []).filter(t => t !== tag)
+                                                   : [...(prev.tags || []), tag]
+                                             }));
                                           }}
-                                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                                            (newService.tags || []).includes(tag)
-                                              ? "bg-ink text-white shadow-md"
-                                              : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
-                                          }`}
-                                        >
+                                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${(newService.tags || []).includes(tag)
+                                                ? "bg-ink text-white shadow-md"
+                                                : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                                             }`}
+                                       >
                                           {tag}
-                                        </button>
-                                     ))}
-                                  </div>
-                               </div>
+                                       </button>
+                                    ))}
+                                 </div>
+                              </div>
 
                               <div className="flex gap-4 pt-10">
                                  <button onClick={handleCreateService} className="flex-[2] py-6 rounded-full bg-ink text-white font-black text-xs uppercase tracking-[0.3em] hover:bg-caramel transition shadow-2xl">Authorize Entry</button>
@@ -844,81 +822,6 @@ export const ClinicServices = () => {
                            </div>
                         </div>
                      ))}
-                  </div>
-               </div>
-            )}
-
-            {activeTab === 'config' && (
-               <div className="grid md:grid-cols-2 gap-10">
-                  <div className="bg-white rounded-[4rem] border border-sand p-12 shadow-sm">
-                     <div className="flex items-center gap-8 mb-12">
-                        <div className="h-20 w-20 rounded-[2rem] bg-warm flex items-center justify-center text-ink shadow-inner">
-                           <Clock className="w-10 h-10" />
-                        </div>
-                        <div>
-                           <h3 className="text-2xl font-serif font-bold italic text-ink">Operational Hours</h3>
-                           <p className="text-xs font-bold text-muted">Establish the active window for patient admissions</p>
-                        </div>
-                     </div>
-
-                     <div className="space-y-12">
-                        <div className="grid grid-cols-2 gap-10">
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Registry Start</label>
-                              <input type="time" value={hours.start} onChange={(e) => setHours(prev => ({ ...prev, start: e.target.value }))} className="w-full bg-warm/30 border border-sand px-8 py-6 rounded-[2.5rem] outline-none font-bold text-2xl shadow-inner focus:border-caramel/30 transition-all text-caramel" />
-                           </div>
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">EndOfLine Registry</label>
-                              <input type="time" value={hours.end} onChange={(e) => setHours(prev => ({ ...prev, end: e.target.value }))} className="w-full bg-warm/30 border border-sand px-8 py-6 rounded-[2.5rem] outline-none font-bold text-2xl shadow-inner focus:border-caramel/30 transition-all text-ink" />
-                           </div>
-                        </div>
-
-                        <div className="p-10 rounded-[3rem] bg-warm/20 border border-sand/50 flex items-start gap-8">
-                           <Settings2 className="w-6 h-6 text-ink mt-1 opacity-20" />
-                           <div>
-                              <p className="text-xs font-black uppercase tracking-widest text-ink mb-2">Synchronization Logic</p>
-                              <p className="text-[12px] text-muted leading-relaxed font-medium">Any adjustments to these hours will immediately synchronize with the public booking dashboard across the PNetAI global network.</p>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="bg-white rounded-[4rem] border border-sand p-12 shadow-sm flex flex-col">
-                     <div className="flex items-center gap-8 mb-12">
-                        <div className="h-20 w-20 rounded-[2rem] bg-warm flex items-center justify-center text-ink shadow-inner">
-                           <Users className="w-10 h-10" />
-                        </div>
-                        <div>
-                           <h3 className="text-2xl font-serif font-bold italic text-ink">Admission Volume</h3>
-                           <p className="text-xs font-bold text-muted">Maximum synchronized bookings per timebox</p>
-                        </div>
-                     </div>
-
-                     <div className="flex-1 space-y-12 flex flex-col justify-between">
-                        <div className="space-y-8">
-                           <div className="flex items-center justify-between mb-4">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Units per Interval</label>
-                              <span className="text-4xl font-serif font-bold italic text-caramel tracking-tighter">{capacity}<span className="text-base ml-2">Patients</span></span>
-                           </div>
-                           <input
-                              type="range" min="1" max="10"
-                              value={capacity}
-                              onChange={(e) => setCapacity(parseInt(e.target.value))}
-                              className="w-full h-2.5 bg-warm rounded-full appearance-none cursor-pointer accent-ink"
-                           />
-                           <div className="flex justify-between px-2">
-                              <span className="text-[10px] font-black text-muted/30">Registry Limit: 1</span>
-                              <span className="text-[10px] font-black text-muted/30">Registry Limit: 10</span>
-                           </div>
-                        </div>
-
-                        <button
-                           onClick={handleUpdateConfig}
-                           className="w-full py-7 bg-ink text-white rounded-full font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-caramel transition-all hover:-translate-y-1 active:scale-95 shadow-ink/20"
-                        >
-                           Commit Configuration
-                        </button>
-                     </div>
                   </div>
                </div>
             )}

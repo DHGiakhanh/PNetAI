@@ -376,7 +376,7 @@ router.get("/my", verifyToken, async (req, res) => {
                 }
             })
             .populate('pet', 'name avatarUrl species breed gender age medicalHistoryRecords')
-            .sort({ bookingDate: -1 });
+            .sort({ bookingDate: -1, bookingTime: 1 });
 
         // Filter out bookings where service or pet might have been deleted
         // And augment with session notes from medicalHistoryRecords
@@ -413,7 +413,7 @@ router.get("/provider", verifyToken, async (req, res) => {
             .populate('service', 'title')
             .populate('user', 'name email phone')
             .populate('pet', 'name avatarUrl species breed gender age weightKg healthStatus allergies medicalHistory medicalHistoryRecords notes')
-            .sort({ bookingDate: -1 });
+            .sort({ bookingDate: -1, bookingTime: 1 });
 
         const bookings = rawBookings.map(b => {
             const bookingObj = b.toObject();
@@ -462,6 +462,20 @@ router.patch("/status/:id", verifyToken, async (req, res) => {
 
         if (provider._id.toString() !== req.userId) {
             return res.status(403).json({ message: "Access denied." });
+        }
+
+        if (status === "completed") {
+            const slotStart = parseBookingStart(booking.bookingDate, booking.bookingTime);
+            if (slotStart && slotStart > new Date()) {
+                return res.status(400).json({ message: "Cannot mark a future appointment as completed." });
+            }
+        }
+
+        if (status === "confirmed") {
+            const slotStart = parseBookingStart(booking.bookingDate, booking.bookingTime);
+            if (slotStart && slotStart <= new Date()) {
+                return res.status(400).json({ message: "Cannot confirm a past appointment." });
+            }
         }
 
         const oldStatus = booking.status;

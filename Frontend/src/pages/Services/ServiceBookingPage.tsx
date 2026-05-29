@@ -192,6 +192,20 @@ export default function ServiceBookingPage() {
     return slotStart <= currentTime;
   };
 
+  const isDateFullyPassed = (date: Date) => {
+    if (isBefore(date, startOfToday())) return true;
+    if (isSameDay(date, currentTime)) {
+      const provider = typeof service?.providerId === 'object' ? service.providerId : null;
+      const hours = provider?.operatingHours || { start: "08:00", end: "18:00" };
+      const allSlots = generateTimeSlots(hours.start, hours.end, 30);
+      if (allSlots.length > 0) {
+        const lastSlot = allSlots[allSlots.length - 1];
+        return isSlotInPast(date, lastSlot);
+      }
+    }
+    return false;
+  };
+
   const isSlotOccupied = (date: Date, slot: string) => {
     const key = format(date, "yyyy-MM-dd");
     return occupiedSlots[key]?.has(slot) || false;
@@ -334,7 +348,7 @@ export default function ServiceBookingPage() {
                              ))}
                              {days.map(d => {
                                 const sel = isSameDay(d, selectedDate);
-                                const past = isBefore(d, startOfToday());
+                                const past = isDateFullyPassed(d);
                                 return (
                                   <button key={d.toString()} disabled={past} onClick={() => setSelectedDate(d)} className={`h-10 rounded-xl text-[10px] font-black transition-all border ${sel ? "bg-ink border-ink text-white shadow-lg scale-105 z-10" : past ? "text-muted/10 bg-warm/10 cursor-not-allowed opacity-20 border-transparent" : "bg-white border-sand/30 text-ink hover:border-caramel/40"}`}>
                                      {format(d, 'd')}

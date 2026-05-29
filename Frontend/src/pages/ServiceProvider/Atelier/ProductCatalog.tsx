@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit3, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit3,
   Image as ImageIcon,
   Loader2,
   Trash2,
@@ -59,7 +59,7 @@ export const ProductCatalog = () => {
       const res = await productService.getProviderProducts();
       setProducts(res.products);
     } catch (error) {
-       toast.error("Failed to retrieve inventory records.");
+      toast.error("Failed to retrieve inventory records.");
     } finally {
       setLoading(false);
     }
@@ -98,9 +98,9 @@ export const ProductCatalog = () => {
     setEditingProduct((prev) =>
       prev
         ? {
-            ...prev,
-            images: prev.images.filter((_, imageIndex) => imageIndex !== index),
-          }
+          ...prev,
+          images: prev.images.filter((_, imageIndex) => imageIndex !== index),
+        }
         : prev
     );
   };
@@ -117,9 +117,9 @@ export const ProductCatalog = () => {
     setEditingProduct((prev) =>
       prev
         ? {
-            ...prev,
-            images: moveImageToFront(prev.images, index),
-          }
+          ...prev,
+          images: moveImageToFront(prev.images, index),
+        }
         : prev
     );
   };
@@ -148,12 +148,12 @@ export const ProductCatalog = () => {
         setEditingProduct((prev) =>
           prev
             ? {
-                ...prev,
-                images:
-                  prev.images.length >= MAX_PRODUCT_IMAGES
-                    ? prev.images
-                    : [...prev.images, url],
-              }
+              ...prev,
+              images:
+                prev.images.length >= MAX_PRODUCT_IMAGES
+                  ? prev.images
+                  : [...prev.images, url],
+            }
             : prev
         );
       }
@@ -244,7 +244,7 @@ export const ProductCatalog = () => {
     }
   };
 
-  const filteredProducts = products.filter(p => 
+  const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) &&
     (selectedCategory === "all" || p.category === selectedCategory)
   );
@@ -280,7 +280,7 @@ export const ProductCatalog = () => {
 
   if (loading) return (
     <div className="h-96 flex items-center justify-center">
-       <Loader2 className="w-10 h-10 animate-spin text-caramel" />
+      <Loader2 className="w-10 h-10 animate-spin text-caramel" />
     </div>
   );
 
@@ -297,11 +297,11 @@ export const ProductCatalog = () => {
             Product Portfolio
           </h1>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(true)}
           className="flex items-center gap-2 px-8 py-4 bg-ink text-white rounded-full font-bold text-xs uppercase tracking-widest hover:bg-caramel transition-all shadow-xl shadow-ink/10 active:scale-95"
         >
-          <Plus className="w-4 h-4" /> Add Premium Item
+          <Plus className="w-4 h-4" /> Add Product
         </button>
       </div>
 
@@ -309,8 +309,8 @@ export const ProductCatalog = () => {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:max-w-md group">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40 group-focus-within:text-caramel transition-colors" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Search catalog... e.g. Kibble, Bed"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -377,8 +377,8 @@ export const ProductCatalog = () => {
                     </span>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       className="w-32 bg-transparent border-b border-transparent hover:border-caramel/30 focus:border-caramel focus:outline-none text-sm font-serif font-bold italic text-ink text-center py-1 transition-all"
                       value={p.price}
                       onBlur={(e) => handleQuickUpdate(p._id, { price: parseFloat(e.target.value) })}
@@ -389,8 +389,8 @@ export const ProductCatalog = () => {
                     />
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       className="w-16 bg-transparent border-b border-transparent hover:border-caramel/30 focus:border-caramel focus:outline-none text-sm font-bold text-ink text-center py-1 transition-all"
                       value={p.stock}
                       onBlur={(e) => handleQuickUpdate(p._id, { stock: parseInt(e.target.value) })}
@@ -402,52 +402,51 @@ export const ProductCatalog = () => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col gap-2">
-                       <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`}></div>
-                          <span className={`text-[11px] font-bold uppercase tracking-wide ${p.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                             {p.status}
-                          </span>
-                       </div>
-                       <span className={`text-[11px] font-bold ${p.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {p.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                       </span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400'}`}></div>
+                        <span className={`text-[11px] font-bold uppercase tracking-wide ${p.status === 'active' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {p.status}
+                        </span>
+                      </div>
+                      <span className={`text-[11px] font-bold ${p.stock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {p.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </span>
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                       <button
-                          onClick={() => handleToggleStatus(p)}
-                          disabled={togglingProductId === p._id}
-                          className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
-                            p.status === 'active'
-                              ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      <button
+                        onClick={() => handleToggleStatus(p)}
+                        disabled={togglingProductId === p._id}
+                        className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${p.status === 'active'
+                            ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                           } disabled:opacity-60`}
-                       >
-                          {togglingProductId === p._id ? "Saving" : p.status === 'active' ? 'Hide' : 'Show'}
-                       </button>
-                       <button
-                          onClick={() => setEditingProduct({ ...p })}
-                          className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition"
-                       >
-                          <Edit3 className="w-4 h-4" />
-                       </button>
-                       <button
-                          onClick={() => handleArchive(p)}
-                          disabled={archivingProductId === p._id}
-                          className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-500 transition disabled:opacity-60"
-                       >
-                          <Trash2 className="w-4 h-4" />
-                       </button>
+                      >
+                        {togglingProductId === p._id ? "Saving" : p.status === 'active' ? 'Hide' : 'Show'}
+                      </button>
+                      <button
+                        onClick={() => setEditingProduct({ ...p })}
+                        className="p-2.5 rounded-xl hover:bg-warm text-muted hover:text-ink transition"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleArchive(p)}
+                        disabled={archivingProductId === p._id}
+                        className="p-2.5 rounded-xl hover:bg-rose-50 text-rose-500 transition disabled:opacity-60"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                   <td colSpan={6} className="px-8 py-32 text-center">
-                      <p className="text-sm font-serif italic text-muted">No artifacts found in the chosen gallery.</p>
-                   </td>
+                  <td colSpan={6} className="px-8 py-32 text-center">
+                    <p className="text-sm font-serif italic text-muted">No artifacts found in the chosen gallery.</p>
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -459,164 +458,163 @@ export const ProductCatalog = () => {
       <AnimatePresence>
         {isAdding && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsAdding(false)}
               className="absolute inset-0 bg-ink/70 backdrop-blur-xl"
             />
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 60 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 60 }}
               className="relative w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-[3rem] bg-white p-8 shadow-2xl sm:p-10"
             >
-               <h2 className="mb-8 text-3xl font-serif font-bold italic text-ink">Add Atelier Item</h2>
-               <div className="space-y-5 pb-2">
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Product Name</label>
-                        <input 
-                          value={newItem.name}
-                          onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink" placeholder="e.g. Organic Beef Bites" 
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Category</label>
-                        <select 
-                          value={newItem.category}
-                          onChange={e => setNewItem(prev => ({ ...prev, category: e.target.value }))}
-                          className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none appearance-none cursor-pointer font-bold text-ink"
-                        >
-                           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                     </div>
+              <h2 className="mb-8 text-3xl font-serif font-bold italic text-ink">Add Atelier Item</h2>
+              <div className="space-y-5 pb-2">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Product Name</label>
+                    <input
+                      value={newItem.name}
+                      onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink" placeholder="e.g. Organic Beef Bites"
+                    />
                   </div>
                   <div className="space-y-2">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Description</label>
-                     <textarea 
-                       value={newItem.description}
-                       onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                       className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink min-h-[96px] resize-none" 
-                       placeholder="Tell the story of this artifact..."
-                     />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Category</label>
+                    <select
+                      value={newItem.category}
+                      onChange={e => setNewItem(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none appearance-none cursor-pointer font-bold text-ink"
+                    >
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Public Rate (VND)</label>
-                        <input 
-                          type="number" 
-                          value={newItem.price || ""}
-                          onChange={e => setNewItem(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                          className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none font-bold text-ink" placeholder="0" 
-                        />
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Initial Stock</label>
-                        <input 
-                          type="number" 
-                          value={newItem.stock || ""}
-                          onChange={e => setNewItem(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
-                          className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none font-bold text-ink" placeholder="0" 
-                        />
-                     </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Description</label>
+                  <textarea
+                    value={newItem.description}
+                    onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-caramel/5 font-bold text-ink min-h-[96px] resize-none"
+                    placeholder="Tell the story of this artifact..."
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Public Rate (VND)</label>
+                    <input
+                      type="number"
+                      value={newItem.price || ""}
+                      onChange={e => setNewItem(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                      className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none font-bold text-ink" placeholder="0"
+                    />
                   </div>
                   <div className="space-y-2">
-                     <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Tags (Select to categorize for pets)</label>
-                     <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
-                        {AVAILABLE_TAGS.map(tag => (
-                           <button
-                             key={tag}
-                             type="button"
-                             onClick={() => {
-                               setNewItem(prev => ({
-                                 ...prev,
-                                 tags: (prev.tags || []).includes(tag) 
-                                   ? (prev.tags || []).filter(t => t !== tag) 
-                                   : [...(prev.tags || []), tag]
-                               }));
-                             }}
-                             className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                               newItem.tags.includes(tag)
-                                 ? "bg-ink text-white shadow-md"
-                                 : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
-                             }`}
-                           >
-                             {tag}
-                           </button>
-                        ))}
-                     </div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Initial Stock</label>
+                    <input
+                      type="number"
+                      value={newItem.stock || ""}
+                      onChange={e => setNewItem(prev => ({ ...prev, stock: parseInt(e.target.value) || 0 }))}
+                      className="w-full bg-warm/30 border border-sand px-6 py-4 rounded-2xl outline-none font-bold text-ink" placeholder="0"
+                    />
                   </div>
-                  <div className="space-y-3 rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
-                    <div className="flex items-center justify-between gap-3 px-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted">Product Gallery</label>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">
-                        {newItem.images.length}/{MAX_PRODUCT_IMAGES} images
-                      </span>
-                    </div>
-                    <label className="relative block h-52 w-full cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-sand/50 bg-white/70 transition-colors hover:bg-warm group sm:h-60">
-                       {newItem.images[0] ? (
-                         <>
-                           <img src={newItem.images[0]} className="w-full h-full object-contain" alt="Cover preview" />
-                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent px-5 py-4 text-white">
-                             <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Cover image</p>
-                             <p className="mt-1 text-xs font-medium text-white/85">
-                               Click thumbnails below to switch cover.
-                             </p>
-                           </div>
-                         </>
-                       ) : (
-                         <div className="h-full w-full flex flex-col items-center justify-center gap-2 px-6 text-center">
-                            <ImageIcon className="w-7 h-7 text-sand group-hover:scale-110 transition-transform" />
-                            <span className="text-xs font-bold text-muted">Upload product photos in a crisp 4:3 frame</span>
-                            <span className="text-[11px] text-muted/80">The first image becomes the shop cover image.</span>
-                         </div>
-                       )}
-                       {imgUploading && (
-                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 animate-spin text-caramel" />
-                         </div>
-                       )}
-                       <input type="file" className="hidden" accept="image/*" onChange={handleProductImageSelect("new")} />
-                    </label>
-                    {newItem.images.length > 0 && (
-                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                        {newItem.images.map((image, index) => (
-                          <div key={`${image}-${index}`} className="relative overflow-hidden rounded-[1.25rem] border border-sand/50 bg-white">
-                            <button
-                              type="button"
-                              onClick={() => setCoverProductImage("new", index)}
-                              className="block aspect-[4/3] w-full"
-                            >
-                              <img src={image} className="h-full w-full object-contain" alt={`Product preview ${index + 1}`} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeProductImage("new", index)}
-                              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink shadow-sm transition hover:bg-white"
-                              aria-label={`Remove image ${index + 1}`}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                            <div className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white">
-                              {index === 0 ? "Cover" : "Set"}
-                            </div>
-                          </div>
-                        ))}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted pl-4">Tags (Select to categorize for pets)</label>
+                  <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
+                    {AVAILABLE_TAGS.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setNewItem(prev => ({
+                            ...prev,
+                            tags: (prev.tags || []).includes(tag)
+                              ? (prev.tags || []).filter(t => t !== tag)
+                              : [...(prev.tags || []), tag]
+                          }));
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${newItem.tags.includes(tag)
+                            ? "bg-ink text-white shadow-md"
+                            : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                          }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3 rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-3 px-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted">Product Gallery</label>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted">
+                      {newItem.images.length}/{MAX_PRODUCT_IMAGES} images
+                    </span>
+                  </div>
+                  <label className="relative block h-52 w-full cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-sand/50 bg-white/70 transition-colors hover:bg-warm group sm:h-60">
+                    {newItem.images[0] ? (
+                      <>
+                        <img src={newItem.images[0]} className="w-full h-full object-contain" alt="Cover preview" />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent px-5 py-4 text-white">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Cover image</p>
+                          <p className="mt-1 text-xs font-medium text-white/85">
+                            Click thumbnails below to switch cover.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center gap-2 px-6 text-center">
+                        <ImageIcon className="w-7 h-7 text-sand group-hover:scale-110 transition-transform" />
+                        <span className="text-xs font-bold text-muted">Upload product photos in a crisp 4:3 frame</span>
+                        <span className="text-[11px] text-muted/80">The first image becomes the shop cover image.</span>
                       </div>
                     )}
-                  </div>
-               </div>
-               <div className="mt-8 flex gap-4 bg-white">
-                  <button onClick={() => setIsAdding(false)} className="flex-1 py-5 rounded-full border border-sand font-bold text-xs uppercase tracking-widest hover:bg-warm transition">Cancel</button>
-                  <button 
-                    disabled={imgUploading || creating}
-                    onClick={handleCreateProduct}
-                    className="flex-1 py-5 rounded-full bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-caramel transition shadow-xl shadow-ink/10 disabled:opacity-50"
-                  >
-                    {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add to Catalog"}
-                  </button>
-               </div>
+                    {imgUploading && (
+                      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-caramel" />
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleProductImageSelect("new")} />
+                  </label>
+                  {newItem.images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                      {newItem.images.map((image, index) => (
+                        <div key={`${image}-${index}`} className="relative overflow-hidden rounded-[1.25rem] border border-sand/50 bg-white">
+                          <button
+                            type="button"
+                            onClick={() => setCoverProductImage("new", index)}
+                            className="block aspect-[4/3] w-full"
+                          >
+                            <img src={image} className="h-full w-full object-contain" alt={`Product preview ${index + 1}`} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeProductImage("new", index)}
+                            className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-ink shadow-sm transition hover:bg-white"
+                            aria-label={`Remove image ${index + 1}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white">
+                            {index === 0 ? "Cover" : "Set"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-8 flex gap-4 bg-white">
+                <button onClick={() => setIsAdding(false)} className="flex-1 py-5 rounded-full border border-sand font-bold text-xs uppercase tracking-widest hover:bg-warm transition">Cancel</button>
+                <button
+                  disabled={imgUploading || creating}
+                  onClick={handleCreateProduct}
+                  className="flex-1 py-5 rounded-full bg-ink text-white font-bold text-xs uppercase tracking-widest hover:bg-caramel transition shadow-xl shadow-ink/10 disabled:opacity-50"
+                >
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Add to Catalog"}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -701,30 +699,29 @@ export const ProductCatalog = () => {
                   </div>
                 </div>
                 <div>
-                   <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Tags</label>
-                   <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
-                      {AVAILABLE_TAGS.map(tag => (
-                         <button
-                           key={tag}
-                           type="button"
-                           onClick={() => {
-                             setEditingProduct(prev => prev ? ({
-                               ...prev,
-                               tags: (prev.tags || []).includes(tag) 
-                                 ? (prev.tags || []).filter(t => t !== tag) 
-                                 : [...(prev.tags || []), tag]
-                             }) : prev);
-                           }}
-                           className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                             (editingProduct.tags || []).includes(tag)
-                               ? "bg-ink text-white shadow-md"
-                               : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
-                           }`}
-                         >
-                           {tag}
-                         </button>
-                      ))}
-                   </div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-muted">Tags</label>
+                  <div className="flex flex-wrap gap-2 p-4 bg-warm/30 border border-sand rounded-2xl">
+                    {AVAILABLE_TAGS.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setEditingProduct(prev => prev ? ({
+                            ...prev,
+                            tags: (prev.tags || []).includes(tag)
+                              ? (prev.tags || []).filter(t => t !== tag)
+                              : [...(prev.tags || []), tag]
+                          }) : prev);
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${(editingProduct.tags || []).includes(tag)
+                            ? "bg-ink text-white shadow-md"
+                            : "bg-white text-muted border border-sand/50 hover:border-caramel/50"
+                          }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="rounded-[2rem] border border-sand/70 bg-[#FBF9F2]/60 p-4 sm:p-5">
                   <div className="mb-2 flex items-center justify-between gap-3">

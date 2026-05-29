@@ -284,7 +284,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FCFAF7] dark:bg-slate-950/20 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 bg-[#FCFAF7] dark:bg-slate-950/20 scrollbar-thin">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-caramel" />
@@ -315,7 +315,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
                     <div className="flex flex-col">
                       {msg.text && (
                         <div
-                          className={`rounded-2xl px-3 py-1.5 text-xs leading-relaxed break-words shadow-sm ${
+                          className={`rounded-2xl px-3 py-1.5 text-xs leading-relaxed break-words break-all shadow-sm ${
                             isMe
                               ? "bg-brown text-white rounded-br-none dark:bg-amber-800"
                               : "bg-white text-ink border border-sand/50 rounded-bl-none dark:bg-slate-800 dark:text-white dark:border-slate-700"
