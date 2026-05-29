@@ -151,7 +151,8 @@ router.post('/:id/comment', verifyToken, async (req, res) => {
         };
 
         blog.comments.push(newComment);
-        await blog.save();
+        const savedBlog = await blog.save();
+        const createdComment = savedBlog.comments[savedBlog.comments.length - 1];
 
         // Create notification if not commenting on own post
         if (blog.author.toString() !== req.userId) {

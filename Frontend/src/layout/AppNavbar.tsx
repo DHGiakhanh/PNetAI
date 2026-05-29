@@ -529,8 +529,8 @@ export function AppNavbar() {
                                   markNotificationRead(notification._id);
                                   if (notification.type === "breeding_request" || notification.type === "breeding_response") {
                                     navigate("/breeding/requests");
-                                    setNotificationOpen(false);
                                   }
+                                  setNotificationOpen(false);
                                 }}
                                 className={`w-full rounded-xl border p-3 text-left transition hover:bg-warm ${
                                   notification.isRead ? "border-sand bg-white" : "border-caramel/30 bg-warm/50"
