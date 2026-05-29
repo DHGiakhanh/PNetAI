@@ -868,6 +868,97 @@ router.delete('/pets/:id', verifyToken, isAdmin, async (req, res) => {
 
 // --- Blog Management (Admin) ---
 
+// List all user blog posts (admin management)
+router.get("/blogs", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const { page = 1, limit = 10, search, status } = req.query;
+        const query = {};
+
+        if (status) query.status = status;
+
+        if (search) {
+            const regex = { $regex: search, $options: "i" };
+            const matchingAuthors = await db.User.find({
+                $or: [{ name: regex }, { email: regex }],
+            }).select("_id");
+            const authorIds = matchingAuthors.map((user) => user._id);
+            query.$or = [{ title: regex }, { content: regex }, { category: regex }];
+            if (authorIds.length > 0) {
+                query.$or.push({ author: { $in: authorIds } });
+            }
+        }
+
+        const skip = (Number(page) - 1) * Number(limit);
+        const [blogs, total, statusAggregation] = await Promise.all([
+            db.Blog.find(query)
+                .populate("author", "name email avatarUrl")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit)),
+            db.Blog.countDocuments(query),
+            db.Blog.aggregate([
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+        ]);
+
+        const statusSummary = statusAggregation.reduce(
+            (acc, item) => {
+                const key = item._id || "draft";
+                acc[key] = item.count;
+                acc.total += item.count;
+                return acc;
+            },
+            {
+                total: 0,
+                approved: 0,
+                pending: 0,
+                draft: 0,
+                rejected: 0,
+                hidden: 0,
+            }
+        );
+        statusSummary.inactive = statusSummary.draft + statusSummary.rejected + statusSummary.hidden;
+
+        const mappedBlogs = blogs.map((blog) => {
+            const commentCount = (blog.comments || []).reduce(
+                (sum, comment) => sum + 1 + (comment.replies?.length || 0),
+                0
+            );
+            return {
+                _id: blog._id,
+                title: blog.title,
+                category: blog.category,
+                status: blog.status,
+                views: blog.views || 0,
+                likeCount: blog.likes?.length || 0,
+                commentCount,
+                author: blog.author,
+                image: blog.image,
+                images: blog.images,
+                createdAt: blog.createdAt,
+                updatedAt: blog.updatedAt,
+            };
+        });
+
+        res.status(200).json({
+            blogs: mappedBlogs,
+            pagination: {
+                total,
+                page: Number(page),
+                pages: Math.ceil(total / Number(limit)) || 1,
+            },
+            statusSummary,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // List all pending blog posts for admin review
 router.get("/blogs/pending", verifyToken, isAdmin, async (req, res) => {
     try {
@@ -878,6 +969,24 @@ router.get("/blogs/pending", verifyToken, isAdmin, async (req, res) => {
         .sort({ createdAt: -1 });
 
         res.status(200).json({ pendingBlogs });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get a single blog post with full comments (admin)
+router.get("/blogs/:id", verifyToken, isAdmin, async (req, res) => {
+    try {
+        const blog = await db.Blog.findById(req.params.id)
+            .populate("author", "name email avatarUrl")
+            .populate("comments.user", "name avatarUrl")
+            .populate("comments.replies.user", "name avatarUrl");
+
+        if (!blog) {
+            return res.status(404).json({ message: "Blog post not found" });
+        }
+
+        res.status(200).json({ blog });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

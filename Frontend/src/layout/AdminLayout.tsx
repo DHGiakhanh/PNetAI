@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  MessageSquare,
   CreditCard,
   Banknote,
   UserPlus,
@@ -31,7 +32,8 @@ export const AdminLayout = () => {
   const adminMenuItems = [
     { section: "Main", title: "Overview", icon: LayoutDashboard, path: "/admin", exact: true },
     { section: "Main", title: "Orders & Bookings", icon: Package, path: "/admin/orders-ledger" },
-    
+    { section: "Main", title: "User Posts", icon: MessageSquare, path: "/admin/user-posts" },
+
     { section: "Users", title: "Sales Team", icon: UserPlus, path: "/admin/users/sales" },
     { section: "Users", title: "Providers", icon: Users2, path: "/admin/users/providers" },
     { section: "Users", title: "Pet Owners", icon: Users, path: "/admin/users/owners" },
