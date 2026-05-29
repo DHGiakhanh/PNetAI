@@ -73,13 +73,13 @@ const Hero = () => {
           className="mx-auto mb-14 max-w-[900px] text-center sm:mb-20"
         >
           <p className="mb-5 text-[11px] font-bold uppercase tracking-[0.34em] text-caramel">
-            PNetAI Pet Care Network
+            PNetAI Pet Network
           </p>
           <h1 className="font-serif text-[clamp(3rem,6.25vw,6rem)] font-semibold not-italic leading-[1.05] tracking-[-0.04em] text-ink">
-            Welcome to Your Pet&apos;s
+            One Place for Your
             <br className="hidden sm:block" />{" "}
             <span className="relative inline-block">
-              Second Home!
+              Pet&apos;s Care
               <svg
                 aria-hidden="true"
                 viewBox="0 0 330 26"
@@ -97,7 +97,7 @@ const Hero = () => {
             </span>
           </h1>
           <p className="mx-auto mt-8 max-w-[650px] text-base leading-relaxed text-muted sm:text-xl">
-            From trusted care and grooming to healthy breeding matches, everything your pet needs feels close to home.
+            Book care services, shop pet products, find breeding matches, and join a friendly pet community.
           </p>
         </motion.div>
 
@@ -148,11 +148,11 @@ const Hero = () => {
             <div className="absolute left-4 top-4 flex flex-wrap gap-2 sm:left-6 sm:top-6">
               <span className="rounded-full bg-ink/90 px-4 py-2 text-xs font-medium text-white backdrop-blur sm:px-5 sm:text-sm">
                 <strong className="mr-1.5 font-serif text-lg font-semibold not-italic">AI</strong>
-                Care guidance
+                Care tips
               </span>
               <span className="rounded-full bg-ink/90 px-4 py-2 text-xs font-medium text-white backdrop-blur sm:px-5 sm:text-sm">
                 <strong className="mr-1.5 font-serif text-lg font-semibold not-italic">24/7</strong>
-                Pet support
+                Support
               </span>
             </div>
           </motion.div>

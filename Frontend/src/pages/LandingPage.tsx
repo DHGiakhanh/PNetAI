@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import {
   Hero,
-  ServicesStrip,
   CareServices,
   AICareStory,
   FeaturedBreeding,
@@ -19,7 +18,6 @@ export default function LandingPage() {
   return (
     <div className="relative bg-cream">
       <Hero />
-      <ServicesStrip />
       <CareServices />
       <AICareStory />
       <FeaturedBreeding />

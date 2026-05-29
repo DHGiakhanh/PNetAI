@@ -97,71 +97,47 @@ function ImageFallback({
   );
 }
 
-const DISCOVERY_LINKS = [
-  { label: "Care Services", description: "Trusted clinics", path: "/services", Icon: Stethoscope },
-  { label: "Breeding", description: "Healthy matches", path: "/breeding", Icon: Heart },
-  { label: "Pet Boutique", description: "Curated essentials", path: "/products", Icon: ShoppingBag },
-  { label: "Community", description: "Stories & tips", path: "/feeds", Icon: PawPrint },
-];
-
-export const ServicesStrip = () => (
-  <section className="bg-forest px-4 py-6 text-white sm:px-6">
-    <div className="mx-auto grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {DISCOVERY_LINKS.map(({ label, description, path, Icon }) => (
-        <Link
-          key={label}
-          to={path}
-          className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-4 transition hover:bg-white/[0.14]"
-        >
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 transition group-hover:bg-caramel">
-            <Icon className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-base font-semibold">{label}</span>
-            <span className="text-sm text-white/65">{description}</span>
-          </span>
-        </Link>
-      ))}
-    </div>
-  </section>
-);
-
 type CareCard = {
   title: string;
   description: string;
   category: string;
   image: string;
   path: string;
+  Icon: typeof Stethoscope;
 };
 
 const DEFAULT_CARE_CARDS: CareCard[] = [
   {
-    title: "Gentle Grooming",
-    description: "Bath, coat care and tidy trims delivered with patience.",
+    title: "Pet Grooming",
+    description: "Bathing, brushing, nail care, and simple grooming for a clean, happy pet.",
     category: "Grooming",
     image: STOCK_IMAGES.grooming,
     path: "/services",
+    Icon: Scissors,
   },
   {
-    title: "Health Visits",
-    description: "Find verified veterinary care for everyday wellbeing.",
-    category: "Veterinary",
+    title: "Vet Care",
+    description: "Find trusted clinics for health checks and regular care.",
+    category: "Vet Care",
     image: STOCK_IMAGES.veterinary,
     path: "/services",
+    Icon: Stethoscope,
   },
   {
-    title: "Positive Training",
-    description: "Build happy habits with caring professional guidance.",
+    title: "Pet Training",
+    description: "Help your pet learn good habits with patient guidance.",
     category: "Training",
     image: STOCK_IMAGES.training,
     path: "/services",
+    Icon: Sparkles,
   },
   {
-    title: "Cozy Stays",
-    description: "Comfortable boarding while pet parents are away.",
+    title: "Pet Boarding",
+    description: "Find a safe place for your pet when you are away.",
     category: "Boarding",
     image: STOCK_IMAGES.boarding,
     path: "/services",
+    Icon: House,
   },
 ];
 
@@ -196,51 +172,83 @@ export const CareServices = () => {
       category: service.category || fallback.category,
       image: service.images?.[0] || fallback.image,
       path: `/services/${service._id}`,
+      Icon: fallback.Icon,
     };
   });
 
   return (
-    <section className="bg-cream px-4 py-20 sm:px-6 sm:py-28">
+    <section className="relative overflow-hidden bg-cream px-4 py-20 sm:px-6 sm:py-28">
+      <div className="pointer-events-none absolute -left-16 top-28 h-44 w-28 rounded-full border-[3px] border-sage/50" />
+      <div className="pointer-events-none absolute -right-20 bottom-28 h-56 w-56 rounded-full border-[3px] border-blush/50" />
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mx-auto mb-14 max-w-3xl text-center">
-          <Eyebrow>Our Services</Eyebrow>
-          <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
-            Complete care for every
-            <br className="hidden sm:block" /> wag and whisker
-          </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
-            Discover care providers, appointments and everyday support built around your pet&apos;s comfort.
-          </p>
+        <Reveal className="mb-14 flex flex-col justify-between gap-6 text-center md:flex-row md:items-end md:text-left">
+          <div className="max-w-3xl">
+            <Eyebrow>Services</Eyebrow>
+            <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
+              Pet care made
+              <br className="hidden sm:block" /> simple
+            </h2>
+          </div>
+          <Link
+            to="/services"
+            className="mx-auto inline-flex items-center gap-2 rounded-full border border-sand bg-white px-6 py-3 font-semibold text-brown shadow-sm transition hover:bg-warm md:mx-0"
+          >
+            View services <ArrowRight className="h-4 w-4" />
+          </Link>
         </Reveal>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid items-stretch gap-6 lg:grid-cols-[0.88fr_1.12fr]">
+          <Reveal className="relative min-h-[470px] overflow-hidden rounded-[44px] bg-sand">
+            <ImageFallback
+              src={STOCK_IMAGES.grooming}
+              fallback={STOCK_IMAGES.dog}
+              alt="Gentle grooming care"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-ink/5 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 rounded-[28px] bg-white/92 p-5 backdrop-blur">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-caramel">Trusted Care</p>
+              <p className="mt-2 font-serif text-3xl font-semibold not-italic leading-tight text-ink">
+                Find the right service for your pet in a few steps.
+              </p>
+            </div>
+            <div className="absolute left-6 top-6 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-xl">
+              Verified providers
+            </div>
+          </Reveal>
+
+          <div className="grid gap-5 sm:grid-cols-2">
           {cards.map((card, index) => (
             <Reveal key={card.title} delay={index * 0.06}>
               <Link
                 to={card.path}
-                className="group block h-full overflow-hidden rounded-[28px] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                className="group relative flex min-h-[260px] h-full overflow-hidden rounded-[32px] border border-sand/50 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="relative aspect-[4/4.7] overflow-hidden">
+                <div className="relative z-10 flex max-w-[72%] flex-col">
+                  <span className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-warm text-brown transition group-hover:bg-brown group-hover:text-white">
+                    <card.Icon className="h-6 w-6" />
+                  </span>
+                  <span className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-caramel">
+                    {card.category}
+                  </span>
+                  <h3 className="text-2xl font-semibold not-italic text-ink">{card.title}</h3>
+                  <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted">{card.description}</p>
+                  <span className="mt-auto inline-flex items-center gap-2 pt-6 text-sm font-semibold text-brown">
+                    View details <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                  </span>
+                </div>
+                <div className="absolute -bottom-6 -right-6 h-36 w-36 overflow-hidden rounded-full border-[10px] border-cream sm:h-40 sm:w-40">
                   <ImageFallback
                     src={card.image}
                     fallback={DEFAULT_CARE_CARDS[index].image}
                     alt={card.title}
-                    className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
                   />
-                  <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brown backdrop-blur">
-                    {card.category}
-                  </span>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold not-italic text-ink">{card.title}</h3>
-                  <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted">{card.description}</p>
-                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brown">
-                    Explore <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </span>
                 </div>
               </Link>
             </Reveal>
           ))}
+          </div>
         </div>
       </div>
     </section>
@@ -270,25 +278,25 @@ export const AICareStory = () => (
         <div className="absolute right-4 top-10 rounded-3xl bg-forest px-5 py-5 text-white shadow-xl sm:right-10">
           <Bot className="mb-3 h-6 w-6 text-sand" />
           <p className="font-serif text-2xl font-semibold not-italic">AI Care</p>
-          <p className="mt-1 text-sm text-white/70">Guidance, 24/7</p>
+          <p className="mt-1 text-sm text-white/70">Tips anytime</p>
         </div>
       </Reveal>
 
       <Reveal delay={0.08}>
-        <Eyebrow>Thoughtful Pet Parenting</Eyebrow>
+        <Eyebrow>AI Pet Care</Eyebrow>
         <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
-          Care that understands your companion
+          Smart care for your pet
         </h2>
         <p className="mt-7 text-base leading-relaxed text-muted sm:text-lg">
-          PNetAI connects daily care with smart support: record pet information, explore trusted providers and ask the
-          AI assistant when you need a helpful first step.
+          Save pet information, find services, and ask the AI assistant for quick care suggestions. For serious symptoms,
+          please contact a vet.
         </p>
 
         <div className="mt-9 space-y-5">
           {[
-            { Icon: ShieldCheck, title: "Trusted provider network", text: "Explore clinics and care services available on the platform." },
-            { Icon: Bot, title: "AI support at hand", text: "Quick guidance alongside your pet profile and care journey." },
-            { Icon: Sparkles, title: "One warm ecosystem", text: "Shopping, stories and breeding connections in one place." },
+            { Icon: ShieldCheck, title: "Trusted providers", text: "Find clinics and care services listed on the platform." },
+            { Icon: Bot, title: "AI assistant", text: "Ask simple questions about daily care, food, grooming, and next steps." },
+            { Icon: Sparkles, title: "All in one place", text: "Shop, community, and breeding features are connected." },
           ].map(({ Icon, title, text }) => (
             <div key={title} className="flex gap-4">
               <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-warm text-brown">
@@ -306,7 +314,7 @@ export const AICareStory = () => (
           to="/services"
           className="mt-10 inline-flex items-center gap-2 rounded-full bg-brown px-7 py-4 font-semibold text-white transition hover:bg-brown-dark"
         >
-          Explore care services <ArrowRight className="h-4 w-4" />
+          Explore services <ArrowRight className="h-4 w-4" />
         </Link>
       </Reveal>
     </div>
@@ -349,13 +357,13 @@ export const FeaturedBreeding = () => {
       <div className="mx-auto max-w-6xl">
         <Reveal className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl">
-            <Eyebrow>Breeding Matches</Eyebrow>
+            <Eyebrow>Breeding</Eyebrow>
             <h2 className="font-serif text-4xl font-semibold not-italic leading-tight text-ink sm:text-6xl">
-              Meet compatible companions
+              Find a good match
             </h2>
           </div>
           <Link to="/breeding" className="inline-flex items-center gap-2 font-semibold text-brown">
-            View all listings <ArrowRight className="h-4 w-4" />
+            View listings <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>
 
@@ -381,9 +389,9 @@ export const FeaturedBreeding = () => {
                 <Reveal key={listing._id} delay={index * 0.06}>
                   <Link
                     to="/breeding"
-                    className="group block overflow-hidden rounded-[28px] bg-white transition hover:-translate-y-1 hover:shadow-xl"
+                    className="group block overflow-hidden rounded-[34px] border border-white/70 bg-cream p-3 transition hover:-translate-y-1 hover:shadow-xl"
                   >
-                    <div className="relative aspect-[4/4.4] overflow-hidden">
+                    <div className="relative aspect-[4/4.4] overflow-hidden rounded-[28px] bg-white">
                       <ImageFallback
                         src={image}
                         fallback={fallback}
@@ -391,10 +399,13 @@ export const FeaturedBreeding = () => {
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                       />
                       {pet?.gender ? (
-                        <span className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brown">
+                        <span className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brown shadow-sm">
                           {pet.gender}
                         </span>
                       ) : null}
+                      <span className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-blush text-white shadow-sm">
+                        <Heart className="h-4 w-4 fill-current" />
+                      </span>
                     </div>
                     <div className="p-5">
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-caramel">
@@ -405,6 +416,9 @@ export const FeaturedBreeding = () => {
                         {pet?.name || listing.title}
                       </h3>
                       <p className="mt-2 line-clamp-2 text-sm text-muted">{listing.title}</p>
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brown">
+                        View match <ArrowRight className="h-4 w-4" />
+                      </span>
                     </div>
                   </Link>
                 </Reveal>
@@ -416,16 +430,16 @@ export const FeaturedBreeding = () => {
             <div className="p-9 sm:p-14">
               <PawPrint className="h-8 w-8 text-caramel" />
               <h3 className="mt-6 font-serif text-3xl font-semibold not-italic text-ink">
-                New approved matches will appear here
+                Approved matches will appear here
               </h3>
               <p className="mt-4 max-w-lg leading-relaxed text-muted">
-                Browse the breeding area or create a listing for your registered pet to connect responsibly.
+                Browse breeding listings or create a listing for your registered pet.
               </p>
               <Link
                 to="/breeding"
                 className="mt-8 inline-flex items-center gap-2 rounded-full bg-brown px-6 py-3.5 font-semibold text-white"
               >
-                Explore breeding <ArrowRight className="h-4 w-4" />
+                View breeding <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
             <ImageFallback
@@ -462,13 +476,13 @@ export const FeaturedProducts = () => {
       <div className="mx-auto max-w-6xl">
         <Reveal className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
-            <Eyebrow>Pet Boutique</Eyebrow>
+            <Eyebrow>Shop</Eyebrow>
             <h2 className="font-serif text-4xl font-semibold not-italic text-ink sm:text-6xl">
-              Thoughtful picks for daily joy
+              Products for daily pet care
             </h2>
           </div>
           <Link to="/products" className="inline-flex items-center gap-2 font-semibold text-brown">
-            Browse the shop <ArrowRight className="h-4 w-4" />
+            View shop <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>
 
@@ -494,7 +508,7 @@ export const FeaturedProducts = () => {
                   />
                   {products[0].isHot && (
                     <span className="absolute left-5 top-5 rounded-full bg-brown px-4 py-2 text-xs font-semibold text-white">
-                      Popular pick
+                      Popular
                     </span>
                   )}
                 </div>
@@ -531,10 +545,10 @@ export const FeaturedProducts = () => {
         ) : (
           <Reveal className="flex flex-col items-center justify-center rounded-[34px] bg-white px-6 py-16 text-center">
             <ShoppingBag className="h-8 w-8 text-caramel" />
-            <h3 className="mt-5 text-3xl font-semibold not-italic text-ink">Explore pet essentials</h3>
-            <p className="mt-3 max-w-lg text-muted">Discover available products for play, comfort and everyday care.</p>
+            <h3 className="mt-5 text-3xl font-semibold not-italic text-ink">Explore pet products</h3>
+            <p className="mt-3 max-w-lg text-muted">Find products for play, comfort, and everyday care.</p>
             <Link to="/products" className="mt-7 rounded-full bg-brown px-7 py-3.5 font-semibold text-white">
-              Open boutique
+              Open shop
             </Link>
           </Reveal>
         )}
@@ -567,12 +581,12 @@ export const CommunityJournal = () => {
     <section className="bg-white px-4 py-20 sm:px-6 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal className="mb-12 text-center">
-          <Eyebrow>Community Journal</Eyebrow>
+          <Eyebrow>Community</Eyebrow>
           <h2 className="font-serif text-4xl font-semibold not-italic text-ink sm:text-6xl">
-            Stories, moments and care tips
+            Stories and care tips
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-muted">
-            Explore recent approved posts shared across the PNetAI community.
+            Read recent posts from pet owners in the PNetAI community.
           </p>
         </Reveal>
 
@@ -590,7 +604,7 @@ export const CommunityJournal = () => {
                 <div className="absolute bottom-0 p-8 text-white">
                   <p className="text-xs font-bold uppercase tracking-widest text-sand">{posts[0].category || "Community"}</p>
                   <h3 className="mt-3 font-serif text-4xl font-semibold not-italic">{posts[0].title}</h3>
-                  <p className="mt-4 text-sm text-white/75">By {posts[0].author?.name || "PNetAI Community"}</p>
+                  <p className="mt-4 text-sm text-white/75">By {posts[0].author?.name || "PNetAI community"}</p>
                 </div>
               </Link>
             </Reveal>
@@ -608,7 +622,7 @@ export const CommunityJournal = () => {
                       <p className="text-[10px] font-bold uppercase tracking-widest text-caramel">{post.category || "Pet Life"}</p>
                       <h3 className="mt-3 line-clamp-3 text-2xl font-semibold not-italic text-ink">{post.title}</h3>
                       <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brown">
-                        Read story <ArrowRight className="h-4 w-4" />
+                        Read post <ArrowRight className="h-4 w-4" />
                       </span>
                     </div>
                   </Link>
@@ -619,7 +633,7 @@ export const CommunityJournal = () => {
                   to="/feeds"
                   className="flex min-h-36 items-center justify-center gap-2 rounded-[28px] border border-dashed border-sand text-brown"
                 >
-                  <BookOpen className="h-5 w-5" /> See more stories
+                  <BookOpen className="h-5 w-5" /> See more posts
                 </Link>
               ) : null}
             </div>
@@ -634,10 +648,10 @@ export const CommunityJournal = () => {
             />
             <div className="absolute inset-0 flex items-end bg-gradient-to-t from-ink/75 to-transparent p-8 sm:p-12">
               <div className="max-w-xl text-white">
-                <h3 className="font-serif text-4xl font-semibold not-italic">Join the pet-loving community</h3>
-                <p className="mt-4 text-white/75">Share moments and discover approved care stories from other pet parents.</p>
+                <h3 className="font-serif text-4xl font-semibold not-italic">Join our pet community</h3>
+                <p className="mt-4 text-white/75">Share moments and read helpful posts from other pet owners.</p>
                 <Link to="/feeds" className="mt-7 inline-flex rounded-full bg-white px-6 py-3 font-semibold text-brown">
-                  Explore community
+                  Open community
                 </Link>
               </div>
             </div>
@@ -653,12 +667,12 @@ export const HomeCallToAction = () => (
     <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[40px] bg-forest">
       <div className="grid items-stretch lg:grid-cols-[1.05fr_0.95fr]">
         <div className="p-9 text-white sm:p-14 lg:p-16">
-          <Eyebrow light>Begin With PNetAI</Eyebrow>
+          <Eyebrow light>Start With PNetAI</Eyebrow>
           <h2 className="font-serif text-4xl font-semibold not-italic leading-tight sm:text-5xl">
-            A warmer home for every pet journey
+            A simple place for your pet&apos;s needs
           </h2>
           <p className="mt-5 max-w-md leading-relaxed text-white/72">
-            Find trusted care, discover compatible companions and connect with a community built for pet parents.
+            Find care services, shop products, connect with other pet owners, and manage your pet&apos;s needs in one place.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link to="/register" className="rounded-full bg-caramel px-7 py-4 font-semibold text-white transition hover:bg-white hover:text-brown">
@@ -677,8 +691,8 @@ export const HomeCallToAction = () => (
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute bottom-6 left-6 flex items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink shadow-lg">
-            <House className="h-4 w-4 text-brown" />
-            Care begins at home
+            <MapPin className="h-4 w-4 text-brown" />
+            Find care near you
           </div>
         </div>
       </div>

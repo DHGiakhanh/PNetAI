@@ -1,6 +1,5 @@
 export { Hero } from "./Hero";
 export {
-  ServicesStrip,
   CareServices,
   AICareStory,
   FeaturedBreeding,
