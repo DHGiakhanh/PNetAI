@@ -155,11 +155,11 @@ export default function ServiceBookingPage() {
   }, [service?._id, currentMonth]);
 
   useEffect(() => {
-    if (selectedPetId && filteredPets.some((pet) => pet._id === selectedPetId && pet.moderationStatus !== "disabled")) {
-      return;
+    // If the currently selected pet becomes unavailable (disabled/filtered out), clear the selection
+    if (selectedPetId && !bookableFilteredPets.some((pet) => pet._id === selectedPetId)) {
+      setSelectedPetId(null);
     }
-    setSelectedPetId(bookableFilteredPets[0]?._id || null);
-  }, [bookableFilteredPets, filteredPets, selectedPetId]);
+  }, [bookableFilteredPets, selectedPetId]);
 
   const fetchService = async (id: string) => {
     try {
