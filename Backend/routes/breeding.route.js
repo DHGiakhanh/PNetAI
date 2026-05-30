@@ -183,15 +183,37 @@ router.post('/:id/request', verifyToken, async (req, res) => {
             });
         }
 
-        // Check for existing request for this listing by same requester and requesterPet
-        const existingRequest = await db.BreedingRequest.findOne({
-            listing: listing._id,
-            requester: req.userId,
+        // Rule 1: Chống gửi lặp (Chặn nếu đã có yêu cầu PENDING giữa Mèo Cái này và Mèo Đực A)
+        const partnerPetListings = await db.BreedingListing.find({ pet: listing.pet._id }).select('_id');
+        const partnerListingIds = partnerPetListings.map(l => l._id);
+
+        const existingPendingRequest = await db.BreedingRequest.findOne({
             requesterPet: requesterPetId,
+            listing: { $in: partnerListingIds },
             status: "pending"
         });
-        if (existingRequest) {
-            return res.status(400).json({ message: "You have already sent a pending request for this listing with this pet." });
+        if (existingPendingRequest) {
+            return res.status(400).json({ message: "Your request is pending approval, you cannot submit another one!" });
+        }
+
+        // Rule 2: Khóa trạng thái khi mèo cái đã có yêu cầu PENDING hoặc ACCEPTED với bất kỳ con đực nào khác
+        const activeRequestAsRequester = await db.BreedingRequest.findOne({
+            requesterPet: requesterPetId,
+            status: { $in: ["pending", "accepted"] }
+        });
+
+        const myPetListings = await db.BreedingListing.find({ pet: requesterPetId }).select('_id');
+        const myListingIds = myPetListings.map(l => l._id);
+
+        const activeRequestAsListing = await db.BreedingRequest.findOne({
+            listing: { $in: myListingIds },
+            status: { $in: ["pending", "accepted"] }
+        });
+
+        if (activeRequestAsRequester || activeRequestAsListing) {
+            return res.status(400).json({
+                message: "Your pet already has a pending or accepted breeding request. Please complete or cancel the current request before sending a new one."
+            });
         }
 
         const breedingRequest = new db.BreedingRequest({
