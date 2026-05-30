@@ -8,14 +8,14 @@ const {
     verifyWebhookSignature,
 } = require("../utils/payos");
 const { removeMissingProductsFromCart } = require("../utils/cart");
+const {
+    normalizeShippingMethod,
+    groupCartItemsByProvider,
+} = require("../utils/shipping");
 
 const router = express.Router();
 
 const toUpperText = (value) => (typeof value === "string" ? value.trim().toUpperCase() : "");
-const STANDARD_SHIPPING_FEE_VND = 30000;
-const EXPRESS_SHIPPING_FEE_VND = 100000;
-const FREE_SHIPPING_THRESHOLD_VND = 500000;
-const VALID_SHIPPING_METHODS = ["standard", "express"];
 
 const generateOrderCode = () => {
     const random = Math.floor(Math.random() * 900) + 100;
@@ -77,17 +77,6 @@ const toOrderItemsFromCart = (cart) => {
     }));
 };
 
-const normalizeShippingMethod = (value) => (
-    VALID_SHIPPING_METHODS.includes(value) ? value : "standard"
-);
-
-const calculateShippingFee = (subtotalAmount, shippingMethod = "standard") => {
-    if (shippingMethod === "express") {
-        return EXPRESS_SHIPPING_FEE_VND;
-    }
-    return subtotalAmount >= FREE_SHIPPING_THRESHOLD_VND ? 0 : STANDARD_SHIPPING_FEE_VND;
-};
-
 const normalizeSelectedProductIds = (selectedProductIds) => {
     if (!Array.isArray(selectedProductIds) || selectedProductIds.length === 0) {
         return null;
@@ -107,44 +96,6 @@ const getCheckoutCartItems = (cart, selectedProductIds) => {
     }
 
     return cart.items.filter((item) => selectedSet.has(item.product?._id?.toString() || item.product?.toString()));
-};
-
-const groupCartItemsByProvider = (items, shippingMethod = "standard") => {
-    const providerMap = new Map();
-
-    for (const item of items) {
-        const providerId = item.product?.providerId?.toString();
-        if (!providerId) {
-            return { error: `${item.product?.name || "Product"} is missing provider information` };
-        }
-
-        const existing = providerMap.get(providerId) || {
-            provider: providerId,
-            items: [],
-            subtotalAmount: 0,
-        };
-
-        const orderItem = {
-            product: item.product._id,
-            name: item.product.name,
-            quantity: item.quantity,
-            price: item.price,
-        };
-        existing.items.push(orderItem);
-        existing.subtotalAmount += Number(item.price || 0) * Number(item.quantity || 0);
-        providerMap.set(providerId, existing);
-    }
-
-    const groups = Array.from(providerMap.values()).map((group) => {
-        const shippingFee = calculateShippingFee(group.subtotalAmount, shippingMethod);
-        return {
-            ...group,
-            shippingFee,
-            totalAmount: group.subtotalAmount + shippingFee,
-        };
-    });
-
-    return { groups };
 };
 
 const toPayOSItemsFromProviderGroups = (groups) => {

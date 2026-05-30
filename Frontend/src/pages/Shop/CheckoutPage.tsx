@@ -20,11 +20,13 @@ import { authService } from "../../services/auth.service";
 import { productService } from "../../services/product.service";
 import apiClient from "@/utils/api.service";
 import {
-  EXPRESS_SHIPPING_FEE_VND,
   formatVnd,
   FREE_SHIPPING_THRESHOLD_VND,
-  STANDARD_SHIPPING_FEE_VND,
 } from "@/utils/currency";
+import {
+  calculateTotalShippingFee,
+  resolveProviderId,
+} from "@/utils/shipping";
 
 // --- Types ---
 type ShippingMethod = "standard" | "express";
@@ -37,6 +39,7 @@ interface CheckoutItem {
   qty: number;
   stock: number;
   image: string;
+  providerId: string | null;
 }
 
 // --- Main Component ---
@@ -78,7 +81,8 @@ export default function CheckoutPage() {
             price: item.price,
             qty: item.quantity,
             stock: product?.stock ?? 0,
-            image: product?.images?.[0] ?? "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=200&auto=format&fit=crop"
+            image: product?.images?.[0] ?? "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=200&auto=format&fit=crop",
+            providerId: resolveProviderId(product?.providerId),
           };
         });
 
@@ -103,14 +107,24 @@ export default function CheckoutPage() {
     init();
   }, [navigate]);
 
-  // Calculations
+  // Calculations — shipping is per provider group (>= 500k per group = free standard delivery)
   const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0), [cartItems]);
-  const shippingFee =
-    shippingMethod === "express"
-      ? EXPRESS_SHIPPING_FEE_VND
-      : subtotal >= FREE_SHIPPING_THRESHOLD_VND
-        ? 0
-        : STANDARD_SHIPPING_FEE_VND;
+  const shippingLineItems = useMemo(
+    () => cartItems.map((item) => ({ price: item.price, qty: item.qty, providerId: item.providerId })),
+    [cartItems]
+  );
+  const shippingFee = useMemo(
+    () => calculateTotalShippingFee(shippingLineItems, shippingMethod),
+    [shippingLineItems, shippingMethod]
+  );
+  const standardShippingFee = useMemo(
+    () => calculateTotalShippingFee(shippingLineItems, "standard"),
+    [shippingLineItems]
+  );
+  const expressShippingFee = useMemo(
+    () => calculateTotalShippingFee(shippingLineItems, "express"),
+    [shippingLineItems]
+  );
   const total = subtotal + shippingFee - discount;
 
   // Actions
@@ -162,10 +176,16 @@ export default function CheckoutPage() {
         address: userData?.address || "Vietnam",
       };
 
+      const checkoutPayload = {
+        shippingAddress,
+        shippingMethod,
+        selectedProductIds: cartItems.map((item) => item.id),
+      };
+
       if (paymentMethod === "qr") {
         // PayOS payment flow
         const { data } = await apiClient.post("/orders/checkout/payos", {
-          shippingAddress,
+          ...checkoutPayload,
           description: `DH PNETAI`,
         });
         if (data?.payment?.checkoutUrl) {
@@ -176,7 +196,7 @@ export default function CheckoutPage() {
       } else {
         // COD payment flow
         await apiClient.post("/orders/checkout", {
-          shippingAddress,
+          ...checkoutPayload,
           paymentMethod: "COD",
         });
         setStep("success");
@@ -372,10 +392,14 @@ export default function CheckoutPage() {
                     }`}>
                       <Truck className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">Free</span>
+                    <span className="text-sm font-bold text-ink">
+                      {standardShippingFee === 0 ? "Free" : formatVnd(standardShippingFee)}
+                    </span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Standard Delivery</h4>
-                  <p className="text-[11px] text-muted mt-2 font-medium">3-5 business days across the territory.</p>
+                  <p className="text-[11px] text-muted mt-2 font-medium">
+                    3-5 business days. Free for orders from {formatVnd(FREE_SHIPPING_THRESHOLD_VND)} per provider.
+                  </p>
                   {shippingMethod === "standard" && (
                     <div className="absolute top-4 right-4">
                       <CheckCircle2 className="w-5 h-5 text-caramel" />
@@ -397,7 +421,7 @@ export default function CheckoutPage() {
                     }`}>
                       <Zap className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-bold text-ink">{formatVnd(EXPRESS_SHIPPING_FEE_VND)}</span>
+                    <span className="text-sm font-bold text-ink">{formatVnd(expressShippingFee)}</span>
                   </div>
                   <h4 className="font-serif text-lg font-bold italic text-ink">Express Manifest</h4>
                   <p className="text-[11px] text-muted mt-2 font-medium">Next-day delivery with premium handling.</p>

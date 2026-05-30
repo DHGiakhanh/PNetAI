@@ -21,6 +21,7 @@ import { productService } from "../services/product.service";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { formatVnd, FREE_SHIPPING_THRESHOLD_VND } from "@/utils/currency";
+import { resolveProviderId } from "@/utils/shipping";
 import apiClient from "@/utils/api.service";
 import { MessengerDropdown } from "../components/social/MessengerDropdown";
 
@@ -39,6 +40,7 @@ type CartPreviewItem = {
   price: number;
   priceText: string;
   image?: string;
+  providerId: string | null;
 };
 
 type UserNotification = {
@@ -63,7 +65,6 @@ export function AppNavbar() {
   const [loading, setLoading] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  const [cartTotal, setCartTotal] = useState(0);
   const [cartPreviewItems, setCartPreviewItems] = useState<CartPreviewItem[]>(
     [],
   );
@@ -111,7 +112,6 @@ export function AppNavbar() {
   const syncCart = async () => {
     if (!isLoggedIn) {
       setCartCount(0);
-      setCartTotal(0);
       setCartPreviewItems([]);
       return;
     }
@@ -120,7 +120,6 @@ export function AppNavbar() {
       const cart = await cartService.getCart();
       const items = (cart?.items ?? []) as CartItem[];
       setCartCount(items.reduce((sum, item) => sum + item.quantity, 0));
-      setCartTotal(cart?.totalAmount ?? 0);
 
       const preview = items.map((item: any, index: number) => {
         const product = item.product as CartProduct;
@@ -134,7 +133,8 @@ export function AppNavbar() {
           stock: product?.stock ?? 0,
           price: item.price,
           priceText: formatVnd(item.price * item.quantity),
-          image: product?.images?.[0] ?? "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=200&auto=format&fit=crop"
+          image: product?.images?.[0] ?? "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=200&auto=format&fit=crop",
+          providerId: resolveProviderId(product?.providerId)
         };
       });
       setCartPreviewItems(preview);
@@ -147,7 +147,6 @@ export function AppNavbar() {
       });
     } catch {
       setCartCount(0);
-      setCartTotal(0);
       setCartPreviewItems([]);
     }
   };
@@ -292,6 +291,55 @@ export function AppNavbar() {
       .filter(item => selectedIds.includes(item.id))
       .reduce((sum, item) => sum + (item.price * item.qty), 0);
   }, [cartPreviewItems, selectedIds]);
+
+  const providerSubtotals = useMemo(() => {
+    const providerMap = new Map<string, number>();
+    for (const item of cartPreviewItems) {
+      const providerId = item.providerId || "unknown";
+      providerMap.set(providerId, (providerMap.get(providerId) || 0) + (item.price * item.qty));
+    }
+    return Array.from(providerMap.entries()).map(([providerId, subtotal]) => ({
+      providerId,
+      subtotal
+    }));
+  }, [cartPreviewItems]);
+
+  const uniqueProvidersCount = providerSubtotals.length;
+
+  const freeShippingMessage = useMemo(() => {
+    if (uniqueProvidersCount === 0) {
+      return "Unlock complimentary delivery.";
+    }
+    if (uniqueProvidersCount === 1) {
+      const subtotal = providerSubtotals[0].subtotal;
+      return subtotal >= FREE_SHIPPING_THRESHOLD_VND
+        ? "Your treasures ship free across the atelier."
+        : `Just ${formatVnd(FREE_SHIPPING_THRESHOLD_VND - subtotal)} more to unlock complimentary delivery.`;
+    }
+    // Multiple providers
+    const allFree = providerSubtotals.every(group => group.subtotal >= FREE_SHIPPING_THRESHOLD_VND);
+    if (allFree) {
+      return "All provider groups ship free!";
+    }
+    // Count how many are free
+    const freeGroups = providerSubtotals.filter(group => group.subtotal >= FREE_SHIPPING_THRESHOLD_VND);
+    if (freeGroups.length > 0) {
+      return `${freeGroups.length}/${uniqueProvidersCount} provider groups ship free.`;
+    }
+    return "Freeship standard is applied per provider (subtotal >= 500,000 VND).";
+  }, [providerSubtotals, uniqueProvidersCount]);
+
+  const shippingProgressPercentage = useMemo(() => {
+    if (uniqueProvidersCount === 0) return 0;
+    if (uniqueProvidersCount === 1) {
+      return Math.min(100, (providerSubtotals[0].subtotal / FREE_SHIPPING_THRESHOLD_VND) * 100);
+    }
+    // For multiple providers, show the progress of the highest provider group below the threshold (or the closest to unlocking free shipping)
+    const lockedGroups = providerSubtotals.filter(group => group.subtotal < FREE_SHIPPING_THRESHOLD_VND);
+    if (lockedGroups.length === 0) return 100;
+    const maxSubtotal = Math.max(...lockedGroups.map(g => g.subtotal));
+    return Math.min(100, (maxSubtotal / FREE_SHIPPING_THRESHOLD_VND) * 100);
+  }, [providerSubtotals, uniqueProvidersCount]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -857,15 +905,12 @@ export function AppNavbar() {
         {/* Free Shipping Milestone (Ultra-Thin Minimalist) */}
         <div className="px-10 py-6">
           <p className="text-[11px] font-bold text-ink/70 mb-3 tracking-wide">
-            {cartTotal >= FREE_SHIPPING_THRESHOLD_VND
-              ? "Your treasures ship free across the atelier." 
-              : `Just ${formatVnd(FREE_SHIPPING_THRESHOLD_VND - cartTotal)} more to unlock complimentary delivery.`
-            }
+            {freeShippingMessage}
           </p>
           <div className="h-[2px] w-full bg-sand/20 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (cartTotal / FREE_SHIPPING_THRESHOLD_VND) * 100)}%` }}
+              animate={{ width: `${shippingProgressPercentage}%` }}
               className="h-full bg-caramel" 
             />
           </div>
